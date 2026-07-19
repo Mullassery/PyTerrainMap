@@ -21,6 +21,7 @@ pub mod export_security;
 pub mod api;
 pub mod api_tls;
 pub mod data_sources;
+pub mod reference_images;
 
 // Re-export all public types
 pub use types::{
@@ -70,6 +71,12 @@ pub use api_tls::{
 pub use data_sources::{
     DataSourceType, ExternalFeature, DataSourceConfig, DataSourceRegistry, GeometryType,
     ContextEnrichment,
+};
+
+// Re-export reference image types
+pub use reference_images::{
+    ReferenceImage, ReferenceImageStore, VisualDescriptor, ImageMatch, GeoreferenceStatus,
+    ImageOrientation,
 };
 
 // TODO: Implement in future weeks
