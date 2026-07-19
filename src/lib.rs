@@ -31,6 +31,7 @@ pub mod change_detection;
 pub mod persistence;
 pub mod weather_soil;
 pub mod intelligence;
+pub mod cli;
 
 // Re-export all public types
 pub use types::{
@@ -146,6 +147,9 @@ pub use intelligence::{
     MobilityAssessment, AgriculturalSuitability, DisasterAssessment,
     MCPTool, MCPSchema,
 };
+
+// Re-export CLI
+pub use cli::{CLICommand, CLIResponse, ResponseStatus};
 
 // TODO: Implement in future weeks
 // pub mod storage;     // Week 3-4: In-memory storage
