@@ -140,6 +140,52 @@ When security_1 goes rogue:
 - Multi-bot missions remain trustworthy
 - Even if one bot fails, others' data is safe
 
+### 5. Integrity Validation (Critical)
+- **Old data = trusted baseline** for validating new data
+- New observations compared against historical patterns
+- Rogue data detected by deviation from baseline
+- Example: "Temperature has always been 20-25°C at this location, new reading of 500°C is flagged as rogue"
+
+---
+
+## Old Data as Validation Baseline
+
+Old, trusted observations serve as the ground truth for flagging suspicious new data:
+
+```
+Historical Baseline (from PyTerrainMap):
+├─ Location X: Temperature range 20-25°C (100 observations over 30 days)
+├─ Location X: Occupancy 5-10 people (consistent pattern)
+├─ Location X: No obstacles (clear for 6 months)
+└─ Confidence: High (consensus across multiple bots)
+
+New Observation (rogue bot):
+├─ Location X: Temperature 500°C
+├─ Comparison: Deviates 200x from historical range
+├─ Flag: ANOMALY - temperature spike with no infrastructure changes
+└─ Action: Filter from context, alert admin
+
+PyTerrainAI workflow:
+1. Query PyTerrainMap for historical data (last 30 days)
+   → Get trusted baseline
+2. Analyze latest 5 observations
+   → Compare to baseline
+3. Detect deviations
+   → Flag new data if significant deviation
+4. Return only data consistent with baseline
+   → Filtered context to requesting bot
+```
+
+### Benefits of This Approach
+
+| Aspect | Benefit |
+|--------|---------|
+| **Rogue detection** | New data flagged by comparison to historical norm |
+| **Attack timeline** | Exactly when behavior changed from normal |
+| **Data recovery** | If bot compromised, old data still trustworthy |
+| **Continuous validation** | Every new observation validated against history |
+| **No data loss** | Both good and bad data preserved (for investigation) |
+
 ---
 
 ## Implementation Details
@@ -222,35 +268,69 @@ Even with append-only storage, PyTerrainAI protects data quality:
 
 ```python
 class DataQualityGate:
-    """Filters out suspicious observations before returning to bot"""
+    """
+    Validates new observations against historical baseline.
+    Uses old data to flag rogue/compromised data.
+    """
     
     async def filter_observations(self, observations: List[Observation]) -> List[Observation]:
         """
         PyTerrainMap returns ALL observations (good + bad).
-        PyTerrainAI filters bad ones based on mission context.
+        PyTerrainAI filters bad ones by comparing against historical baseline.
         """
         filtered = []
         
         for obs in observations:
-            # Check 1: Is this observation plausible?
-            if not self.is_plausible(obs):
+            # CRITICAL: Check against historical baseline
+            baseline = await self.get_historical_baseline(
+                location=obs.location,
+                sensor_type=obs.sensor_type,
+                days_back=30  # 30 days of history
+            )
+            
+            # Check 1: Does this observation match historical patterns?
+            if not self.is_consistent_with_baseline(obs, baseline):
+                z_score = self.compute_z_score(obs, baseline)
+                if z_score > 3.0:  # 99.7% confidence it's anomalous
+                    self.alert(f"Rogue observation from {obs.robot_id}: z-score={z_score}")
+                    continue  # Filter out - too far from baseline
+            
+            # Check 2: Is this observation plausible?
+            if not self.is_physically_plausible(obs):
                 self.alert(f"Implausible observation from {obs.robot_id}: {obs.value}")
                 continue  # Filter out
-            
-            # Check 2: Does this contradict recent good data?
-            if self.contradicts_baseline(obs):
-                self.flag_as_suspect(obs)
-                # Might include with low confidence, or exclude entirely
             
             # Check 3: Is the source reliable?
             reliability = self.robot_reliability(obs.robot_id)
             if reliability < 0.5:  # Compromised
-                self.alert(f"Bot {obs.robot_id} has low reliability")
-                continue  # Filter out
+                self.alert(f"Bot {obs.robot_id} has low reliability, flagging new data")
+                # Don't filter entirely, but mark with low confidence
+                obs.confidence *= (1.0 - (0.5 - reliability))  # Reduce confidence
             
             filtered.append(obs)
         
         return filtered
+    
+    async def get_historical_baseline(self, location, sensor_type, days_back=30):
+        """
+        Query PyTerrainMap for historical observations.
+        Use old data to establish baseline for new validation.
+        """
+        baseline_obs = await self.map_service.query(
+            location=location,
+            sensor_type=sensor_type,
+            days_back=days_back,
+            only_high_confidence=True  # Use only trusted observations
+        )
+        
+        # Compute baseline statistics (mean, std, range)
+        return BaselineStatistics(
+            mean=np.mean([o.value for o in baseline_obs]),
+            std=np.std([o.value for o in baseline_obs]),
+            min=np.min([o.value for o in baseline_obs]),
+            max=np.max([o.value for o in baseline_obs]),
+            observation_count=len(baseline_obs),
+        )
 ```
 
 ---
@@ -318,8 +398,181 @@ Query for historical state:
 
 ---
 
+## Sensor Malfunctions (Different from Rogue Bots)
+
+Even honest bots can collect bad data due to sensor failures:
+
+### Types of Sensor Issues
+
+```
+1. Calibration Drift
+   └─ Sensor slowly drifts from accurate reading
+      Before: 22°C (correct)
+      After: 25°C (drifted, sensor needs recalibration)
+
+2. Sudden Failure
+   └─ Sensor abruptly fails (physical damage, short circuit)
+      Observation: 999°C (nonsensical)
+      Cause: Sensor failure, not bot malice
+
+3. Environmental Sensitivity
+   └─ Sensor affected by interference
+      Thermal: Affected by sun exposure
+      LiDAR: Affected by dust/humidity
+      USB: RF interference
+
+4. Firmware Bug
+   └─ Software issue in sensor driver
+      Example: Sensor off-by-factor-of-10
+      Robot is honest, sensor code is buggy
+
+5. Power Issues
+   └─ Low battery affecting sensor readings
+      Observation: Wildly fluctuating values
+      Cause: Power supply voltage low
+```
+
+### Detection vs Mitigation
+
+```
+PyTerrainAI must distinguish:
+
+Rogue Bot:
+├─ Intentional bad data
+├─ Consistent pattern of nonsense
+├─ Alert: "Bot compromised"
+└─ Action: Revoke credentials
+
+Sensor Malfunction:
+├─ Honest bot, failed sensor
+├─ Deviation from bot's historical norm
+├─ Alert: "Sensor recalibration needed"
+└─ Action: Flag data, suggest diagnostic
+```
+
+### Quality Gate Enhancement
+
+```python
+class SensorHealthMonitor:
+    """Detect and report sensor malfunctions"""
+    
+    async def validate_sensor_health(self, obs: Observation) -> SensorStatus:
+        """
+        Compare observation to:
+        1. Historical baseline for this bot's sensor
+        2. Other bots' readings at same location
+        3. Expected sensor accuracy range
+        """
+        
+        # Get this bot's historical sensor data
+        bot_history = await self.map_service.query(
+            robot_id=obs.robot_id,
+            sensor_type=obs.sensor_type,
+            days_back=30
+        )
+        
+        # Compute bot's typical accuracy/variance
+        bot_baseline = BaselineStatistics(bot_history)
+        
+        # Compare new observation
+        deviation = (obs.value - bot_baseline.mean) / (bot_baseline.std + 1e-6)
+        
+        if deviation > 5.0:  # 5 sigma = extremely unlikely
+            # Distinguish: Bot malice vs sensor failure?
+            
+            if self.is_consistent_malice(obs.robot_id):
+                # Pattern of intentional bad data
+                return SensorStatus.ROGUE_BOT
+            else:
+                # First major deviation from this bot
+                return SensorStatus.SENSOR_MALFUNCTION
+        
+        return SensorStatus.HEALTHY
+    
+    async def cross_validate_with_peers(self, obs: Observation):
+        """
+        Compare against other bots' observations at same location.
+        Helps distinguish sensor failure vs rogue behavior.
+        """
+        peer_obs = await self.map_service.query(
+            location=obs.location,
+            sensor_type=obs.sensor_type,
+            exclude_robot=obs.robot_id,
+            days_back=1  # Recent peer data
+        )
+        
+        if peer_obs:
+            peer_mean = np.mean([o.value for o in peer_obs])
+            
+            # Does this bot's observation match peers?
+            if abs(obs.value - peer_mean) < threshold:
+                return "Sensor OK (matches peers)"
+            else:
+                return "Sensor mismatch (diverges from peers)"
+        
+        return "No peer data to compare"
+```
+
+### Handling Sensor Malfunctions
+
+Instead of filtering out all anomalous data:
+
+1. **Detect the malfunction** (statistical deviation)
+2. **Classify it** (malice vs hardware failure)
+3. **Alert the bot** ("Thermal sensor needs recalibration")
+4. **Reduce confidence** (mark obs as low-confidence, not deleted)
+5. **Use peer data** (other bots' observations if available)
+6. **Log for investigation** (later diagnostics can review)
+
+```python
+class MalfunctionHandling:
+    """Handle sensor failures gracefully"""
+    
+    async def process_suspicious_observation(self, obs: Observation) -> Observation:
+        """
+        Don't blindly filter - classify and handle intelligently
+        """
+        status = await self.validate_sensor_health(obs)
+        
+        if status == SensorStatus.HEALTHY:
+            return obs  # Return as-is
+        
+        elif status == SensorStatus.SENSOR_MALFUNCTION:
+            # Alert bot to investigate
+            await self.alert_bot(obs.robot_id, 
+                message="Thermal sensor readings appear anomalous. Recalibration recommended.")
+            
+            # Mark with low confidence, but keep in map
+            obs.confidence *= 0.3  # Reduce from 0.95 to 0.28
+            obs.annotation = "SENSOR_MALFUNCTION_FLAG"
+            return obs  # Return with warning flag
+        
+        elif status == SensorStatus.ROGUE_BOT:
+            # Revoke and filter
+            await self.revoke_bot(obs.robot_id)
+            return None  # Filter out entirely
+        
+        return obs
+```
+
+---
+
+## Summary: Data Integrity Strategy
+
+| Scenario | Detection | Response |
+|----------|-----------|----------|
+| **Rogue Bot** | Consistent pattern of intentional bad data | Filter + revoke credentials |
+| **Sensor Malfunction** | Single bot deviates from own baseline, matches peers | Flag + alert bot + reduce confidence |
+| **Calibration Drift** | Gradual deviation over time | Alert for recalibration |
+| **Transient Glitch** | Single outlier, bot returns to normal next read | Log + keep (single observation won't skew) |
+| **Environmental Interference** | Sensor sensitive to conditions | Document interference source |
+
+---
+
 ## Conclusion
 
-PyTerrainMap's append-only, immutable design ensures that **even if robots go rogue, the historical truth is preserved**. PyTerrainAI's quality gates ensure that **contaminated data doesn't reach operational bots**, while maintaining the complete audit trail for investigation.
+PyTerrainMap's append-only, immutable design ensures that **even if robots go rogue or sensors fail, the historical truth is preserved**. PyTerrainAI's quality gates ensure that **contaminated data doesn't reach operational bots**, while maintaining the complete audit trail for investigation.
+
+Critical insight: **Old data is the validation baseline for new data.** By comparing new observations against 30 days of history, we detect both rogue behavior and sensor malfunctions, distinguishing between intentional attacks and honest equipment failures.
 
 This is why separation of concerns (PyTerrainMap ≠ PyTerrainAI) is critical: storage is pure and immutable, intelligence layer is smart and adaptive.
