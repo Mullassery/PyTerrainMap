@@ -1,7 +1,11 @@
-//! In-memory immutable storage for observations
+//! Storage architecture with pluggable backends
 //!
-//! Append-only immutable observation log. Once an observation is added,
-//! it cannot be modified (only read, queried, or expired via time window).
+//! Immutable append-only observation log with multi-backend support.
+//! Observations can be persisted to PostgreSQL (hot), BigQuery (warm), S3 (cold), or memory.
+
+pub mod backends;
+pub mod postgres;
+pub mod federation;
 
 use crate::types::{Observation, Result, Error};
 use std::sync::Arc;

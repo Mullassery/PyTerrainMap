@@ -1,6 +1,6 @@
 [package]
 name = "pyterrain-map"
-version = "0.0.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
 license = "MIT"
@@ -52,7 +52,7 @@ hyper = { version = "0.14", features = ["full"] }  # MIT
 tokio-util = { version = "0.7", features = ["codec"] }  # MIT
 
 # Optional: Database (OSS only)
-sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "postgres"], optional = true }  # MIT/Apache 2.0
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "postgres", "uuid", "chrono"], optional = true }  # MIT/Apache 2.0
 rusqlite = { version = "0.30", features = ["bundled"], optional = true }  # MIT
 
 # Optional: Image processing for PyNoramic (OSS only)
@@ -71,7 +71,7 @@ proptest = "1.4"
 tokio-test = "0.4"
 
 [features]
-default = []
+default = ["database"]
 database = ["sqlx", "rusqlite"]
 imaging = ["image"]  # opencv-python used via Python wrapper instead
 pynoramic = ["imaging"]

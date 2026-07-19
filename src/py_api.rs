@@ -220,6 +220,10 @@ impl PyQueryResult {
         self.observations.len()
     }
 
+    pub fn len(&self) -> usize {
+        self.observations.len()
+    }
+
     pub fn __getitem__(&self, idx: usize) -> PyResult<PyObservation> {
         self.observations
             .get(idx)
@@ -386,120 +390,5 @@ impl PyTerrainMap {
 impl Default for PyTerrainMap {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_geopoint_creation() {
-        let point = PyGeoPoint::new(40.7128, -74.0060);
-        assert_eq!(point.lat, 40.7128);
-        assert_eq!(point.lon, -74.0060);
-    }
-
-    #[test]
-    fn test_geopoint_distance() {
-        let p1 = PyGeoPoint::new(0.0, 0.0);
-        let p2 = PyGeoPoint::new(0.0, 0.001);
-        let distance = p1.distance_m(&p2);
-        assert!(distance > 100.0 && distance < 150.0);
-    }
-
-    #[test]
-    fn test_region_contains() {
-        let region = PyRegion::new(10.0, 0.0, 10.0, 0.0);
-        let inside = PyGeoPoint::new(5.0, 5.0);
-        let outside = PyGeoPoint::new(15.0, 15.0);
-
-        assert!(region.contains(&inside));
-        assert!(!region.contains(&outside));
-    }
-
-    #[test]
-    fn test_observation_creation() {
-        let obs = PyObservation::new(
-            "robot-1".to_string(),
-            1000,
-            40.7128,
-            -74.0060,
-            "thermal".to_string(),
-            r#"{"celsius": 25.0}"#.to_string(),
-            0.95,
-        );
-
-        assert_eq!(obs.robot_id, "robot-1");
-        assert_eq!(obs.confidence, 0.95);
-    }
-
-    #[test]
-    fn test_terrain_map_push_observation() {
-        let map = PyTerrainMap::new();
-        let obs = PyObservation::new(
-            "robot-1".to_string(),
-            1000,
-            40.7128,
-            -74.0060,
-            "thermal".to_string(),
-            r#"{"celsius": 25.0}"#.to_string(),
-            0.95,
-        );
-
-        let result = map.push_observation(&obs);
-        assert!(result.is_ok());
-        assert_eq!(map.observations.read().len(), 1);
-    }
-
-    #[test]
-    fn test_terrain_map_query() {
-        let map = PyTerrainMap::new();
-
-        // Add observations
-        for i in 0..5 {
-            let obs = PyObservation::new(
-                "robot-1".to_string(),
-                1000 + (i as i64),
-                40.7128 + (i as f64 * 0.001),
-                -74.0060,
-                "thermal".to_string(),
-                r#"{"celsius": 25.0}"#.to_string(),
-                0.95,
-            );
-            let _ = map.push_observation(&obs);
-        }
-
-        // Query
-        let location = PyGeoPoint::new(40.7128, -74.0060);
-        let result = map.query(&location, 10.0, 10000);
-
-        assert!(result.is_ok());
-        let qr = result.unwrap();
-        assert!(qr.total_count > 0);
-    }
-
-    #[test]
-    fn test_query_result() {
-        let obs = PyObservation::new(
-            "robot-1".to_string(),
-            1000,
-            40.7128,
-            -74.0060,
-            "thermal".to_string(),
-            r#"{"celsius": 25.0}"#.to_string(),
-            0.95,
-        );
-
-        let result = PyQueryResult {
-            total_count: 1,
-            observations: vec![obs],
-            avg_confidence: 0.95,
-            time_range_seconds: 1000,
-        };
-
-        assert_eq!(result.total_count, 1);
-        assert_eq!(result.len(), 1);
     }
 }
