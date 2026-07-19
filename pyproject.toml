@@ -3,7 +3,7 @@ requires = ["maturin>=1.4,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "pyterrain-map"
+name = "pyterrainMap"
 version = "0.0.1"
 description = "Spatial intelligence companion for multi-robot terrain mapping with anomaly detection and 3D reconstruction"
 readme = "README.md"

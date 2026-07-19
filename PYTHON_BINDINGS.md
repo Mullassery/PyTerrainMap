@@ -6,14 +6,14 @@ Native Python package exposing PyTerrainMap Rust core via PyO3.
 
 ### From PyPI (When Available)
 ```bash
-pip install pyterrain-map
+pip install pyterrainMap
 ```
 
 ### From Source (Development)
 ```bash
 # Clone repository
-git clone https://github.com/Mullassery/pyterrain-map.git
-cd pyterrain-map
+git clone https://github.com/Mullassery/pyterrainMap.git
+cd pyterrainMap
 
 # Build Python wheel
 maturin develop
@@ -372,7 +372,7 @@ PyTerrainMap Rust core ensures high performance:
 ### Import Error: "module 'pyterrain_map' not found"
 ```bash
 # Reinstall development mode
-pip uninstall pyterrain-map
+pip uninstall pyterrainMap
 maturin develop
 ```
 
@@ -399,4 +399,4 @@ MIT License - See LICENSE file
 - **CLI**: Use `pytm --help` for command reference
 - **API Docs**: See docstrings (e.g., `help(TerrainMap.analyze)`)
 - **Examples**: Check `examples/` directory
-- **Issues**: Report at https://github.com/Mullassery/pyterrain-map/issues
+- **Issues**: Report at https://github.com/Mullassery/pyterrainMap/issues

@@ -2,9 +2,16 @@
 //!
 //! Defines the fundamental structures for spatial-temporal observation storage:
 //! - GeoPoint: Location (lat, lon)
-//! - Observation: Single sensor reading with metadata
+//! - TemporalMetadata: Time as first-class coordinate with provenance
+//! - Observation: Single sensor reading with spatial-temporal coordinates
 //! - SensorType & SensorValue: Typed sensor data
 //! - Elevation tracking for 3D spatial awareness
+//!
+//! CRITICAL: Time is a first-class dimension treated with same rigor as space.
+//! Every observation must preserve: event_time, capture_time, transmission_time,
+//! ingestion_time, processing_time, and clock synchronization metadata.
+//! This enables proper handling of out-of-order events, late-arriving data, and
+//! multi-clock synchronization across heterogeneous robot fleets.
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -125,7 +132,152 @@ pub struct ObjectDetection {
     pub bbox: [f32; 4],
 }
 
-/// Single observation: raw sensor data from one robot at one location/time
+/// Clock source for temporal synchronization
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ClockSource {
+    GPS,        // Standard GPS time
+    NavIC,      // Indian GNSS system
+    Galileo,    // European GNSS system
+    GLONASS,    // Russian GNSS system
+    BeiDou,     // Chinese GNSS system
+    IMU,        // IMU timestamp
+    Camera,     // Camera frame timestamp
+    LiDAR,      // LiDAR packet timestamp
+    SystemClock, // Local system clock
+    UTC,        // UTC epoch time
+    NTP,        // Network Time Protocol synchronized
+    PTP,        // Precision Time Protocol
+}
+
+impl std::fmt::Display for ClockSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClockSource::GPS => write!(f, "gps"),
+            ClockSource::NavIC => write!(f, "navic"),
+            ClockSource::Galileo => write!(f, "galileo"),
+            ClockSource::GLONASS => write!(f, "glonass"),
+            ClockSource::BeiDou => write!(f, "beidou"),
+            ClockSource::IMU => write!(f, "imu"),
+            ClockSource::Camera => write!(f, "camera"),
+            ClockSource::LiDAR => write!(f, "lidar"),
+            ClockSource::SystemClock => write!(f, "system_clock"),
+            ClockSource::UTC => write!(f, "utc"),
+            ClockSource::NTP => write!(f, "ntp"),
+            ClockSource::PTP => write!(f, "ptp"),
+        }
+    }
+}
+
+/// Temporal metadata - time as first-class coordinate with provenance
+///
+/// Treats time with same rigor as spatial coordinates. Captures all temporal
+/// dimensions: when event occurred, when captured, when transmitted, when ingested,
+/// when processed. Enables reasoning about out-of-order events and late arrivals.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TemporalMetadata {
+    /// When the event actually occurred in reality (microseconds since epoch)
+    /// This is the ground truth temporal coordinate
+    pub event_time_us: i64,
+
+    /// When the sensor physically captured/measured the event
+    /// May differ from event_time due to sensor integration time
+    pub capture_time_us: i64,
+
+    /// When the observation was transmitted from robot to system
+    /// May be significantly later than capture due to batching or buffering
+    pub transmission_time_us: i64,
+
+    /// When the observation entered the ingestion system
+    /// Marks arrival in backend storage layer
+    pub ingestion_time_us: i64,
+
+    /// When the observation was processed/indexed
+    /// After anomaly detection, fusion, etc.
+    pub processing_time_us: i64,
+
+    /// Source of temporal information
+    pub clock_source: ClockSource,
+
+    /// Precision of timestamp in microseconds (e.g., 1000 = millisecond precision)
+    pub precision_us: u32,
+
+    /// Estimated latency from event to ingestion (microseconds)
+    pub estimated_latency_us: u32,
+
+    /// Synchronization confidence (0.0-1.0)
+    /// Higher = more confident this timestamp is correctly synchronized
+    pub sync_confidence: f32,
+
+    /// Whether this observation arrived out of order
+    /// (ingestion_time is later than more recent observations)
+    pub is_late_arrival: bool,
+
+    /// Jitter estimate in microseconds
+    /// Variability in transmission delay
+    pub jitter_us: u32,
+
+    /// Temporal validity confidence (0.0-1.0)
+    /// Consider all factors: clock accuracy, sync quality, jitter
+    pub temporal_confidence: f32,
+}
+
+impl TemporalMetadata {
+    /// Create new temporal metadata from event time
+    pub fn from_event_time(
+        event_time_us: i64,
+        clock_source: ClockSource,
+        precision_us: u32,
+    ) -> Self {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_micros() as i64;
+
+        let estimated_latency = (now - event_time_us).max(0) as u32;
+
+        TemporalMetadata {
+            event_time_us,
+            capture_time_us: event_time_us,
+            transmission_time_us: now,
+            ingestion_time_us: now,
+            processing_time_us: now,
+            clock_source,
+            precision_us,
+            estimated_latency_us: estimated_latency,
+            sync_confidence: 0.95,
+            is_late_arrival: false,
+            jitter_us: 0,
+            temporal_confidence: 0.95,
+        }
+    }
+
+    /// Update processing timestamp
+    pub fn mark_processed(&mut self) {
+        self.processing_time_us = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_micros() as i64;
+    }
+
+    /// Compute total latency from event to processing
+    pub fn total_latency_us(&self) -> u32 {
+        ((self.processing_time_us - self.event_time_us).max(0)) as u32
+    }
+
+    /// Compute capture-to-ingestion latency
+    pub fn transmission_latency_us(&self) -> u32 {
+        ((self.ingestion_time_us - self.capture_time_us).max(0)) as u32
+    }
+
+    /// Check if observation is temporally valid
+    pub fn is_temporally_valid(&self) -> bool {
+        self.temporal_confidence >= 0.7
+            && self.event_time_us > 0
+            && self.event_time_us <= self.ingestion_time_us
+    }
+}
+
+/// Single observation: raw sensor data with full spatial-temporal coordinates
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Observation {
     /// Unique identifier
@@ -153,12 +305,16 @@ pub struct Observation {
     /// Represents sensor/device reliability, not affected by temporal decay
     pub confidence: f32,
 
+    /// Full temporal metadata with clock provenance
+    /// Enables reasoning about out-of-order events and late arrivals
+    pub temporal: TemporalMetadata,
+
     /// Additional metadata (battery level, signal strength, etc.)
     pub metadata: HashMap<String, String>,
 }
 
 impl Observation {
-    /// Create a new observation with UUID
+    /// Create a new observation with UUID and default temporal metadata
     pub fn new(
         robot_id: String,
         timestamp: i64,
@@ -177,6 +333,32 @@ impl Observation {
             sensor_type,
             value,
             confidence,
+            temporal: TemporalMetadata::from_event_time(timestamp, ClockSource::UTC, 1000),
+            metadata: HashMap::new(),
+        }
+    }
+
+    /// Create observation with explicit clock source
+    pub fn with_clock_source(
+        robot_id: String,
+        timestamp: i64,
+        location: GeoPoint,
+        elevation_asl: Option<f32>,
+        sensor_type: SensorType,
+        value: SensorValue,
+        confidence: f32,
+        clock_source: ClockSource,
+    ) -> Self {
+        Observation {
+            id: Uuid::new_v4(),
+            robot_id,
+            timestamp,
+            location,
+            elevation_asl,
+            sensor_type,
+            value,
+            confidence,
+            temporal: TemporalMetadata::from_event_time(timestamp, clock_source, 1000),
             metadata: HashMap::new(),
         }
     }
@@ -187,12 +369,35 @@ impl Observation {
         self
     }
 
-    /// Check if observation is valid
+    /// Set temporal metadata
+    pub fn with_temporal(mut self, temporal: TemporalMetadata) -> Self {
+        self.temporal = temporal;
+        self
+    }
+
+    /// Check if observation is valid (spatial and temporal)
     pub fn is_valid(&self) -> bool {
         self.location.is_valid()
             && self.confidence >= 0.0
             && self.confidence <= 1.0
             && self.timestamp > 0
+            && self.temporal.is_temporally_valid()
+    }
+
+    /// Check if event occurred (chronological ordering)
+    pub fn event_occurred_before(&self, other: &Observation) -> bool {
+        self.temporal.event_time_us < other.temporal.event_time_us
+    }
+
+    /// Check if arrival is out of order
+    pub fn check_late_arrival(&mut self) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_micros() as i64;
+        // Mark as late if ingestion time is more than 100ms after event time
+        // (compared to normal ~50ms expected latency)
+        self.temporal.is_late_arrival = (now - self.temporal.event_time_us) > 100_000;
     }
 }
 

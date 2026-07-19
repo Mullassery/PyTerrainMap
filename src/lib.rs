@@ -37,9 +37,9 @@ pub mod py;  // PyO3 Python bindings
 
 // Re-export all public types
 pub use types::{
-    BaselineStatistics, ElevationBucket, Error, FusedData, FusedDetection, GeoPoint,
+    BaselineStatistics, ClockSource, ElevationBucket, Error, FusedData, FusedDetection, GeoPoint,
     GridCell, ObjectDetection, Observation, Result, SensorType, SensorValue, TemperatureEstimate,
-    TemporalTrend,
+    TemporalMetadata, TemporalTrend,
 };
 
 // Re-export spatial types

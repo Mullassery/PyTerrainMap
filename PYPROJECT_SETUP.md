@@ -4,7 +4,7 @@
 
 PyTerrainMap exposes its high-performance Rust core to Python via PyO3 native extension module (abi3-py310). This enables both:
 
-1. **Python Packages**: `pip install pyterrain-map` (when published)
+1. **Python Packages**: `pip install pyterrainMap` (when published)
 2. **Python API**: `from pyterrain_map import ...`
 3. **CLI Tool**: `pytm <command>`
 
@@ -16,7 +16,7 @@ Python 3.13 (system)
     ↓
 PyO3 0.22 (extension-module)
     ↓
-Rust Core (pyterrain-map crate)
+Rust Core (pyterrainMap crate)
     ↓
 maturin (Python build backend)
     ↓
@@ -35,7 +35,7 @@ The build uses `abi3-py310` feature, which creates a **stable ABI wheel** compat
 ### Files Structure
 
 ```
-pyterrain-map/
+pyterrainMap/
 ├── Cargo.toml                          # Rust package config + PyO3 dependency
 ├── pyproject.toml                      # Python package config + maturin backend
 ├── src/
@@ -113,7 +113,7 @@ pip install maturin
 
 ### Development Build
 ```bash
-cd pyterrain-map
+cd pyterrainMap
 maturin develop              # Builds wheel and installs editable
 # or
 pip install -e .            # Also works with maturin backend
