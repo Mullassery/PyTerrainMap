@@ -26,6 +26,7 @@ pub mod reconstruction_3d;
 pub mod slam;
 pub mod photogrammetry;
 pub mod tiles_3d;
+pub mod cesium_integration;
 
 // Re-export all public types
 pub use types::{
@@ -105,6 +106,13 @@ pub use photogrammetry::{
 pub use tiles_3d::{
     Tileset, Tile, BoundingVolume, TilesExporter, QuantizedPointCloud,
     PNTSHeader, PointCloudFeatures, TilesStats,
+};
+
+// Re-export Cesium integration types
+pub use cesium_integration::{
+    CesiumConfig, CameraPosition, TerrainProvider, BaseLayer, TilesetLayer,
+    FeatureLayer, DataSource, FeatureStyle, ViewerOptions, TilesetMetadata,
+    BoundingBox, CesiumIonAsset, MeasurementTool,
 };
 
 // TODO: Implement in future weeks
