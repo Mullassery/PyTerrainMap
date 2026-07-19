@@ -11,6 +11,8 @@
 
 pub mod types;
 pub mod spatial;
+pub mod temporal;
+pub mod storage;
 
 // Re-export all public types
 pub use types::{
@@ -22,8 +24,13 @@ pub use types::{
 // Re-export spatial types
 pub use spatial::{SpatialIndex, SpatialKey, H3Cell};
 
+// Re-export temporal types
+pub use temporal::{TemporalIndex, DecayFunction};
+
+// Re-export storage types
+pub use storage::ObservationStore;
+
 // TODO: Implement in future weeks
-// pub mod temporal;    // Week 3-4: Time-series indexing
 // pub mod storage;     // Week 3-4: In-memory storage
 // pub mod fusion;      // Week 4-5: Sensor fusion
 // pub mod anomaly;     // Week 7-8: Anomaly detection
