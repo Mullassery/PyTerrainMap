@@ -10,6 +10,7 @@
 //! Python bindings are provided via PyO3 in the `python/` directory.
 
 pub mod types;
+pub mod spatial;
 
 // Re-export all public types
 pub use types::{
@@ -18,8 +19,10 @@ pub use types::{
     TemporalTrend,
 };
 
+// Re-export spatial types
+pub use spatial::{SpatialIndex, SpatialKey, H3Cell};
+
 // TODO: Implement in future weeks
-// pub mod spatial;     // Week 2-3: H3 spatial indexing
 // pub mod temporal;    // Week 3-4: Time-series indexing
 // pub mod storage;     // Week 3-4: In-memory storage
 // pub mod fusion;      // Week 4-5: Sensor fusion
@@ -29,8 +32,6 @@ pub use types::{
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);

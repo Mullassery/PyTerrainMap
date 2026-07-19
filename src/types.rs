@@ -40,6 +40,16 @@ pub struct ElevationBucket {
     pub max_m: f32,
 }
 
+// Manually implement Eq and Hash for ElevationBucket using bit representation of f32
+impl Eq for ElevationBucket {}
+
+impl std::hash::Hash for ElevationBucket {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.min_m.to_bits().hash(state);
+        self.max_m.to_bits().hash(state);
+    }
+}
+
 impl ElevationBucket {
     /// Create elevation bucket with 1m resolution
     pub fn from_elevation_1m(elevation_asl: f32) -> Self {
@@ -280,7 +290,7 @@ impl std::error::Error for Error {}
 
 #[cfg(test)]
 mod tests {
-    use super::{GeoPoint, ElevationBucket, Observation, SensorType, SensorValue, BaselineStatistics, ObjectDetection};
+    use super::{GeoPoint, ElevationBucket, Observation, SensorType, SensorValue, BaselineStatistics};
 
     #[test]
     fn test_geopoint_creation() {
