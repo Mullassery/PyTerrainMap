@@ -25,6 +25,7 @@ pub mod reference_images;
 pub mod reconstruction_3d;
 pub mod slam;
 pub mod photogrammetry;
+pub mod tiles_3d;
 
 // Re-export all public types
 pub use types::{
@@ -98,6 +99,12 @@ pub use slam::{
 pub use photogrammetry::{
     StructureFromMotion, PhotogrammetryProcessor, DensePointCloud, TriangulatedPoint,
     CameraPoseEstimate, Neural3DRepresentation, GaussianSplat, PhotogrammetryStats,
+};
+
+// Re-export 3D Tiles types
+pub use tiles_3d::{
+    Tileset, Tile, BoundingVolume, TilesExporter, QuantizedPointCloud,
+    PNTSHeader, PointCloudFeatures, TilesStats,
 };
 
 // TODO: Implement in future weeks
