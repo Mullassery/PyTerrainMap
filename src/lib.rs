@@ -34,6 +34,7 @@ pub mod intelligence;
 pub mod cli;
 pub mod spatial_reasoning;
 pub mod py;  // PyO3 Python bindings
+pub mod parallel_execution;  // Multi-GPU parallel execution runtime
 
 // Re-export all public types
 pub use types::{
@@ -157,6 +158,13 @@ pub use cli::{CLICommand, CLIResponse, ResponseStatus};
 pub use spatial_reasoning::{
     DataProvenance, RegionalPreference, Uncertainty, ReasomedSpatialAnswer,
     SourceDisagreement, PositionAnswer, SpatialReasoningEngine,
+};
+
+// Re-export Parallel Execution (Multi-GPU scheduling + orchestration)
+pub use parallel_execution::{
+    SpaceTimeScheduler, WorkPacket, WorkType, WorkPriority, GPUDeviceId,
+    GPUResources, RegionId, TimeWindow, AgentId, Watermark,
+    LateArrivalTask, TemporalCorrection, ExecutionMetadata, SchedulerMetrics,
 };
 
 // TODO: Implement in future weeks
