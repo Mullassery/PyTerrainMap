@@ -8,38 +8,62 @@ description = "Collaborative terrain mapping platform for multi-robot fleets"
 repository = "https://github.com/Mullassery/pyterrain-map"
 
 [dependencies]
-tokio = { version = "1.35", features = ["full"] }
-pyo3 = { version = "0.20", features = ["extension-module"] }
-pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-uuid = { version = "1.6", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-h3 = "0.11"
-geo = "0.27"
-geohash = "0.13"
-hashbrown = "0.14"
-parking_lot = "0.12"
-crossbeam = "0.8"
-rayon = "1.7"
-ndarray = "0.15"
-statrs = "0.16"
-thiserror = "1.0"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-anyhow = "1.0"
-async-trait = "0.1"
-futures = "0.3"
-hyper = { version = "0.14", features = ["full"] }
-tokio-util = { version = "0.7", features = ["codec"] }
+# OSS POLICY: All dependencies MIT, Apache 2.0, or BSD licensed
+# See OSS_POLICY.md for details
 
-# Optional: Database
-sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "postgres"], optional = true }
-rusqlite = { version = "0.30", features = ["bundled"], optional = true }
+# Async runtime & tokio
+tokio = { version = "1.35", features = ["full"] }  # MIT
 
-# Optional: Image processing (for PyNoramic)
-image = { version = "0.24", optional = true }
-opencv = { version = "0.77", optional = true }
+# Python interop
+pyo3 = { version = "0.20", features = ["extension-module"] }  # Apache 2.0
+pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"] }  # Apache 2.0
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }  # MIT/Apache 2.0
+serde_json = "1.0"  # MIT/Apache 2.0
+
+# Utilities
+uuid = { version = "1.6", features = ["v4", "serde"] }  # MIT/Apache 2.0
+chrono = { version = "0.4", features = ["serde"] }  # MIT/Apache 2.0
+parking_lot = "0.12"  # MIT/Apache 2.0
+anyhow = "1.0"  # MIT/Apache 2.0
+thiserror = "1.0"  # MIT/Apache 2.0
+async-trait = "0.1"  # MIT/Apache 2.0
+futures = "0.3"  # MIT/Apache 2.0
+
+# Geospatial
+h3 = "0.11"  # Apache 2.0
+geo = "0.27"  # Apache 2.0
+
+# Math/Stats
+ndarray = "0.15"  # MIT/Apache 2.0
+statrs = "0.16"  # Apache 2.0
+
+# Concurrency (use parking_lot, not crossbeam, for smaller deps)
+# crossbeam = "0.8"  # REMOVED: Use parking_lot instead
+# rayon = "1.7"  # REMOVED: Not needed for MVP
+
+# Logging & tracing
+tracing = "0.1"  # MIT
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # MIT
+
+# HTTP server (optional, for HTTP API)
+hyper = { version = "0.14", features = ["full"] }  # MIT
+tokio-util = { version = "0.7", features = ["codec"] }  # MIT
+
+# Optional: Database (OSS only)
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "postgres"], optional = true }  # MIT/Apache 2.0
+rusqlite = { version = "0.30", features = ["bundled"], optional = true }  # MIT
+
+# Optional: Image processing for PyNoramic (OSS only)
+image = { version = "0.24", optional = true }  # MIT/Apache 2.0
+# opencv = { version = "0.77", optional = true }  # REMOVED: Use Python's opencv-python instead
+
+# DO NOT ADD:
+# - Any AWS/Google Cloud/Azure SDKs
+# - Any proprietary libraries
+# - TensorFlow, PyTorch (too heavy)
+# - Anything without permissive license
 
 [dev-dependencies]
 criterion = "0.5"
