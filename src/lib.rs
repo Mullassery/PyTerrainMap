@@ -17,6 +17,7 @@ pub mod query;
 pub mod fusion;
 pub mod anomaly;
 pub mod export;
+pub mod export_security;
 
 // Re-export all public types
 pub use types::{
@@ -45,6 +46,11 @@ pub use anomaly::{AnomalyDetector, AnomalyType, AnomalyStats};
 
 // Re-export export types
 pub use export::{ExportFormat, SpatialExporter, GeoJSONExporter, KMLExporter};
+
+// Re-export security types
+pub use export_security::{
+    DataClassification, UserRole, ExportPrivacy, ExportPolicy, AuditLogger, AuditLogEntry,
+};
 
 // TODO: Implement in future weeks
 // pub mod storage;     // Week 3-4: In-memory storage
