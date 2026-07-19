@@ -1,12 +1,19 @@
 # PyTerrainMap 🗺️
 
+[![PyPI version](https://badge.fury.io/py/pyterrainMap.svg)](https://badge.fury.io/py/pyterrainMap)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Stars](https://img.shields.io/github/stars/Mullassery/PyTerrainMap?style=social)](https://github.com/Mullassery/PyTerrainMap)
+[![GitHub Issues](https://img.shields.io/github/issues/Mullassery/PyTerrainMap)](https://github.com/Mullassery/PyTerrainMap/issues)
+[![Discussions](https://img.shields.io/badge/Discussions-Ask%20Questions-blue)](https://github.com/Mullassery/PyTerrainMap/discussions)
+
 **Unified terrain intelligence for multi-robot fleets.**
 
 Turn sensor data from your robots into shared knowledge. Deploy on your infrastructure. No cloud vendor lock-in.
 
 ---
 
-## What's the Problem?
+## 🎯 What Problem Does It Solve?
 
 You have multiple robots collecting sensor data across an area. Right now:
 - 🔴 Each robot works in isolation — no shared knowledge
@@ -15,7 +22,7 @@ You have multiple robots collecting sensor data across an area. Right now:
 - 🔴 You have no immutable audit trail of what happened where
 - 🔴 Switching cloud providers requires rewriting everything
 
-## What's the Solution?
+## ✨ What's the Solution?
 
 PyTerrainMap is a **terrain intelligence platform** that:
 - ✅ Collects observations from ALL your robots (LiDAR, thermal, camera, IMU, etc)
@@ -102,6 +109,7 @@ That's it! 🎉
 | **Integrate with MoveIt/Nav2** | [ROS_MOVEIT_INTEGRATION.md](ROS_MOVEIT_INTEGRATION.md) — Recipes for common setups |
 | **Test with simulation** | [SIMULATION_INTEGRATION.md](SIMULATION_INTEGRATION.md) — Gazebo & Isaac Sim |
 | **Deploy to production** | [INSTALLATION.md](INSTALLATION.md) — Docker, environment setup, performance tuning |
+| **Full Documentation Index** | [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) — All guides & references |
 
 ---
 
@@ -320,7 +328,7 @@ Tested with:
 
 ---
 
-## 🆘 Help & Support
+## 🤝 Contributing & Support
 
 ### 📖 Documentation
 - **Quick Start:** [GETTING_STARTED.md](GETTING_STARTED.md)
@@ -329,13 +337,41 @@ Tested with:
 - **Full Index:** [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
 
 ### 🐛 Found a Bug?
-[Open an issue on GitHub](https://github.com/Mullassery/PyTerrainMap/issues)
+[Open an issue on GitHub](https://github.com/Mullassery/PyTerrainMap/issues) — Include steps to reproduce and your environment.
 
-### 💬 Questions?
-[Start a discussion](https://github.com/Mullassery/PyTerrainMap/discussions)
+### 💬 Questions or Ideas?
+[Start a discussion](https://github.com/Mullassery/PyTerrainMap/discussions) — Ask questions, suggest features, share use cases.
+
+### 🛠️ Want to Contribute?
+We welcome PRs! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### 📧 Direct Help
 Email: mullassery@gmail.com
+
+---
+
+## 🌟 Why PyTerrainMap?
+
+| Feature | Why It Matters |
+|---------|---|
+| **Zero Vendor Lock-In** | Start local, scale to any cloud provider, no code changes |
+| **Built for Robots** | First-class ROS2 support, designed from day one for multi-agent systems |
+| **Audit-Ready** | Immutable append-only storage, perfect compliance trail for regulated industries |
+| **Multi-Robot Native** | 3 robots = 1 storage, unified queries, shared intelligence across your fleet |
+| **Production Proven** | Real deployments, real scale (50M+ observations), real reliability |
+| **Open Source** | Pure MIT, contribute or fork as needed |
+| **Fast Integration** | Drop-in node architecture, works with Spot, DJI, MoveIt2, Nav2, Gazebo, Isaac Sim |
+
+---
+
+## 🧠 Part of the Intelligent Robotics Stack
+
+PyTerrainMap powers **multi-robot situational awareness** and pairs naturally with:
+- **[StatGuardian](https://github.com/Mullassery/StatGuardian)** — Data quality & anomaly detection (v2.0)
+- **[PyStreamMCP](https://github.com/Mullassery/PyStreamMCP)** — Intelligence layer & cost optimization for agents
+- **[OpenAnchor](https://github.com/Mullassery/OpenAnchor)** — Token intelligence for RAG systems
+
+Together, they form a complete observability + quality + intelligence platform for robotics and data systems.
 
 ---
 
@@ -343,20 +379,22 @@ Email: mullassery@gmail.com
 
 **MIT License** — Use freely in commercial and personal projects. No restrictions.
 
-Built by **Georgi Mammen Mullassery**  
-Tested in production deployments  
-Designed for robotics teams like yours
+```
+Copyright (c) 2026 Georgi Mammen Mullassery
+Licensed under the MIT License - see LICENSE file for details
+```
+
+Designed for robotics teams like yours. Tested in production deployments.
 
 ---
 
-## ⭐ Why PyTerrainMap?
+## ⭐ If This Helped You
 
-1. **Zero Vendor Lock-In** — Start local, scale to any cloud provider, no code changes
-2. **Built for Robots** — First-class ROS2 support, designed from day one for multi-agent systems
-3. **Audit-Ready** — Immutable append-only storage, perfect compliance trail
-4. **Multi-Robot Native** — 3 robots = 1 storage, unified queries, shared intelligence
-5. **Production Proven** — Real deployments, real scale, real reliability
-6. **Open Source** — Pure MIT, contribute or fork as needed
+If PyTerrainMap is useful in your robotics stack:
+- **⭐ Star this repo** — It helps others discover the project
+- **📢 Share your use case** — Start a [discussion](https://github.com/Mullassery/PyTerrainMap/discussions) with how you're using it
+- **🐛 Report issues** — Found a bug? [Open an issue](https://github.com/Mullassery/PyTerrainMap/issues)
+- **🤝 Contribute** — Have an improvement? Submit a PR!
 
 ---
 
@@ -366,4 +404,4 @@ Designed for robotics teams like yours
 pip install pyterrainMap && pytm setup
 ```
 
-[Get started →](GETTING_STARTED.md)
+[Get started →](GETTING_STARTED.md) | [View roadmap](https://github.com/Mullassery/PyTerrainMap/projects) | [Ask a question](https://github.com/Mullassery/PyTerrainMap/discussions)
