@@ -289,7 +289,7 @@ impl WeatherDataSource {
         }
     }
 
-    /// Create NOAA source
+    /// Create NOAA source (US-only, no API key needed)
     pub fn noaa() -> Self {
         WeatherDataSource {
             source_type: WeatherSourceType::NOAA,
@@ -308,6 +308,51 @@ impl WeatherDataSource {
             url: "https://api.weatherapi.com/v1".to_string(),
             update_frequency_hours: 1,
             coverage_km: 10.0,
+        }
+    }
+
+    /// Create Open-Meteo source (free, no API key needed, global coverage)
+    /// Recommended for autonomous robots - no rate limits, global, hourly updates
+    pub fn open_meteo() -> Self {
+        WeatherDataSource {
+            source_type: WeatherSourceType::Custom,
+            api_key: None,
+            url: "https://api.open-meteo.com/v1".to_string(),
+            update_frequency_hours: 1,
+            coverage_km: 9000.0, // Global grid
+        }
+    }
+
+    /// Create Tomorrow.io source (weather + environmental intelligence)
+    pub fn tomorrow_io(api_key: &str) -> Self {
+        WeatherDataSource {
+            source_type: WeatherSourceType::Custom,
+            api_key: Some(api_key.to_string()),
+            url: "https://api.tomorrow.io/v4".to_string(),
+            update_frequency_hours: 1,
+            coverage_km: 1.0, // Point data
+        }
+    }
+
+    /// Create Meteostat source (historical weather data)
+    pub fn meteostat() -> Self {
+        WeatherDataSource {
+            source_type: WeatherSourceType::Custom,
+            api_key: None,
+            url: "https://api.meteostat.net".to_string(),
+            update_frequency_hours: 24,
+            coverage_km: 100.0,
+        }
+    }
+
+    /// Create NASA POWER source (climate, solar radiation)
+    pub fn nasa_power() -> Self {
+        WeatherDataSource {
+            source_type: WeatherSourceType::Custom,
+            api_key: None,
+            url: "https://power.larc.nasa.gov/api/v1".to_string(),
+            update_frequency_hours: 24,
+            coverage_km: 10000.0,
         }
     }
 }
@@ -338,8 +383,9 @@ pub struct SoilDataSource {
 }
 
 impl SoilDataSource {
-    /// Create ISRIC soil database source
-    pub fn isric() -> Self {
+    /// Create SoilGrids source (ISRIC, global 250m resolution)
+    /// Recommended for global coverage - pH, texture, carbon, moisture estimates
+    pub fn soilgrids() -> Self {
         SoilDataSource {
             source_type: SoilSourceType::ISRIC,
             api_key: None,
@@ -349,7 +395,19 @@ impl SoilDataSource {
         }
     }
 
-    /// Create USDA NRCS source
+    /// Create ISRIC World Soil Information source (global datasets)
+    pub fn isric() -> Self {
+        SoilDataSource {
+            source_type: SoilSourceType::ISRIC,
+            api_key: None,
+            url: "https://www.isric.org/wwr/wwr-data-hub".to_string(),
+            update_frequency_days: 365,
+            grid_resolution_meters: 250.0,
+        }
+    }
+
+    /// Create USDA NRCS source (US-only, high resolution 30m)
+    /// Recommended for US operations - detailed soil maps
     pub fn usda_nrcs(api_key: &str) -> Self {
         SoilDataSource {
             source_type: SoilSourceType::USDA_NRCS,
@@ -357,6 +415,52 @@ impl SoilDataSource {
             url: "https://sdmdataaccess.nrcs.usda.gov/Tabular".to_string(),
             update_frequency_days: 90,
             grid_resolution_meters: 30.0,
+        }
+    }
+
+    /// Create Google Earth Engine source (global, multi-modal)
+    /// Soil, climate, land cover, vegetation, elevation
+    pub fn earth_engine(api_key: &str) -> Self {
+        SoilDataSource {
+            source_type: SoilSourceType::Custom,
+            api_key: Some(api_key.to_string()),
+            url: "https://earthengine.googleapis.com/v1".to_string(),
+            update_frequency_days: 1,
+            grid_resolution_meters: 30.0,
+        }
+    }
+
+    /// Create Copernicus source (Sentinel imagery, land monitoring)
+    /// EU-focused, free Sentinel-1/2 data
+    pub fn copernicus() -> Self {
+        SoilDataSource {
+            source_type: SoilSourceType::Custom,
+            api_key: None,
+            url: "https://dataspace.copernicus.eu".to_string(),
+            update_frequency_days: 5,
+            grid_resolution_meters: 10.0,
+        }
+    }
+
+    /// Create USGS Earth Explorer source (elevation, land cover, satellite)
+    pub fn usgs_earth_explorer(api_key: &str) -> Self {
+        SoilDataSource {
+            source_type: SoilSourceType::Custom,
+            api_key: Some(api_key.to_string()),
+            url: "https://m2m.cr.usgs.gov/api".to_string(),
+            update_frequency_days: 7,
+            grid_resolution_meters: 30.0,
+        }
+    }
+
+    /// Create LUCAS source (EU soil database)
+    pub fn lucas() -> Self {
+        SoilDataSource {
+            source_type: SoilSourceType::LUCAS,
+            api_key: None,
+            url: "https://esdac.jrc.ec.europa.eu/resource/lucas".to_string(),
+            update_frequency_days: 365,
+            grid_resolution_meters: 2000.0,
         }
     }
 
