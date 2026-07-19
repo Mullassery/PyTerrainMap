@@ -140,7 +140,7 @@ No proprietary libraries, cloud SDKs, or closed-source components.
 
 ```bash
 # Navigate to project
-cd /Users/georgimullassery/pypanorama
+cd /Users/georgimullassery/PyTerrainMap
 
 # Check out latest documentation
 git log --oneline | head -20

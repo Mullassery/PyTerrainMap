@@ -1,8 +1,8 @@
-# PyPanorama Architecture
+# PyTerrainMap Architecture
 
 ## Overview
 
-PyPanorama is a three-layer collaborative spatial intelligence system:
+PyTerrainMap is a three-layer collaborative spatial intelligence system:
 
 ```
 Layer 1: Python API (PyO3 bindings)
@@ -261,7 +261,7 @@ pub fn fuse_detections(
 ### Thread-Safe Storage
 
 ```rust
-pub struct PyPanorama {
+pub struct PyTerrainMap {
     // Multiple robots writing concurrently
     layers: Arc<RwLock<
         HashMap<SpatialKey, SpatialLayer>
@@ -451,16 +451,16 @@ pub fn compute_change_score(anomalies: &[Anomaly]) -> f32 {
 use pyo3::prelude::*;
 
 #[pyclass]
-pub struct PyPanorama {
-    inner: Arc<PanoramaCore>,
+pub struct PyTerrainMap {
+    inner: Arc<TerrainMapCore>,
 }
 
 #[pymethods]
-impl PyPanorama {
+impl PyTerrainMap {
     #[new]
     fn new(config: Option<&str>) -> PyResult<Self> {
-        let core = PanoramaCore::new(config)?;
-        Ok(PyPanorama { inner: Arc::new(core) })
+        let core = TerrainMapCore::new(config)?;
+        Ok(PyTerrainMap { inner: Arc::new(core) })
     }
     
     fn push_observation(&self, py: Python, obs: &PyAny) -> PyResult<PyObject> {

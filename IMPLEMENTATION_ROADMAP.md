@@ -39,7 +39,7 @@ Phase 4: Advanced Features (Weeks 11-18)
 **Start here:**
 
 ```bash
-cd /Users/georgimullassery/pypanorama
+cd /Users/georgimullassery/PyTerrainMap
 cargo new --lib
 ```
 
@@ -590,7 +590,7 @@ Image registration, Structure from Motion
 
 ```bash
 # Week 1-2: Create project structure
-cd /Users/georgimullassery/pypanorama
+cd /Users/georgimullassery/PyTerrainMap
 git checkout main
 
 # Create source files

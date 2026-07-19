@@ -264,7 +264,7 @@ services:
 
 ### Project Structure
 ```
-pypanorama/
+PyTerrainMap/
 ├── python/
 │   ├── pyterrain_map/          # Core storage (1300 LOC)
 │   │   ├── storage/

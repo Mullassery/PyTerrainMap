@@ -39,9 +39,9 @@ Unlike monolithic robot autonomy platforms, PyTerrainMap solves a different prob
 
 ## The Vision
 
-**PyPanorama is the shared knowledge layer for collaborative robot inspection, surveillance, and monitoring.**
+**PyTerrainMap is the shared knowledge layer for collaborative robot inspection, surveillance, and monitoring.**
 
-Users download, deploy locally, provide their terrain, deploy their bot fleet, and PyPanorama handles:
+Users download, deploy locally, provide their terrain, deploy their bot fleet, and PyTerrainMap handles:
 - Multi-perspective terrain reconstruction
 - Temporal knowledge decay and freshness scoring
 - Context synthesis ("what should this bot know before exploring?")
@@ -59,13 +59,13 @@ It works with ANY robot (quadruped, drone, humanoid, wheeled, custom) using ANY 
 
 #### 1. **Map-Centric vs Robot-Centric**
 - ❌ DimOS approach: Make each robot smart → fragmentation
-- ✅ PyPanorama approach: Make the map smart, keep robots simple
+- ✅ PyTerrainMap approach: Make the map smart, keep robots simple
 
 Robots are stateless clients. If a robot dies, restart it. If the map dies, reconstruct from observations. This scales.
 
 #### 2. **Sensor Layers, Not Robot Platforms**
 - ❌ Traditional: "Support Go2, then G1, then xArm..." (N×M problem)
-- ✅ PyPanorama: "Support thermal, LiDAR, camera..." (N+M problem)
+- ✅ PyTerrainMap: "Support thermal, LiDAR, camera..." (N+M problem)
 
 All observations feed into per-sensor-type layers. A new robot with an existing sensor set is instantly valuable.
 
@@ -78,7 +78,7 @@ Like FPS games' fog-of-war system but for robotics:
 
 ---
 
-## What PyPanorama Does
+## What PyTerrainMap Does
 
 ### Core Capabilities
 
@@ -145,7 +145,7 @@ Like FPS games' fog-of-war system but for robotics:
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
-│    PyPanorama Core                      │
+│    PyTerrainMap Core                      │
 │  ├─ 3D Spatial Indexing (H3 + elevation)
 │  ├─ Temporal Decay Functions            │
 │  ├─ Multi-sensor Fusion Engine          │
@@ -210,7 +210,7 @@ Any bot, any autonomy system can integrate via simple protocol:
 
 ```python
 # Initialize
-map_service = PyPanorama(host="192.168.1.100", port=8080)
+map_service = PyTerrainMap(host="192.168.1.100", port=8080)
 
 # Before mission
 context = await map_service.query(
@@ -249,7 +249,7 @@ for observation in my_sensor_readings:
 
 ### vs Existing Solutions
 
-| Aspect | ArcGIS | ROS SLAM | DimOS | Palantir | PyPanorama |
+| Aspect | ArcGIS | ROS SLAM | DimOS | Palantir | PyTerrainMap |
 |--------|--------|----------|-------|----------|-----------|
 | **Collaborative mapping** | ✓ Maps only | ✓ Per-robot | ✗ No | ✓ Enterprise | ✓ Core |
 | **3D elevation support** | ✓ Limited | ✗ Rare | ✗ No | ✓ Yes | ✓ First-class |
@@ -260,7 +260,7 @@ for observation in my_sensor_readings:
 | **Open source** | ✗ Proprietary | ✓ Yes | ✗ Research | ✗ Proprietary | ✓ MIT |
 | **Price** | $$$$ | Free | N/A | $$$$$ | Free |
 
-**PyPanorama's unique position:** ROS modularity + Palantir semantics + temporal awareness + zero cloud dependency + MIT license.
+**PyTerrainMap's unique position:** ROS modularity + Palantir semantics + temporal awareness + zero cloud dependency + MIT license.
 
 ---
 
@@ -296,11 +296,11 @@ for observation in my_sensor_readings:
 ## Getting Started
 
 ### For Users
-1. Download PyPanorama (GitHub releases)
+1. Download PyTerrainMap (GitHub releases)
 2. Provide terrain (OSM data, LiDAR scan, floor plans)
 3. Deploy your bot fleet (any autonomy system)
 4. Bots query for context, push observations
-5. PyPanorama builds shared knowledge
+5. PyTerrainMap builds shared knowledge
 
 ### For Contributors
 1. Clone repository
@@ -317,7 +317,7 @@ for observation in my_sensor_readings:
 
 ---
 
-## Why PyPanorama
+## Why PyTerrainMap
 
 ### For Roboticists
 - Stop rebuilding collaborative mapping
@@ -339,14 +339,14 @@ for observation in my_sensor_readings:
 
 ## Conclusion
 
-PyPanorama is the knowledge layer roboticists have been rebuilding in every project. It transforms robot fleets from isolated agents into a coherent collective intelligence system.
+PyTerrainMap is the knowledge layer roboticists have been rebuilding in every project. It transforms robot fleets from isolated agents into a coherent collective intelligence system.
 
-Like how multiplayer FPS games handle shared maps, PyPanorama handles shared terrain understanding. Download it, plug in your bots, and focus on what makes your application unique.
+Like how multiplayer FPS games handle shared maps, PyTerrainMap handles shared terrain understanding. Download it, plug in your bots, and focus on what makes your application unique.
 
-The future of robotics is collaborative. PyPanorama enables it.
+The future of robotics is collaborative. PyTerrainMap enables it.
 
 ---
 
 **Status:** Vision document (in development)  
 **License:** MIT  
-**Repository:** github.com/Mullassery/pypanorama
+**Repository:** github.com/Mullassery/pyterrain-map
