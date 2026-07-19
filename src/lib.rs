@@ -13,6 +13,7 @@ pub mod types;
 pub mod spatial;
 pub mod temporal;
 pub mod storage;
+pub mod query;
 
 // Re-export all public types
 pub use types::{
@@ -29,6 +30,9 @@ pub use temporal::{TemporalIndex, DecayFunction};
 
 // Re-export storage types
 pub use storage::ObservationStore;
+
+// Re-export query types
+pub use query::{Query, QueryResult};
 
 // TODO: Implement in future weeks
 // pub mod storage;     // Week 3-4: In-memory storage
