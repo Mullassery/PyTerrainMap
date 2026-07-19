@@ -27,6 +27,8 @@ pub mod slam;
 pub mod photogrammetry;
 pub mod tiles_3d;
 pub mod cesium_integration;
+pub mod change_detection;
+pub mod persistence;
 
 // Re-export all public types
 pub use types::{
@@ -113,6 +115,19 @@ pub use cesium_integration::{
     CesiumConfig, CameraPosition, TerrainProvider, BaseLayer, TilesetLayer,
     FeatureLayer, DataSource, FeatureStyle, ViewerOptions, TilesetMetadata,
     BoundingBox, CesiumIonAsset, MeasurementTool,
+};
+
+// Re-export Change Detection types
+pub use change_detection::{
+    ChangeDetectionResult, ChangeDetector, ChangeMask, ChangeHeatmap,
+    ChangeStatistics, TemporalChangesSeries, ChangeTrend,
+};
+
+// Re-export Persistence types
+pub use persistence::{
+    DatabaseBackend, DatabaseConfig, StorageRecord, StorageQuery,
+    GeographicBounds, DatabaseStats, IndexConfig, ArchivalPolicy,
+    PerformanceMetrics, BackupConfig, PersistenceManager,
 };
 
 // TODO: Implement in future weeks
