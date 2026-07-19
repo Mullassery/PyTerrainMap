@@ -20,6 +20,7 @@ pub mod export;
 pub mod export_security;
 pub mod api;
 pub mod api_tls;
+pub mod data_sources;
 
 // Re-export all public types
 pub use types::{
@@ -63,6 +64,12 @@ pub use api::{
 // Re-export TLS/HTTPS types
 pub use api_tls::{
     HttpsMode, TlsConfig, TlsVersion, CertificateInfo, CertificateValidator, SecurityHeaders,
+};
+
+// Re-export data source types
+pub use data_sources::{
+    DataSourceType, ExternalFeature, DataSourceConfig, DataSourceRegistry, GeometryType,
+    ContextEnrichment,
 };
 
 // TODO: Implement in future weeks
