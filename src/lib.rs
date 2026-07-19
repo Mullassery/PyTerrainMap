@@ -37,6 +37,7 @@ pub mod py;  // PyO3 Python bindings
 pub mod parallel_execution;  // Multi-GPU parallel execution runtime
 pub mod caching;  // Layered caching and progressive world understanding
 pub mod security;  // Security-first and auditability-first architecture
+pub mod predictive_caching;  // Predictive cache warming and intent inference
 
 // Re-export all public types
 pub use types::{
@@ -183,6 +184,16 @@ pub use security::{
     SourceIdentity, ProvenanceChain, ProvenanceStep, ProvenanceAction,
     RetentionPolicy, ComplianceMetadata,
     AuditLog, AuditEvent, AuditEventType, AuditResult,
+};
+
+// Re-export Predictive Caching (Intent inference, trajectory prediction, cache warming)
+pub use predictive_caching::{
+    BehavioralMode, Mission, Waypoint, DecisionState, CachePriority,
+    KnowledgeRequirement, Region, PredictedState, DecisionGraph,
+    TrajectoryModel, WaypointPrediction, PredictedTrajectory, BehaviorHistory,
+    EnvironmentalContext, TrajectoryPredictor, InferredIntent, IntentInferrer,
+    DefaultIntentInferrer, CacheWarmingBudget, PrioritizedPrefetch,
+    AccuracyStatistics, PredictionRecord, PredictionLearner,
 };
 
 // TODO: Implement in future weeks

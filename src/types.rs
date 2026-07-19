@@ -35,6 +35,20 @@ impl GeoPoint {
     pub fn is_valid(&self) -> bool {
         self.lat >= -90.0 && self.lat <= 90.0 && self.lon >= -180.0 && self.lon <= 180.0
     }
+
+    /// Calculate distance to another point using Haversine formula
+    pub fn distance_m(&self, other: &GeoPoint) -> f32 {
+        let lat1_rad = self.lat.to_radians();
+        let lat2_rad = other.lat.to_radians();
+        let delta_lat = (other.lat - self.lat).to_radians();
+        let delta_lon = (other.lon - self.lon).to_radians();
+
+        let a = (delta_lat / 2.0).sin().powi(2)
+            + lat1_rad.cos() * lat2_rad.cos() * (delta_lon / 2.0).sin().powi(2);
+        let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
+
+        (6371.0e3 * c) as f32
+    }
 }
 
 /// Elevation bucket for 3D spatial indexing
