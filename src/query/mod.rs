@@ -3,8 +3,8 @@
 //! Provides high-level queries that combine H3 spatial cells,
 //! elevation buckets, and temporal decay in a single operation.
 
-use crate::types::{Observation, Result, Error, ElevationBucket};
-use crate::spatial::{SpatialIndex, SpatialKey};
+use crate::types::{Observation, Result, ElevationBucket};
+use crate::spatial::SpatialIndex;
 use crate::temporal::TemporalIndex;
 use crate::storage::ObservationStore;
 use std::sync::Arc;
