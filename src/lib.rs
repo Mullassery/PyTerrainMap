@@ -32,6 +32,7 @@ pub mod persistence;
 pub mod weather_soil;
 pub mod intelligence;
 pub mod cli;
+pub mod spatial_reasoning;
 
 // Re-export all public types
 pub use types::{
@@ -150,6 +151,12 @@ pub use intelligence::{
 
 // Re-export CLI
 pub use cli::{CLICommand, CLIResponse, ResponseStatus};
+
+// Re-export Spatial Reasoning (Provenance & Multi-Source Intelligence)
+pub use spatial_reasoning::{
+    DataProvenance, RegionalPreference, Uncertainty, ReasomedSpatialAnswer,
+    SourceDisagreement, PositionAnswer, SpatialReasoningEngine,
+};
 
 // TODO: Implement in future weeks
 // pub mod storage;     // Week 3-4: In-memory storage
