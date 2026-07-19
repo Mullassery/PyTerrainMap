@@ -30,6 +30,7 @@ pub mod cesium_integration;
 pub mod change_detection;
 pub mod persistence;
 pub mod weather_soil;
+pub mod intelligence;
 
 // Re-export all public types
 pub use types::{
@@ -136,6 +137,14 @@ pub use weather_soil::{
     WeatherObservation, WeatherCondition, SoilCondition, SoilType, SoilTexture,
     WeatherDataSource, WeatherSourceType, SoilDataSource, SoilSourceType,
     WeatherGridCell, SoilGridCell, EnvironmentalConditions,
+};
+
+// Re-export Intelligence Layer (Personality + Reasoning)
+pub use intelligence::{
+    TerrainAnalysis, AnalysisReport, Risk, RiskType, Persona,
+    DataExplanation, TemporalReasoning, Trend, TrendDirection, Projection, Action,
+    MobilityAssessment, AgriculturalSuitability, DisasterAssessment,
+    MCPTool, MCPSchema,
 };
 
 // TODO: Implement in future weeks
