@@ -36,6 +36,7 @@ pub mod spatial_reasoning;
 pub mod py;  // PyO3 Python bindings
 pub mod parallel_execution;  // Multi-GPU parallel execution runtime
 pub mod caching;  // Layered caching and progressive world understanding
+pub mod security;  // Security-first and auditability-first architecture
 
 // Re-export all public types
 pub use types::{
@@ -173,6 +174,15 @@ pub use caching::{
     CacheManager, CacheLayer, CacheQuality, InformationNeed, InvalidationReason,
     LocationSummary, LocationFacts, RegionContext, CacheStats, CachedResult,
     CacheUpdatePolicy, CachedLayer,
+};
+
+// Re-export Security (Trust, verification, audit, compliance)
+// Note: DataClassification already exported from export_security
+pub use security::{
+    TrustScore, TrustMetadata, VerificationMetadata, VerificationStatus,
+    SourceIdentity, ProvenanceChain, ProvenanceStep, ProvenanceAction,
+    RetentionPolicy, ComplianceMetadata,
+    AuditLog, AuditEvent, AuditEventType, AuditResult,
 };
 
 // TODO: Implement in future weeks
