@@ -5,7 +5,6 @@
 
 use crate::types::{GeoPoint, Result, Error};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Camera intrinsic parameters (calibration matrix)
 #[derive(Clone, Debug, Serialize, Deserialize)]

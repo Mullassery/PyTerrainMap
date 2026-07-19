@@ -23,6 +23,7 @@ pub mod api_tls;
 pub mod data_sources;
 pub mod reference_images;
 pub mod reconstruction_3d;
+pub mod slam;
 
 // Re-export all public types
 pub use types::{
@@ -84,6 +85,12 @@ pub use reference_images::{
 pub use reconstruction_3d::{
     CameraIntrinsics, CameraPose, Point3D, ReconstructionFrame, PointCloud, ReconstructionEngine,
     PointCloudStats, ReconstructionStats,
+};
+
+// Re-export SLAM types
+pub use slam::{
+    SLAMTracker, SLAMPose, PoseGraph, CameraFrame, VisualFeature, IMUReading, DepthMeasurement,
+    DepthSensorType, PoseEdge, LoopClosure, SLAMStats,
 };
 
 // TODO: Implement in future weeks

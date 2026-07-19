@@ -80,11 +80,6 @@ pynoramic = ["imaging"]
 name = "pyterrain_map"
 crate-type = ["rlib"]  # For now, just build as Rust library. PyO3 bindings in Week 5-6
 
-[[bin]]
-name = "pypanorama-cli"
-path = "src/bin/cli.rs"
-required-features = []
-
 [profile.release]
 opt-level = 3
 lto = true
