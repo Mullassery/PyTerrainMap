@@ -281,10 +281,9 @@ impl ChangeDetector {
 
         for (i, &current_point) in current_points.iter().enumerate() {
             let mut closest_distance = f32::MAX;
-            let mut closest_idx = None;
 
             // Find closest point in baseline
-            for (j, &baseline_point) in baseline_points.iter().enumerate() {
+            for &baseline_point in baseline_points.iter() {
                 let dx = current_point.0 - baseline_point.0;
                 let dy = current_point.1 - baseline_point.1;
                 let dz = current_point.2 - baseline_point.2;
@@ -292,7 +291,6 @@ impl ChangeDetector {
 
                 if distance < closest_distance {
                     closest_distance = distance;
-                    closest_idx = Some(j);
                 }
             }
 

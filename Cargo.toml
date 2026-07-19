@@ -14,9 +14,9 @@ repository = "https://github.com/Mullassery/pyterrain-map"
 # Async runtime & tokio
 tokio = { version = "1.35", features = ["full"] }  # MIT
 
-# Python interop (added in Week 5-6 for bindings)
-# pyo3 = { version = "0.20", features = ["extension-module"] }  # Apache 2.0
-# pyo3-asyncio = { version = "0.20", features = ["tokio-runtime"] }  # Apache 2.0
+# Python interop (PyO3 bindings) - newer version for Python 3.13 support
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py310"] }  # Apache 2.0
+# pyo3-asyncio = { version = "0.22", features = ["tokio-runtime"] }  # Apache 2.0 - used for async API
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }  # MIT/Apache 2.0
@@ -78,7 +78,7 @@ pynoramic = ["imaging"]
 
 [lib]
 name = "pyterrain_map"
-crate-type = ["rlib"]  # For now, just build as Rust library. PyO3 bindings in Week 5-6
+crate-type = ["cdylib"]  # PyO3 extension module for Python
 
 [profile.release]
 opt-level = 3

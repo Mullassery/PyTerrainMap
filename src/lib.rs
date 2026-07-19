@@ -33,6 +33,7 @@ pub mod weather_soil;
 pub mod intelligence;
 pub mod cli;
 pub mod spatial_reasoning;
+pub mod py;  // PyO3 Python bindings
 
 // Re-export all public types
 pub use types::{

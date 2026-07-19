@@ -1,11 +1,11 @@
 [build-system]
-requires = ["maturin>=1.0,<2.0"]
+requires = ["maturin>=1.4,<2.0"]
 build-backend = "maturin"
 
 [project]
 name = "pyterrain-map"
 version = "0.0.1"
-description = "Collaborative terrain mapping platform for multi-robot fleets"
+description = "Spatial intelligence companion for multi-robot terrain mapping with anomaly detection and 3D reconstruction"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -93,14 +93,15 @@ scientific = [
 # - Any non-OSS packages
 
 [project.urls]
-Homepage = "https://github.com/Mullassery/pyterrain-map"
-Repository = "https://github.com/Mullassery/pyterrain-map.git"
-Documentation = "https://pyterrain-map.readthedocs.io"
+Repository = "https://github.com/Mullassery/pyterrain-map"
+Documentation = "https://github.com/Mullassery/pyterrain-map/blob/main/PYTHON_BINDINGS.md"
 Issues = "https://github.com/Mullassery/pyterrain-map/issues"
 
+[project.scripts]
+pytm = "pyterrain_map.cli:main"
+
 [tool.maturin]
-python-source = "python"
-module-name = "pyterrain_map._core"
+module-name = "pyterrain_map"
 features = ["pyo3/extension-module"]
 
 [tool.pytest.ini_options]
