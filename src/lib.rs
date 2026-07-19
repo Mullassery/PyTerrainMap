@@ -18,6 +18,8 @@ pub mod fusion;
 pub mod anomaly;
 pub mod export;
 pub mod export_security;
+pub mod api;
+pub mod api_tls;
 
 // Re-export all public types
 pub use types::{
@@ -50,6 +52,17 @@ pub use export::{ExportFormat, SpatialExporter, GeoJSONExporter, KMLExporter};
 // Re-export security types
 pub use export_security::{
     DataClassification, UserRole, ExportPrivacy, ExportPolicy, AuditLogger, AuditLogEntry,
+};
+
+// Re-export API types
+pub use api::{
+    ApiError, ApiResult, SubmitObservationRequest, SpatialQueryRequest,
+    TemporalQueryRequest, ExportRequest, HealthResponse, FleetStatus, ApiConfig, ApiRoute,
+};
+
+// Re-export TLS/HTTPS types
+pub use api_tls::{
+    HttpsMode, TlsConfig, TlsVersion, CertificateInfo, CertificateValidator, SecurityHeaders,
 };
 
 // TODO: Implement in future weeks
