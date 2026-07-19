@@ -35,6 +35,7 @@ pub mod cli;
 pub mod spatial_reasoning;
 pub mod py;  // PyO3 Python bindings
 pub mod parallel_execution;  // Multi-GPU parallel execution runtime
+pub mod caching;  // Layered caching and progressive world understanding
 
 // Re-export all public types
 pub use types::{
@@ -165,6 +166,13 @@ pub use parallel_execution::{
     SpaceTimeScheduler, WorkPacket, WorkType, WorkPriority, GPUDeviceId,
     GPUResources, RegionId, TimeWindow, AgentId, Watermark,
     LateArrivalTask, TemporalCorrection, ExecutionMetadata, SchedulerMetrics,
+};
+
+// Re-export Caching (Layered caching + progressive understanding)
+pub use caching::{
+    CacheManager, CacheLayer, CacheQuality, InformationNeed, InvalidationReason,
+    LocationSummary, LocationFacts, RegionContext, CacheStats, CachedResult,
+    CacheUpdatePolicy, CachedLayer,
 };
 
 // TODO: Implement in future weeks
