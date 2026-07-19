@@ -29,6 +29,7 @@ pub mod tiles_3d;
 pub mod cesium_integration;
 pub mod change_detection;
 pub mod persistence;
+pub mod weather_soil;
 
 // Re-export all public types
 pub use types::{
@@ -128,6 +129,13 @@ pub use persistence::{
     DatabaseBackend, DatabaseConfig, StorageRecord, StorageQuery,
     GeographicBounds, DatabaseStats, IndexConfig, ArchivalPolicy,
     PerformanceMetrics, BackupConfig, PersistenceManager,
+};
+
+// Re-export Weather & Soil types
+pub use weather_soil::{
+    WeatherObservation, WeatherCondition, SoilCondition, SoilType, SoilTexture,
+    WeatherDataSource, WeatherSourceType, SoilDataSource, SoilSourceType,
+    WeatherGridCell, SoilGridCell, EnvironmentalConditions,
 };
 
 // TODO: Implement in future weeks
