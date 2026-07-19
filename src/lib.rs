@@ -15,6 +15,7 @@ pub mod temporal;
 pub mod storage;
 pub mod query;
 pub mod fusion;
+pub mod anomaly;
 
 // Re-export all public types
 pub use types::{
@@ -37,6 +38,9 @@ pub use query::{Query, QueryResult};
 
 // Re-export fusion types
 pub use fusion::{SensorFusion, SensorWeights};
+
+// Re-export anomaly types
+pub use anomaly::{AnomalyDetector, AnomalyType, AnomalyStats};
 
 // TODO: Implement in future weeks
 // pub mod storage;     // Week 3-4: In-memory storage
