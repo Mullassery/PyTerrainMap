@@ -1,27 +1,38 @@
 //! PyO3 Python bindings for PyTerrainMap
 //!
 //! Exposes Rust core to Python via PyO3 extension module.
-//! This module is a stub that documents the API surface.
-//! Full implementation will expose Rust types as Python classes.
+//! Provides Python classes for spatial intelligence platform:
+//! - TerrainMap: Main mapping engine
+//! - Observation: Single sensor reading
+//! - QueryResult: Results from spatial-temporal queries
+//! - GeoPoint: Latitude/longitude coordinate
+//! - Region: Geographic bounding box
 
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
+use crate::py_api::{PyTerrainMap, PyObservation, PyQueryResult, PyGeoPoint, PyRegion};
 
 /// PyTerrainMap Python module
 ///
-/// Provides access to spatial intelligence platform from Python.
-/// Main classes:
-/// - TerrainMap: Analysis engine
-/// - Persona: Context for analysis
-/// - DataExplanation: Self-documenting fields
-/// - SpatialReasoningEngine: Multi-source reasoning
+/// Main module for spatial intelligence platform.
+/// Core classes: TerrainMap, Observation, QueryResult, GeoPoint, Region
 #[pymodule]
-fn pyterrain_map(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", "0.0.1")?;
-    m.add("__doc__", "PyTerrainMap: Spatial Intelligence Companion for multi-robot terrain mapping")?;
+    m.add(
+        "__doc__",
+        "PyTerrainMap: Spatial Intelligence Companion for multi-robot terrain mapping",
+    )?;
+
+    // Register main classes
+    m.add_class::<PyGeoPoint>()?;
+    m.add_class::<PyRegion>()?;
+    m.add_class::<PyObservation>()?;
+    m.add_class::<PyQueryResult>()?;
+    m.add_class::<PyTerrainMap>()?;
 
     // Persona constants
-    m.add("Persona", py_persona_dict(_py))?;
+    m.add("Persona", py_persona_dict(py))?;
 
     Ok(())
 }

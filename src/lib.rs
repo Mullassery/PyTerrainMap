@@ -34,6 +34,7 @@ pub mod intelligence;
 pub mod cli;
 pub mod spatial_reasoning;
 pub mod py;  // PyO3 Python bindings
+pub mod py_api;  // Python wrapper classes (TerrainMap, Observation, QueryResult, etc.)
 pub mod parallel_execution;  // Multi-GPU parallel execution runtime
 pub mod caching;  // Layered caching and progressive world understanding
 pub mod security;  // Security-first and auditability-first architecture

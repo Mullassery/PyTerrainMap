@@ -1,30 +1,33 @@
 """PyTerrainMap: Spatial Intelligence Companion for Multi-Robot Terrain Mapping
 
-A high-performance Rust core exposing collaborative terrain mapping, multi-source
-spatial reasoning, anomaly detection, 3D reconstruction, and autonomous-friendly
-APIs for robot fleets, agricultural systems, and geospatial analysis.
+A high-performance Rust core for collaborative terrain mapping.
 
 Quick Start:
-    >>> from pyterrain_map import TerrainMap, Persona
-    >>> engine = TerrainMap()
-    >>> analysis = engine.analyze(40.71, -74.00, Persona.MobileRobot)
-    >>> print(analysis.summary())
+    >>> from pyterrain_map import TerrainMap, Observation, GeoPoint
+    >>> map_engine = TerrainMap()
+    >>> obs = Observation(
+    ...     robot_id="robot-1",
+    ...     timestamp=1000,
+    ...     lat=40.7128,
+    ...     lon=-74.0060,
+    ...     sensor_type="thermal",
+    ...     value_json='{"celsius": 25.0}',
+    ...     confidence=0.95,
+    ... )
+    >>> map_engine.push_observation(obs)
+    >>> result = map_engine.query(
+    ...     GeoPoint(40.7128, -74.0060),
+    ...     region_radius_km=10.0,
+    ...     time_window_seconds=10000
+    ... )
+    >>> print(f"Found {result.count} observations")
 
-Features:
-    - Multi-robot terrain mapping with consensus fusion
-    - Append-only immutable observation storage
-    - Temporal decay and temporal reasoning
-    - H3 hierarchical spatial indexing
-    - 8-failure anomaly detection taxonomy
-    - Multi-source geospatial data integration
-    - 3D reconstruction (SLAM + Photogrammetry)
-    - Natural language CLI interface
-    - REST API with TLS/mTLS
-    - Persona-driven analysis (7 personas)
-    - Change detection and temporal trends
-    - Weather/soil integration
-    - RBAC + privacy controls
-    - GIS export (GeoJSON, KML, WKT, OBJ, 3D Tiles)
+Core Classes:
+    - TerrainMap: Main mapping engine
+    - Observation: Single sensor observation
+    - GeoPoint: Latitude/longitude coordinate
+    - Region: Geographic bounding box
+    - QueryResult: Results from spatial-temporal queries
 
 Documentation:
     https://github.com/Mullassery/pyterrain-map/blob/main/PYTHON_BINDINGS.md
@@ -38,167 +41,25 @@ __author__ = "Georgi Mammen Mullassery"
 __email__ = "mullassery@gmail.com"
 __license__ = "MIT"
 
-from typing import Tuple, List, Dict, Optional
-
 # Import Rust extension
 try:
-    from . import _core as _rust_core  # noqa: F401
+    from . import pyterrain_map as _core
 except ImportError as e:
     raise ImportError(
         "Failed to import PyTerrainMap Rust extension. "
-        "Please install from source: pip install -e . or maturin develop"
+        "Please install from PyPI: pip install pyterrainMap"
     ) from e
 
-# Public API
-__all__ = [
-    # Main engine
-    "TerrainMap",
+# User-friendly aliases for Rust classes
+TerrainMap = _core.PyTerrainMap
+Observation = _core.PyObservation
+GeoPoint = _core.PyGeoPoint
+Region = _core.PyRegion
+QueryResult = _core.PyQueryResult
 
-    # Analysis results
-    "TerrainAnalysis",
-    "AnalysisReport",
-    "Risk",
-    "MobilityAssessment",
-    "EnvironmentalConditions",
-    "TemporalReasoning",
-
-    # Personas
-    "Persona",
-
-    # Data explanation
-    "DataExplanation",
-
-    # Spatial reasoning
-    "SpatialReasoningEngine",
-    "DataProvenance",
-    "Uncertainty",
-    "PositionAnswer",
-
-    # CLI
-    "CLICommand",
-    "CLIResponse",
-]
-
-
-class TerrainMap:
-    """Main terrain mapping engine.
-
-    Provides high-level API for terrain analysis, mobility assessment,
-    environmental conditions, and mission planning.
-    """
-
-    def __init__(self):
-        """Initialize terrain mapping engine."""
-        pass
-
-    def analyze(
-        self,
-        lat: float,
-        lon: float,
-        persona: str = "Analyst",
-    ) -> "TerrainAnalysis":
-        """Analyze a location for a given persona.
-
-        Args:
-            lat: Latitude in decimal degrees
-            lon: Longitude in decimal degrees
-            persona: Analysis context (MobileRobot, Drone, Farmer, etc.)
-
-        Returns:
-            TerrainAnalysis with persona-specific insights
-        """
-        pass
-
-    def assess_mobility(
-        self,
-        lat: float,
-        lon: float,
-        robot_type: str = "rover",
-    ) -> "MobilityAssessment":
-        """Assess robot traversability at location.
-
-        Args:
-            lat: Latitude
-            lon: Longitude
-            robot_type: Type of robot (rover, drone, legged, etc.)
-
-        Returns:
-            MobilityAssessment with traversability details
-        """
-        pass
-
-    def environmental_conditions(
-        self,
-        lat: float,
-        lon: float,
-    ) -> "EnvironmentalConditions":
-        """Get weather and soil conditions at location.
-
-        Args:
-            lat: Latitude
-            lon: Longitude
-
-        Returns:
-            EnvironmentalConditions with weather and soil data
-        """
-        pass
-
-
-class TerrainAnalysis:
-    """Result of location analysis."""
-
-    def __init__(self):
-        """Initialize analysis result."""
-        self.location: Tuple[float, float]
-        self.summary: str
-        self.observations: List[str]
-        self.risks: List["Risk"]
-        self.recommendations: Dict[str, List[str]]
-
-
-class AnalysisReport:
-    """Structured analysis report."""
-    pass
-
-
-class Risk:
-    """Risk assessment."""
-
-    def severity_label(self) -> str:
-        """Get severity label (Critical, High, Medium, Low)."""
-        pass
-
-
-class MobilityAssessment:
-    """Robot traversability analysis."""
-
-    def difficulty_label(self) -> str:
-        """Get difficulty label."""
-        pass
-
-
-class EnvironmentalConditions:
-    """Weather and soil context."""
-
-    @property
-    def is_flight_safe(self) -> bool:
-        """Check if conditions are safe for aerial operations."""
-        pass
-
-    @property
-    def is_ground_safe(self) -> bool:
-        """Check if conditions are safe for ground robots."""
-        pass
-
-
-class TemporalReasoning:
-    """Temporal trends and projections."""
-    pass
-
-
+# Personas
 class Persona:
     """Analysis persona/context."""
-
     MobileRobot = "mobile_robot"
     Drone = "drone"
     Farmer = "farmer"
@@ -207,70 +68,16 @@ class Persona:
     Analyst = "analyst"
     MissionPlanner = "mission_planner"
 
+# CLI
+from . import cli  # noqa: F401, E402
 
-class DataExplanation:
-    """Self-documenting data field for AI agents."""
-
-    @staticmethod
-    def soil_moisture() -> "DataExplanation":
-        """Get explanation for soil_moisture field."""
-        pass
-
-    @staticmethod
-    def temperature() -> "DataExplanation":
-        """Get explanation for temperature field."""
-        pass
-
-    @staticmethod
-    def visibility() -> "DataExplanation":
-        """Get explanation for visibility field."""
-        pass
-
-    @staticmethod
-    def slope() -> "DataExplanation":
-        """Get explanation for slope field."""
-        pass
-
-
-class SpatialReasoningEngine:
-    """Multi-source spatial reasoning with regional context."""
-
-    def __init__(self):
-        """Initialize with default regional preferences."""
-        pass
-
-
-class DataProvenance:
-    """Data source attribution and confidence tracking."""
-    pass
-
-
-class Uncertainty:
-    """Confidence intervals and limitation modeling."""
-    pass
-
-
-class PositionAnswer:
-    """Position with full provenance and reasoning."""
-    pass
-
-
-class CLICommand:
-    """Natural language command parser."""
-
-    @staticmethod
-    def parse(input_str: str) -> "CLICommand":
-        """Parse natural language command."""
-        pass
-
-
-class CLIResponse:
-    """Human-friendly CLI response."""
-
-    def format_terminal(self) -> str:
-        """Format for terminal output."""
-        pass
-
-    def format_json(self) -> str:
-        """Format as JSON."""
-        pass
+# Public API
+__all__ = [
+    "TerrainMap",
+    "Observation",
+    "GeoPoint",
+    "Region",
+    "QueryResult",
+    "Persona",
+    "cli",
+]
