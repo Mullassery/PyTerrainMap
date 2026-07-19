@@ -57,11 +57,13 @@ The PyTerrain ecosystem consists of two independent repositories with clear sepa
 - Multiple layers (thermal, LiDAR, camera, custom)
 
 ### Key Principle
-**PyTerrainMap = Permanent Data Warehouse**
-- Never deletes observations
-- Never applies temporal decay
-- Returns RAW data (all observations, full confidence, original timestamps)
+**PyTerrainMap = Permanent Data Warehouse (No Decay Enforcement)**
+- Stores all observations permanently (never deletes)
+- **HAS** timestamp and location data (decay is possible)
+- **DOES NOT ENFORCE** temporal decay (returns raw confidence values)
+- Returns observations as-is (all confidence values original, all timestamps intact)
 - Acts as source of truth for all historical and current data
+- Decay logic lives in PyTerrainAI (query/middleware layer)
 
 ### Does NOT Include
 - Temporal decay functions (PyTerrainAI applies these)
@@ -113,12 +115,13 @@ pub struct PyTerrainMap {
 - **Audit logging:** Track what each bot accessed
 
 ### Key Principle
-**PyTerrainAI = Smart Middleware + Temporal Intelligence**
-- Queries PyTerrainMap for RAW observations
-- Applies temporal decay (weighted by age)
+**PyTerrainAI = Smart Middleware + Temporal Intelligence (Applies Decay)**
+- Queries PyTerrainMap for RAW observations (with timestamps intact)
+- **APPLIES temporal decay** (uses timestamp to weight old observations less)
 - Filters by mission (bot A sees security data only)
 - Enriches with intelligence
 - Returns: "Here's what you need, weighted by freshness, relevant to your mission"
+- Decay happens at query-time, not storage-time
 
 ### Does NOT Include
 - Observation storage (PyTerrainMap handles)
@@ -280,7 +283,7 @@ Bot Query = {
    └─ Reject if unauthorized
 
 2. Query PyTerrainMap for RAW observations
-   └─ Get all observations (no filtering, no decay)
+   └─ Get all observations with timestamps (no decay applied yet)
 
 3. Apply Temporal Decay
    └─ For each observation:
