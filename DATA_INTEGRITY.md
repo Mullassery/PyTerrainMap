@@ -270,46 +270,64 @@ Even with append-only storage, PyTerrainAI protects data quality:
 class DataQualityGate:
     """
     Validates new observations against historical baseline.
-    Uses old data to flag rogue/compromised data.
+    CRITICAL: Anomalies are NOT errors—they may be genuine changes.
+    Mark for verification, don't delete.
     """
     
-    async def filter_observations(self, observations: List[Observation]) -> List[Observation]:
+    async def process_observations(self, observations: List[Observation]) -> List[ObservationWithStatus]:
         """
-        PyTerrainMap returns ALL observations (good + bad).
-        PyTerrainAI filters bad ones by comparing against historical baseline.
+        PyTerrainMap returns ALL observations.
+        PyTerrainAI classifies each by comparing against historical baseline:
+        - VERIFIED: Consistent with baseline, known patterns
+        - ANOMALY_NEEDS_VERIFICATION: Different from baseline, might be real change
+        - ROGUE: Consistent pattern of malicious data
+        - SENSOR_FAULT: Single bot diverges from own history (likely hardware issue)
         """
-        filtered = []
+        processed = []
         
         for obs in observations:
-            # CRITICAL: Check against historical baseline
+            # Get historical baseline
             baseline = await self.get_historical_baseline(
                 location=obs.location,
                 sensor_type=obs.sensor_type,
-                days_back=30  # 30 days of history
+                days_back=30
             )
             
-            # Check 1: Does this observation match historical patterns?
-            if not self.is_consistent_with_baseline(obs, baseline):
-                z_score = self.compute_z_score(obs, baseline)
-                if z_score > 3.0:  # 99.7% confidence it's anomalous
-                    self.alert(f"Rogue observation from {obs.robot_id}: z-score={z_score}")
-                    continue  # Filter out - too far from baseline
+            # Analyze deviation from baseline
+            z_score = self.compute_z_score(obs, baseline)
+            deviation_percent = abs(obs.value - baseline.mean) / (baseline.mean + 1e-6) * 100
             
-            # Check 2: Is this observation plausible?
-            if not self.is_physically_plausible(obs):
-                self.alert(f"Implausible observation from {obs.robot_id}: {obs.value}")
-                continue  # Filter out
+            # CRITICAL DISTINCTION: Anomaly ≠ Error
+            if z_score > 3.0:  # Significant deviation
+                
+                # Is this a CHANGE or a MALFUNCTION?
+                if await self.is_rogue_bot(obs.robot_id):
+                    # Consistent pattern of malice
+                    status = ObservationStatus.ROGUE_BOT
+                elif await self.is_sensor_fault(obs.robot_id, obs.sensor_type):
+                    # This bot's sensor is broken
+                    status = ObservationStatus.SENSOR_FAULT
+                else:
+                    # GENUINE CHANGE - mark for verification, DON'T FILTER
+                    status = ObservationStatus.ANOMALY_NEEDS_VERIFICATION
+                    await self.alert_operator(
+                        f"Change detected at {obs.location}: "
+                        f"{obs.sensor_type} changed {deviation_percent:.1f}%. "
+                        f"Send verification bot to confirm."
+                    )
+            else:
+                status = ObservationStatus.VERIFIED
             
-            # Check 3: Is the source reliable?
-            reliability = self.robot_reliability(obs.robot_id)
-            if reliability < 0.5:  # Compromised
-                self.alert(f"Bot {obs.robot_id} has low reliability, flagging new data")
-                # Don't filter entirely, but mark with low confidence
-                obs.confidence *= (1.0 - (0.5 - reliability))  # Reduce confidence
-            
-            filtered.append(obs)
+            # IMPORTANT: Keep ALL observations, mark with status
+            processed.append(ObservationWithStatus(
+                observation=obs,
+                status=status,
+                z_score=z_score,
+                deviation_percent=deviation_percent,
+                needs_verification=(status == ObservationStatus.ANOMALY_NEEDS_VERIFICATION),
+            ))
         
-        return filtered
+        return processed
     
     async def get_historical_baseline(self, location, sensor_type, days_back=30):
         """
@@ -398,9 +416,46 @@ Query for historical state:
 
 ---
 
-## Sensor Malfunctions (Different from Rogue Bots)
+## Anomalies ≠ Errors: Detecting Genuine Changes
 
-Even honest bots can collect bad data due to sensor failures:
+**Critical distinction:** A flagged anomaly is not necessarily wrong—it may indicate a **genuine change in the environment**.
+
+### Scenario: Temperature Spike (Not an Error)
+
+```
+Historical Baseline (30 days):
+  Temperature at Location_X: 20-24°C (stable)
+  
+Day 31 - Bot_A reports:
+  Temperature: 45°C
+  Flag: ANOMALY (deviation from baseline)
+  
+Reaction (OLD, WRONG):
+  ❌ "Must be sensor error, filter it out"
+  ❌ Data lost
+  
+Reaction (NEW, CORRECT):
+  ✅ "Change detected. Mark as unverified. Alert for verification."
+  ✅ Data preserved with "NEEDS_VERIFICATION" tag
+  
+Day 32 - Inspection Bot arrives with camera:
+  ├─ Camera confirms: New HVAC unit installed
+  ├─ Observation: "HVAC installation at Location_X"
+  ├─ Verification: Temperature spike IS legitimate
+  └─ Update: Baseline changes (new normal is 40-50°C)
+  
+Result:
+  ✅ Anomaly verified as real change
+  ✅ Old data still in map (with context)
+  ✅ New baseline established
+  ✅ Next bots know: Location_X runs hot now
+```
+
+---
+
+## Sensor Malfunctions (Different from Real Changes)
+
+Even honest bots can collect questionable data due to sensor failures:
 
 ### Types of Sensor Issues
 
@@ -513,46 +568,227 @@ class SensorHealthMonitor:
         return "No peer data to compare"
 ```
 
-### Handling Sensor Malfunctions
+### Handling Different Observation Statuses
 
-Instead of filtering out all anomalous data:
-
-1. **Detect the malfunction** (statistical deviation)
-2. **Classify it** (malice vs hardware failure)
-3. **Alert the bot** ("Thermal sensor needs recalibration")
-4. **Reduce confidence** (mark obs as low-confidence, not deleted)
-5. **Use peer data** (other bots' observations if available)
-6. **Log for investigation** (later diagnostics can review)
+Never assume anomaly = error. Always classify and track.
 
 ```python
-class MalfunctionHandling:
-    """Handle sensor failures gracefully"""
+class AnomalyHandler:
+    """
+    Process anomalies with verification tracking.
+    Anomalies are kept, classified, and verified through subsequent visits.
+    """
     
-    async def process_suspicious_observation(self, obs: Observation) -> Observation:
+    async def process_observation(self, obs_with_status: ObservationWithStatus) -> None:
         """
-        Don't blindly filter - classify and handle intelligently
+        Route observation to appropriate handler based on status.
         """
-        status = await self.validate_sensor_health(obs)
+        if obs_with_status.status == ObservationStatus.VERIFIED:
+            # Consistent with baseline - store normally
+            await self.store_verified(obs_with_status.observation)
         
-        if status == SensorStatus.HEALTHY:
-            return obs  # Return as-is
-        
-        elif status == SensorStatus.SENSOR_MALFUNCTION:
-            # Alert bot to investigate
-            await self.alert_bot(obs.robot_id, 
-                message="Thermal sensor readings appear anomalous. Recalibration recommended.")
+        elif obs_with_status.status == ObservationStatus.ANOMALY_NEEDS_VERIFICATION:
+            # GENUINE CHANGE DETECTED - Keep it, mark for verification
+            await self.store_anomaly_pending_verification(obs_with_status.observation)
             
-            # Mark with low confidence, but keep in map
-            obs.confidence *= 0.3  # Reduce from 0.95 to 0.28
-            obs.annotation = "SENSOR_MALFUNCTION_FLAG"
-            return obs  # Return with warning flag
+            # Create verification task
+            await self.create_verification_task(
+                location=obs_with_status.observation.location,
+                reason=f"Temperature anomaly: {obs_with_status.deviation_percent:.1f}% change",
+                suggested_sensors=[SensorType.Camera, SensorType.Thermal]
+            )
+            
+            # Alert operator
+            await self.alert_operator(
+                f"Anomaly at {obs_with_status.observation.location}: "
+                f"Needs verification. Sending inspector."
+            )
         
-        elif status == SensorStatus.ROGUE_BOT:
-            # Revoke and filter
-            await self.revoke_bot(obs.robot_id)
-            return None  # Filter out entirely
+        elif obs_with_status.status == ObservationStatus.SENSOR_FAULT:
+            # Likely hardware failure - reduce confidence
+            obs = obs_with_status.observation
+            obs.confidence *= 0.2  # Mark as low-confidence, not deleted
+            obs.annotation = "SENSOR_FAULT_SUSPECTED"
+            await self.store_anomaly_pending_verification(obs)
+            
+            # Alert bot owner
+            await self.alert_bot(obs.robot_id,
+                message=f"Sensor anomaly detected. {obs.sensor_type} readings unreliable. "
+                        f"Please recalibrate or replace sensor.")
         
-        return obs
+        elif obs_with_status.status == ObservationStatus.ROGUE_BOT:
+            # Consistent malicious pattern - revoke
+            await self.revoke_bot(obs_with_status.observation.robot_id)
+            # Still store (for audit trail), but mark as rogue
+            obs = obs_with_status.observation
+            obs.annotation = "ROGUE_BOT_DATA"
+            await self.store_verified(obs)
+```
+
+### Verification Workflow
+
+Anomalies get verified through subsequent bot visits:
+
+```
+Step 1: Anomaly Detected
+  T=100: Bot_A (thermal): Temperature 45°C (was 22°C baseline)
+  Status: ANOMALY_NEEDS_VERIFICATION
+  Alert: "Change detected at Location_X"
+
+Step 2: Verification Task Created
+  ├─ Location: Location_X
+  ├─ Required sensors: Camera (visual verification)
+  ├─ Priority: High
+  └─ Assigned: Next available inspection bot
+
+Step 3: Inspector Bot Visits
+  T=110: Bot_B (camera + thermal) visits Location_X
+  ├─ Camera: Confirms HVAC unit newly installed
+  ├─ Thermal: Confirms 45°C is new normal (unit generating heat)
+  └─ Verdict: ANOMALY_VERIFIED_AS_REAL_CHANGE
+
+Step 4: Baseline Updated
+  ├─ Old baseline (invalid): 20-24°C
+  ├─ New baseline (current): 40-50°C
+  ├─ Change reason: "HVAC unit installed"
+  └─ Next bots use new baseline for comparison
+
+Step 5: Context Returned to Bots
+  When next bot queries Location_X:
+  ├─ Gets both: old observations (20-24°C) and new (40-50°C)
+  ├─ Knows: "Environment changed on Day 31"
+  ├─ Baseline: Now 40-50°C (not 20-24°C)
+  └─ Confidence: High (verified by multiple sensors)
+```
+
+### Anomaly Tracking Data Structure
+
+```python
+@dataclass
+class VerificationStatus:
+    """Track anomaly from detection through verification"""
+    observation_id: UUID
+    location: GeoPoint
+    timestamp: int
+    anomaly_z_score: float
+    anomaly_percent: float
+    
+    # Verification tracking
+    status: AnomalyStatus  # PENDING, VERIFIED_REAL, SENSOR_FAULT, ROGUE
+    verification_bot_id: Optional[str] = None
+    verification_timestamp: Optional[int] = None
+    verification_method: Optional[str] = None  # "camera", "consensus", "human"
+    verification_notes: str = ""
+    
+    # Context for decision-making
+    baseline_before: float
+    baseline_after: Optional[float] = None
+    change_reason: Optional[str] = None
+```
+
+---
+
+## Baselines Are Temporal Windows, Not Permanent Truths
+
+**Critical:** Baselines change as environments change. Don't treat them as immutable.
+
+```
+Temporal Baseline Evolution:
+
+Period 1 (Days 1-30):
+  Location_X baseline: 20-24°C
+  ├─ Status: "Normal state"
+  ├─ Data: 100 observations from 5 bots
+  └─ Confidence: HIGH
+
+Period 2 (Day 31 - Anomaly Detected):
+  New observation: 45°C
+  ├─ Status: "Anomalous vs Period 1 baseline"
+  ├─ Alert: "Change detected"
+  └─ Verification initiated
+
+Period 2 (Days 31-35 - Verification):
+  Bot_B (camera): "HVAC installed, explains 45°C"
+  Bot_C (thermal): "Confirms 42-48°C range"
+  Bot_D (thermal): "Confirms 43-47°C range"
+  └─ Consensus: 40-50°C is new normal
+
+Period 2 (Days 31-60):
+  Location_X baseline: 40-50°C
+  ├─ Status: "New normal (environment changed)"
+  ├─ Data: Multiple observations confirming
+  ├─ Context: "HVAC unit installed on Day 31"
+  └─ Confidence: HIGH
+
+Period 3 (Day 61 - Change Again):
+  New observation: 15°C (HVAC turned off)
+  ├─ Status: "Anomalous vs Period 2 baseline"
+  ├─ Alert: "Change detected again"
+  └─ Verification process repeats
+
+Key Insight:
+├─ Baselines = "what was normal in this time window"
+├─ Baselines change when environments change
+├─ Multiple observations establish new baseline
+├─ Don't assume baseline is permanent
+└─ Track baseline evolution over time
+```
+
+### Baseline Confidence Increases with Agreement
+
+```
+Anomaly Detection Chain:
+
+Day 31, Bot_A reports 45°C:
+  Status: NEEDS_VERIFICATION
+  Confidence in anomaly: Medium
+  
+Day 32, Bot_B (independent) reports 44°C:
+  Status: VERIFIED_REAL_CHANGE
+  Confidence in anomaly: High
+  New baseline forming: 40-50°C
+  
+Day 33, Bot_C reports 46°C:
+  Status: CONSENSUS_REACHED
+  Confidence in new baseline: VERY HIGH
+  Update: Lock in new baseline for Period 2
+  
+Result:
+  ├─ Anomaly is now verified real change
+  ├─ New baseline established by consensus
+  ├─ All future comparisons use 40-50°C
+  └─ Ready for next anomaly detection
+```
+
+### Baseline Versioning
+
+```python
+@dataclass
+class BaselineVersion:
+    """Track baseline evolution over time"""
+    baseline_id: UUID
+    location: GeoPoint
+    sensor_type: SensorType
+    
+    # Temporal window
+    start_timestamp: int
+    end_timestamp: Optional[int]  # None if current
+    
+    # Statistical summary
+    mean: float
+    std: float
+    min: float
+    max: float
+    observation_count: int
+    num_unique_bots: int
+    
+    # Verification
+    status: BaselineStatus  # INITIAL, VERIFIED, SUPERSEDED
+    confidence: float  # Increases with observations
+    
+    # Context
+    change_reason: Optional[str]  # "HVAC installed", "equipment removed"
+    change_verified_by: Optional[str]  # "camera", "consensus", "manual"
 ```
 
 ---
@@ -561,11 +797,12 @@ class MalfunctionHandling:
 
 | Scenario | Detection | Response |
 |----------|-----------|----------|
-| **Rogue Bot** | Consistent pattern of intentional bad data | Filter + revoke credentials |
-| **Sensor Malfunction** | Single bot deviates from own baseline, matches peers | Flag + alert bot + reduce confidence |
-| **Calibration Drift** | Gradual deviation over time | Alert for recalibration |
-| **Transient Glitch** | Single outlier, bot returns to normal next read | Log + keep (single observation won't skew) |
-| **Environmental Interference** | Sensor sensitive to conditions | Document interference source |
+| **Real Environmental Change** | Anomalous vs old baseline, verified by multiple bots | Flag, verify with camera/additional sensors, establish new baseline |
+| **Rogue Bot** | Consistent pattern of intentional bad data, doesn't match peers | Mark as rogue, filter from context, but keep in audit trail |
+| **Sensor Malfunction** | Single bot deviates, contradicts peer observations | Flag as sensor fault, alert bot owner, reduce confidence |
+| **Calibration Drift** | Gradual deviation over time from bot's own history | Alert bot for recalibration, mark observation confidence lower |
+| **Transient Glitch** | Single outlier, bot returns to normal next read | Flag, track, include with low confidence (might be verification artifact) |
+| **Baseline Evolution** | Multiple bots converge on new value range | Update baseline, track transition period, adjust anomaly detection threshold |
 
 ---
 
