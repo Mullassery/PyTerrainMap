@@ -49,19 +49,28 @@ The PyTerrain ecosystem consists of two independent repositories with clear sepa
 **Language:** Rust (core) + Python (bindings)
 
 ### Responsibilities
-- Store observations from multiple robots
+- **Store ALL observations** from all robots (permanent historical record)
 - Spatial indexing (H3 cells + elevation buckets)
-- Temporal knowledge management (decay functions)
+- **Provide raw observations** via query API (no filtering, no decay applied)
 - Basic sensor fusion (temperature averaging, obstacle grids, detection voting)
-- Query API (spatial-temporal range queries)
-- Context synthesis (what should a bot know before exploring?)
+- Elevation-aware 3D spatial organization
+- Multiple layers (thermal, LiDAR, camera, custom)
+
+### Key Principle
+**PyTerrainMap = Permanent Data Warehouse**
+- Never deletes observations
+- Never applies temporal decay
+- Returns RAW data (all observations, full confidence, original timestamps)
+- Acts as source of truth for all historical and current data
 
 ### Does NOT Include
+- Temporal decay functions (PyTerrainAI applies these)
+- Mission-based filtering (PyTerrainAI applies these)
 - Image processing/stitching
-- Advanced anomaly detection (beyond baseline z-score)
+- Access control/security
 - Machine learning models
 - Knowledge graphs
-- Natural language understanding
+- Anomaly detection
 
 ### Public API
 
@@ -86,24 +95,35 @@ pub struct PyTerrainMap {
 
 ---
 
-## PyTerrainAI (Intelligence Layer)
+## PyTerrainAI (Middleware + Intelligence Layer)
 
 **Repository:** `github.com/Mullassery/pyterrain-ai`  
 **License:** MIT  
-**Language:** Python (primary), Rust (optional performance modules)
+**Language:** Python (primary)
 
 ### Responsibilities
-- Image registration and stitching (from multiple robots/times)
-- Structure from Motion (3D reconstruction from images)
-- Advanced anomaly detection (statistical, ML-based)
-- Context enrichment (combining map data with external knowledge)
-- Change detection (temporal image comparison)
-- Knowledge synthesis (entity tracking, threat scoring, etc.)
+- **Temporal decay:** Apply time-decay functions to observations (old observations weighted less)
+- **Mission alignment:** Ensure context matches bot's mission requirements
+- **Access control:** Enforce RBAC (what each bot can see/access)
+- **Information filtering:** Return only mission-relevant observations
+- **Image registration & stitching:** Combine images from multiple robots/times
+- **Anomaly detection:** Statistical, rule-based, and ML-based
+- **Context enrichment:** Add intelligence to filtered observations
+- **Change detection:** Temporal image comparison and trend analysis
+- **Audit logging:** Track what each bot accessed
+
+### Key Principle
+**PyTerrainAI = Smart Middleware + Temporal Intelligence**
+- Queries PyTerrainMap for RAW observations
+- Applies temporal decay (weighted by age)
+- Filters by mission (bot A sees security data only)
+- Enriches with intelligence
+- Returns: "Here's what you need, weighted by freshness, relevant to your mission"
 
 ### Does NOT Include
-- Observation storage (uses PyTerrainMap)
+- Observation storage (PyTerrainMap handles)
 - Spatial indexing (reads from PyTerrainMap)
-- Basic sensor fusion (delegated to PyTerrainMap)
+- Raw data access (all data flows through decay/filtering)
 - Robot autonomy (external systems call PyTerrainAI)
 
 ### Integration with PyTerrainMap
@@ -112,19 +132,24 @@ pub struct PyTerrainMap {
 from pyterrain_map import PyTerrainMap
 from pyterrain_ai import PyTerrainAI
 
-# PyTerrainAI is a client of PyTerrainMap
-map_service = PyTerrainMap(...)
-ai_service = PyTerrainAI(map_service=map_service)
+# PyTerrainAI is middleware client of PyTerrainMap
+map_service = PyTerrainMap()
+ai_service = PyTerrainAI(map_service=map_service, access_policy=policy)
 
-# Query map for context
-context = await map_service.query(location)
+# Bot queries AI (not map directly)
+context = await ai_service.get_context(
+    bot_id="security_1",
+    mission="security",
+    location=GeoPoint(lat, lon),
+)
 
-# Enhance with intelligence
-enriched = await ai_service.analyze(context)
-# ├─ Detected anomalies
-# ├─ Temporal changes
-# ├─ 3D reconstructions
-# └─ Confidence scores
+# AI does:
+# 1. Check if bot authorized for this location/mission
+# 2. Query PyTerrainMap for raw observations
+# 3. Apply temporal decay
+# 4. Filter mission-irrelevant data
+# 5. Enrich with intelligence
+# 6. Return filtered, decayed, enriched context
 ```
 
 ### Public API
@@ -217,42 +242,111 @@ docker run -p 8081:8081 \
 
 ## Data Flow & Contracts
 
-### Observation → PyTerrainMap
+### Step 1: Observation → PyTerrainMap (Storage)
 
 ```python
 Observation = {
     robot_id: String,
     location: GeoPoint,
     elevation_asl: Float,  # Optional
-    timestamp: Int64,
-    sensor_type: SensorType,  # Enum: Thermal, LiDAR, Camera, etc.
+    timestamp: Int64,  # STORED AS-IS (no decay)
+    sensor_type: SensorType,  # Thermal, LiDAR, Camera, etc.
     value: Dict,  # Sensor-specific
-    confidence: Float,  # 0.0-1.0
-    metadata: Dict,  # Custom fields
+    confidence: Float,  # 0.0-1.0 (stored original)
+    metadata: Dict,
+}
+```
+**PyTerrainMap:** Stores EVERYTHING, FOREVER, NO MODIFICATIONS
+
+### Step 2: Bot Query → PyTerrainAI (Middleware)
+
+```python
+Bot Query = {
+    bot_id: String,
+    mission: String,  # "security", "inspection", etc.
+    location: GeoPoint,
+    radius_m: Float,
 }
 ```
 
-### PyTerrainMap → PyTerrainAI
-
-PyTerrainAI queries PyTerrainMap via:
+### Step 3: PyTerrainAI Processes (Temporal + Mission Alignment)
 
 ```python
-CompositeContext = {
+# PyTerrainAI workflow:
+
+1. Check Authorization
+   ├─ Is this bot allowed for this mission?
+   ├─ Does this mission have access to this location?
+   └─ Reject if unauthorized
+
+2. Query PyTerrainMap for RAW observations
+   └─ Get all observations (no filtering, no decay)
+
+3. Apply Temporal Decay
+   └─ For each observation:
+       ├─ Calculate age = now - observation.timestamp
+       ├─ Apply decay function: weight = exp(-age / half_life)
+       └─ Decayed confidence = original_confidence * weight
+
+4. Filter by Mission
+   └─ Keep only sensors relevant to mission
+       ├─ "security" mission: keep Camera, Thermal, Movement
+       ├─ "inspection" mission: keep LiDAR, Camera, Ultrasonic
+       └─ "monitoring" mission: keep Environmental, Thermal, Occupancy
+
+5. Enrich with Intelligence
+   ├─ Detect anomalies
+   ├─ Stitch images
+   ├─ Compute 3D models
+   └─ Add context
+
+6. Return Filtered, Decayed, Enriched Context
+```
+
+### Step 4: PyTerrainAI → Bot (Mission-Filtered Context)
+
+```python
+MissionContext = {
     location: GeoPoint,
-    timestamp: Int64,
-    thermal_summary: Optional[Stats],
-    obstacle_map: Optional[Grid],
-    detected_objects: [Object...],
-    temporal_trends: [String...],
-    suggested_focus_areas: [(Location, reason)...],
-    raw_observations: [Observation...],  # For AI to process
+    timestamp_query: Int64,
+    
+    # Only relevant to mission
+    observations: [
+        {
+            sensor_type: ...,
+            value: ...,
+            confidence: ...,  # DECAYED
+            age_seconds: ...,
+            temporal_weight: ...,  # e.g., 0.5 for 2hr old data
+        }
+    ],
+    
+    # Mission-specific intelligence
+    anomalies: [...],
+    trends: [...],
+    suggested_focus_areas: [...],
+    
+    # Metadata
+    authorization_level: String,
+    audit_log_entry: String,
 }
 ```
 
 ### Interface Contract
-- **PyTerrainMap** exposes read-only query API (PyTerrainAI is a client)
-- **PyTerrainAI** does NOT write to PyTerrainMap (no feedback loop)
-- **PyTerrainAI** can suggest actions via enriched context
+
+**PyTerrainMap:**
+- Exposes read-only query API
+- Returns RAW observations (no filtering, no decay, no time modifications)
+- Permanent storage (never deletes)
+- Single source of truth for all historical data
+
+**PyTerrainAI:**
+- Client of PyTerrainMap
+- Applies temporal decay (dynamically, on read)
+- Enforces mission-based filtering
+- Enriches with intelligence
+- Does NOT modify PyTerrainMap data
+- Does NOT store observations
 
 ---
 
