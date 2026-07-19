@@ -24,6 +24,7 @@ pub mod data_sources;
 pub mod reference_images;
 pub mod reconstruction_3d;
 pub mod slam;
+pub mod photogrammetry;
 
 // Re-export all public types
 pub use types::{
@@ -91,6 +92,12 @@ pub use reconstruction_3d::{
 pub use slam::{
     SLAMTracker, SLAMPose, PoseGraph, CameraFrame, VisualFeature, IMUReading, DepthMeasurement,
     DepthSensorType, PoseEdge, LoopClosure, SLAMStats,
+};
+
+// Re-export Photogrammetry types
+pub use photogrammetry::{
+    StructureFromMotion, PhotogrammetryProcessor, DensePointCloud, TriangulatedPoint,
+    CameraPoseEstimate, Neural3DRepresentation, GaussianSplat, PhotogrammetryStats,
 };
 
 // TODO: Implement in future weeks
