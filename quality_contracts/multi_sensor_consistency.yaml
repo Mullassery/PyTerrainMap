@@ -1,0 +1,68 @@
+---
+name: multi_sensor_consistency
+version: "1.0.0"
+description: Validates agreement and consistency across multiple sensor streams
+domain: sensor_fusion
+
+rules:
+  min_sensor_agreement:
+    value: 0.90
+    description: Sensors must agree at least 90% of the time
+    severity: warning
+
+  max_timestamp_sync_ms:
+    value: 100
+    description: Sensor readings must be synchronized within 100 milliseconds
+    severity: warning
+
+  max_variance_pct:
+    value: 15.0
+    description: Reading variance across sensors cannot exceed 15%
+    severity: warning
+
+  max_outlier_rate:
+    value: 0.05
+    description: Maximum 5% of readings can be statistical outliers
+    severity: warning
+
+anomalies:
+  - name: sensors_disagree
+    description: Multiple sensors report significantly different values
+    severity: warning
+
+  - name: timestamp_misalignment
+    description: Sensor timestamps are not synchronized
+    severity: warning
+
+  - name: high_variance
+    description: Reading variance exceeds acceptable threshold
+    severity: warning
+
+  - name: sensor_malfunction
+    description: Outlier rate suggests sensor may be malfunctioning
+    severity: warning
+
+  - name: sensor_conflict
+    description: Persistent disagreement between specific sensors
+    severity: warning
+
+audit_trail:
+  - timestamp: required
+  - sensor_ids: required
+  - agreement_score: required
+  - max_timestamp_diff_ms: required
+  - variance_pct: required
+  - outlier_rate: required
+  - validation_result: required
+
+fusion_decisions:
+  - if_disagreement: "Weight high-agreement sensors more heavily in fusion"
+  - if_misaligned: "Discard out-of-sync readings for this fusion cycle"
+  - if_high_variance: "Mark region as low-confidence in output map"
+  - if_malfunction: "Isolate sensor and continue with remaining streams"
+
+expected_improvements:
+  fusion_accuracy: "Improve by 8-12% through consistency validation"
+  sensor_health: "Detect sensor malfunction 2-3x faster"
+  data_quality: "Eliminate inconsistent fusion errors"
+  reliability: "Increase system uptime with graceful sensor degradation"

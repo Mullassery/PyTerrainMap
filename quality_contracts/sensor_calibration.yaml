@@ -1,0 +1,74 @@
+---
+name: sensor_calibration_quality
+version: "1.0.0"
+description: Validates sensor calibration freshness, drift rate, and accuracy
+domain: sensor_validation
+
+rules:
+  max_calibration_age_hours:
+    value: 168
+    description: Sensors must be recalibrated at least once per week (168 hours)
+    severity: warning
+
+  max_drift_rate_mm_per_hour:
+    value: 2.0
+    description: Maximum acceptable drift is 2mm per hour
+    severity: critical
+
+  min_accuracy_meters:
+    value: 0.01
+    description: Minimum accuracy requirement is 1cm
+    severity: warning
+
+  max_accuracy_meters:
+    value: 0.5
+    description: Maximum acceptable accuracy error is 50cm
+    severity: warning
+
+  min_confidence_pct:
+    value: 85
+    description: Sensor confidence score must be at least 85%
+    severity: warning
+
+anomalies:
+  - name: calibration_stale
+    description: Sensor calibration exceeds maximum age without refresh
+    severity: warning
+
+  - name: excessive_drift
+    description: Sensor drift rate exceeds acceptable limit
+    severity: critical
+
+  - name: poor_accuracy
+    description: Sensor accuracy falls outside acceptable bounds
+    severity: warning
+
+  - name: low_confidence
+    description: Sensor reports low confidence in measurements
+    severity: warning
+
+  - name: calibration_divergence
+    description: Multiple calibrations of same sensor show inconsistency
+    severity: warning
+
+audit_trail:
+  - timestamp: required
+  - sensor_id: required
+  - age_hours: required
+  - drift_rate_mm_per_hour: required
+  - accuracy_meters: required
+  - confidence_pct: required
+  - calibration_date: required
+  - validation_result: required
+
+actions:
+  - if_stale: "Schedule recalibration within 24 hours"
+  - if_excessive_drift: "Reject sensor data immediately"
+  - if_poor_accuracy: "Log warning; use with reduced weight in fusion"
+  - if_low_confidence: "Monitor for patterns indicating malfunction"
+
+expected_improvements:
+  data_reliability: "Only use high-quality calibrated sensor data"
+  drift_monitoring: "Detect sensor degradation before accuracy suffers"
+  fusion_accuracy: "Improve terrain mapping by 5-10%"
+  maintenance: "Plan sensor maintenance proactively"

@@ -1,0 +1,74 @@
+---
+name: temporal_coordinate_quality
+version: "1.0.0"
+description: Validates temporal ordering and quality of 5D spatial-temporal coordinates
+domain: temporal_normalization
+
+rules:
+  coordinate_bounds_min:
+    value: -1000
+    description: Minimum spatial coordinate is -1000 meters
+    severity: critical
+
+  coordinate_bounds_max:
+    value: 1000
+    description: Maximum spatial coordinate is 1000 meters
+    severity: critical
+
+  time_ordering:
+    value: monotonic_increasing
+    description: Timestamps must be strictly monotonically increasing
+    severity: critical
+
+  max_temporal_gap_seconds:
+    value: 60
+    description: Maximum gap between consecutive timestamps is 60 seconds
+    severity: warning
+
+  min_quality_score:
+    value: 0.70
+    description: Minimum quality score for coordinates is 0.70
+    severity: warning
+
+anomalies:
+  - name: impossible_location
+    description: Coordinates fall outside reasonable spatial bounds
+    severity: critical
+
+  - name: temporal_disorder
+    description: Timestamps not in monotonic order
+    severity: critical
+
+  - name: data_discontinuity
+    description: Gap in timestamps suggests lost data
+    severity: warning
+
+  - name: degraded_data
+    description: Quality score below acceptable threshold
+    severity: warning
+
+  - name: clock_drift
+    description: Detected gradual drift in timestamp intervals
+    severity: warning
+
+audit_trail:
+  - timestamp: required
+  - coordinate_count: required
+  - time_ordering_valid: required
+  - max_gap_seconds: required
+  - min_quality_score: required
+  - spatial_bounds_check: required
+  - validation_result: required
+
+recovery_actions:
+  - if_out_of_bounds: "Reject coordinate; log with sensor ID"
+  - if_out_of_order: "Stop processing; alert operator"
+  - if_gap_detected: "Flag region with gap as lower confidence"
+  - if_low_quality: "Mark region for reprocessing with more sensors"
+  - if_clock_drift: "Resynchronize sensor clocks"
+
+expected_improvements:
+  coordinate_reliability: "Ensure 99%+ temporal coordinate correctness"
+  data_continuity: "Detect and flag data gaps for investigation"
+  mapping_quality: "Improve 3D reconstruction accuracy"
+  multi_robot_sync: "Enable synchronized multi-robot mapping"

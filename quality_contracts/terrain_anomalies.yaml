@@ -1,0 +1,80 @@
+---
+name: terrain_mapping_quality
+version: "1.0.0"
+description: Detects geometric anomalies and quality issues in terrain mapping
+domain: spatial_quality
+
+rules:
+  max_elevation_gradient:
+    value: 45
+    description: Maximum elevation gradient is 45 degrees
+    severity: critical
+
+  min_point_density_per_m2:
+    value: 100
+    description: Minimum point density is 100 points per square meter
+    severity: warning
+
+  max_color_variance:
+    value: 0.3
+    description: Color consistency must not vary more than 0.3
+    severity: warning
+
+  min_normal_coherence:
+    value: 0.8
+    description: Surface normal coherence must be at least 0.8
+    severity: warning
+
+anomalies:
+  - name: impossible_slope
+    description: Terrain slope exceeds physical feasibility
+    severity: critical
+
+  - name: sparse_coverage
+    description: Point cloud too sparse for reliable mapping
+    severity: warning
+
+  - name: inconsistent_color
+    description: Surface color inconsistency indicates alignment error
+    severity: warning
+
+  - name: noisy_surface
+    description: Surface normals incoherent, indicating noise in data
+    severity: warning
+
+  - name: sensor_fusion_error
+    description: Detected inconsistency between multiple sensors
+    severity: warning
+
+  - name: outlier_cluster
+    description: Localized cluster of outliers detected
+    severity: warning
+
+audit_trail:
+  - timestamp: required
+  - region_id: required
+  - point_count: required
+  - elevation_gradient: required
+  - point_density: required
+  - color_variance: required
+  - normal_coherence: required
+  - validation_result: required
+
+region_tagging:
+  - high_quality: "confidence > 0.90"
+  - medium_quality: "0.70 < confidence < 0.90"
+  - low_quality: "confidence < 0.70"
+  - reject: "gradient > 45° or density < 50 pts/m²"
+
+quality_actions:
+  - if_impossible_slope: "Reject region; investigate sensor alignment"
+  - if_sparse: "Mark for reprocessing with additional sensors"
+  - if_color_inconsistent: "Flag as potential registration error"
+  - if_noisy: "Apply denoising filter or mark uncertain"
+  - if_outlier_cluster: "Isolate and analyze separately"
+
+expected_improvements:
+  mapping_quality: "Achieve 96%+ high-confidence terrain data"
+  anomaly_detection: "Catch 95%+ of mapping errors before delivery"
+  confidence_scoring: "Every region has quality metadata"
+  autonomous_improvement: "System learns optimal thresholds over time"

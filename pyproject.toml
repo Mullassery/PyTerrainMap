@@ -4,8 +4,8 @@ build-backend = "maturin"
 
 [project]
 name = "pyterrainMap"
-version = "0.2.0"
-description = "Spatial intelligence companion for multi-robot terrain mapping with anomaly detection and 3D reconstruction"
+version = "1.0.0"
+description = "Spatial intelligence companion for multi-robot terrain mapping with embedded StatGuardian quality validation, anomaly detection, and 3D reconstruction"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
