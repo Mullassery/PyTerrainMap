@@ -1,53 +1,206 @@
 # PyTerrainMap
 
-**Collaborative terrain mapping platform for multi-robot fleets.**
+> **The Problem:** Multi-robot teams explore together but map separately. Each robot builds its own mental model. No shared learning. Redundant exploration. Wasted time and energy.
 
-PyTerrainMap enables heterogeneous robot teams to build shared terrain understanding in real-time. Download, deploy locally, provide your terrain, and let your bots collaborate.
+**PyTerrainMap solves this.** It's a spatial intelligence engine that lets robot teams build shared understanding in real-time. One robot observes terrain → all robots know about it. Anomalies detected once → team avoids the area. Efficient terrain models built collaboratively, not individually.
 
-> Part of the PyTerrain ecosystem. For intelligence/anomaly detection, see [PyTerrainAI](https://github.com/Mullassery/pyterrain-ai)
+Deploy locally. No external dependencies. Plug in your robots. Start mapping.
+
+## Install
+
+Using **pip**:
+```bash
+pip install pyterrainMap
+```
+
+Using **uv** (faster, recommended):
+```bash
+uv pip install pyterrainMap
+```
+
+Or add to your project:
+```bash
+uv add pyterrainMap
+```
+
+**Requirements:** Python 3.10+. Works on macOS (Intel/ARM), Linux, Windows.
+
+## Core Idea
+
+**Push observations. Query what you need to know. Let the system reason about space and time.**
+
+```python
+from pyterrain_map import Observation, GeoPoint, SensorType
+
+# Robot 1 explores and observes
+observation = Observation(
+    robot_id="quad_1",
+    location=GeoPoint(40.7128, -74.0060),
+    sensor_type=SensorType.Thermal,
+    value={"celsius": 42.1},
+    confidence=0.95,
+)
+
+# Push observation (shared with all robots)
+await map_engine.push_observation(observation)
+
+# Robot 2 queries: "What do I need to know about this area?"
+context = await map_engine.context(
+    location=GeoPoint(40.7128, -74.0060),
+    what_matters=["recent_detections", "anomalies", "confidence"],
+)
+
+print(context.temperature_trend)      # Rising? Steady?
+print(context.observed_obstacles)     # Where are the hazards?
+print(context.robot_activity)         # Who else was here?
+```
+
+## What It Does
+
+**Observation Fusion** — Multiple robots, multiple sensors, one shared reality
+- Sensor types: Thermal, LiDAR, Camera, Ultrasonic, Motion
+- Confidence tracking: Know which observations to trust
+- Spatial indexing: Fast queries without scanning history
+
+**Spatial Reasoning** — Understand terrain in 3D
+- Elevation-aware: Ground floor ≠ 2nd floor ≠ roof
+- H3 hierarchical indexing: Query at any scale
+- Change detection: "What's different from yesterday?"
+
+**Temporal Intelligence** — Recent data matters more
+- Exponential decay: Old observations fade gracefully
+- Multi-sensor fusion: Combine sources for better certainty
+- Anomaly detection: Flag unexpected observations automatically
+
+**Trust and Verification** — Know what to believe
+- Trust scoring: How reliable is this observation?
+- Provenance tracking: Who captured this, when, how?
+- Audit trails: Why was this decision made?
 
 ## Quick Start
 
 ```python
-from pyterrain_map import PyTerrainMap, Observation, GeoPoint, SensorType
+import asyncio
+from pyterrain_map import TerrainMap, Observation, GeoPoint, SensorType
 
-# Initialize
-map_service = PyTerrainMap(config={
-    "terrain_file": "factory_elevation.tif",
-    "floor_plans": "factory_floors.json",
-})
+async def main():
+    # Initialize
+    map_engine = TerrainMap()
+    
+    # Simulate robot observations
+    for i in range(5):
+        obs = Observation(
+            robot_id=f"robot_{i % 2}",  # 2 robots alternating
+            location=GeoPoint(40.7 + (i * 0.001), -74.0 + (i * 0.001)),
+            sensor_type=SensorType.Thermal,
+            value={"celsius": 20.0 + i},
+            confidence=0.9,
+        )
+        await map_engine.push_observation(obs)
+    
+    # Query: What happened in this area?
+    region_context = await map_engine.query(
+        location=GeoPoint(40.702, -74.001),
+        time_window_days=1,
+        max_results=10,
+    )
+    
+    print(f"Observations in region: {region_context.observation_count}")
+    print(f"Confidence: {region_context.avg_confidence:.2%}")
+    print(f"Temperature trend: {region_context.temperature_trend}")
 
-# Query before exploring
-context = await map_service.query(
-    location=GeoPoint(40.123, -74.567),
-    elevation_range=(0, 2),
-    interested_sensors=[SensorType.Thermal, SensorType.LiDAR]
-)
-print(context.suggested_focus_areas)  # Where should I go?
-print(context.temporal_trends)        # What changed?
-
-# Push observations after exploring
-await map_service.push_observation(Observation(
-    robot_id="quad_1",
-    location=current_gps,
-    sensor_type=SensorType.Thermal,
-    value={"celsius": 42.1},
-    confidence=0.95
-))
-
-# Get timeline images (optional PyNoramic)
-timeline = await map_service.get_image_timeline(
-    location=GeoPoint(40.123, -74.567),
-    time_range=("2024-01-01", "2024-01-10")
-)
+asyncio.run(main())
 ```
+
+## When to Use
+
+- **Multi-robot teams** exploring the same environment
+- **Surveillance systems** that need spatial anomaly detection
+- **Disaster response** (search & rescue, structural assessment)
+- **Infrastructure inspection** (factories, buildings, plants)
+- **Environmental monitoring** (agriculture, ecology, urban planning)
+
+Teams that benefit: Swarm robotics, drone fleets, autonomous vehicles, IoT sensor networks, research labs.
 
 ## Features
 
-- **Multi-perspective terrain reconstruction** — Fuse observations from different robots, viewpoints, and sensor types
-- **3D spatial awareness** — Ground floor ≠ 2nd floor ≠ roof (elevation-aware indexing)
-- **Temporal decay** — Recent data weighted higher; old observations fade gracefully
-- **Real-time context** — Bots query "what should I know before exploring?"
+- **Pure Python (with Rust core)** — Install via pip, no C++ compiler needed
+- **Async/await throughout** — Integrates with async Python code (asyncio, FastAPI, etc.)
+- **Type-safe** — Full type hints for IDE support and runtime validation
+- **Zero external services** — Deploy anywhere, no cloud dependencies
+- **Open source (MIT)** — Use freely, modify as needed
+
+## API
+
+### Core Operations
+
+**Push observation**
+```python
+await map_engine.push_observation(obs: Observation) -> ObservationId
+```
+
+**Query spatial-temporal region**
+```python
+results = await map_engine.query(
+    location: GeoPoint,
+    time_window_days: int,
+    max_results: int,
+) -> QueryResult
+```
+
+**Get region statistics**
+```python
+stats = await map_engine.region_stats(
+    region: Region,
+    time_window_days: int,
+) -> RegionStatistics
+```
+
+**Detect anomalies**
+```python
+anomalies = await map_engine.detect_anomalies(
+    region: Region,
+) -> List[Anomaly]
+```
+
+**Export observations**
+```python
+geojson = await map_engine.export(
+    format: ExportFormat,  # GeoJSON, KML, WKT, Parquet, etc.
+    region: Region,
+) -> ExportStream
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────┐
+│     Python Application Layer        │
+│  (your robots, your logic)          │
+└──────────────┬──────────────────────┘
+               │ (async/await)
+┌──────────────▼──────────────────────┐
+│   PyTerrainMap (Python Wrapper)     │
+│   Type hints, CLI, utilities        │
+└──────────────┬──────────────────────┘
+               │ (PyO3 FFI)
+┌──────────────▼──────────────────────┐
+│   Rust Core (Fast + Safe)           │
+│   ├─ Spatial indexing (H3)          │
+│   ├─ Temporal reasoning             │
+│   ├─ Sensor fusion                  │
+│   ├─ Anomaly detection              │
+│   └─ Audit + security               │
+└─────────────────────────────────────┘
+```
+
+The Rust core is battle-tested for correctness and performance. Python layer is flexible and easy to extend.
+
+## License
+
+MIT License — See LICENSE file.
+
+For questions or issues: https://github.com/Mullassery/pyterrain-map/issues
 - **Sensor fusion** — Combines thermal + LiDAR + camera + ultrasonic intelligently
 - **Anomaly detection** — Flags threats, damage, unexpected presence
 - **Image timeline stitching** — Progressive 3D reconstruction from image sequences
