@@ -22,6 +22,7 @@ pub mod api;
 pub mod api_tls;
 pub mod data_sources;
 pub mod reference_images;
+pub mod reconstruction_3d;
 
 // Re-export all public types
 pub use types::{
@@ -77,6 +78,12 @@ pub use data_sources::{
 pub use reference_images::{
     ReferenceImage, ReferenceImageStore, VisualDescriptor, ImageMatch, GeoreferenceStatus,
     ImageOrientation,
+};
+
+// Re-export 3D reconstruction types
+pub use reconstruction_3d::{
+    CameraIntrinsics, CameraPose, Point3D, ReconstructionFrame, PointCloud, ReconstructionEngine,
+    PointCloudStats, ReconstructionStats,
 };
 
 // TODO: Implement in future weeks
