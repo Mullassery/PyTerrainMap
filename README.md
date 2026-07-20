@@ -15,23 +15,30 @@ Turn sensor data from your robots into shared knowledge. Deploy on your infrastr
 
 ## 🎯 What Problem Does It Solve?
 
-You have multiple robots collecting sensor data across an area. Right now:
-- 🔴 Each robot works in isolation — no shared knowledge
+You have multiple robots collecting sensor data. Right now:
+- 🔴 Sensor data quality is unknown — garbage in, garbage out
+- 🔴 No validation that sensors are calibrated or trustworthy
+- 🔴 Multi-sensor conflicts are invisible until they break your maps
+- 🔴 Each robot works in isolation — no shared situational awareness
 - 🔴 You rebuild multi-robot coordination for every project
-- 🔴 Yesterday's data gets treated same as today's
-- 🔴 You have no immutable audit trail of what happened where
-- 🔴 Switching cloud providers requires rewriting everything
+- 🔴 No audit trail: can't answer "where did this bad data come from?"
+
+The result: Bad maps, wrong decisions, wasted robot hours.
 
 ## ✨ What's the Solution?
 
-PyTerrainMap is a **terrain intelligence platform** that:
-- ✅ Collects observations from ALL your robots (LiDAR, thermal, camera, IMU, etc)
-- ✅ Stores them immutably in YOUR choice of storage (S3, GCS, ADLS, or local)
-- ✅ Lets every robot query what others have learned
-- ✅ Detects changes over time (thermal anomalies, structural damage, movement)
-- ✅ Provides zero-vendor-lock-in, pure open-source architecture
+PyTerrainMap is a **high-fidelity terrain intelligence platform** that:
+- ✅ **Validates sensor quality before fusion** — calibration, drift, consistency checks
+- ✅ **Catches conflicts early** — multi-sensor agreement validation
+- ✅ **Fuses only high-confidence data** — quality-aware sensor fusion
+- ✅ **Collects observations from ALL your robots** (LiDAR, thermal, camera, IMU, etc)
+- ✅ **Stores immutably** in YOUR storage choice (S3, GCS, ADLS, or local)
+- ✅ **Detects changes over time** with quality metadata (thermal anomalies, structural damage, movement)
+- ✅ **Provides zero-vendor-lock-in** with open-source, self-validating architecture
 
-**Use it for:** Construction inspection, security surveillance, agricultural monitoring, environmental mapping, emergency response, or any multi-robot sensing mission.
+**Architectural Role:** PyTerrainMap owns **spatial intelligence and sensor data movement** across your fleet. Quality validation (calibration, consistency, anomalies) is embedded and non-negotiable.
+
+**Use it for:** Construction inspection, security surveillance, agricultural monitoring, environmental mapping, emergency response, or any multi-robot sensing mission where **quality and trust matter**.
 
 ---
 
