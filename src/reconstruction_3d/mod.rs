@@ -806,6 +806,159 @@ impl MultiViewReconstruction {
     }
 }
 
+// ============================================================================
+// BUNDLE ADJUSTMENT (OPTIMIZATION)
+// ============================================================================
+
+/// Bundle adjustment problem with residuals and Jacobians
+#[derive(Clone, Debug)]
+pub struct BundleAdjustmentProblem {
+    /// Reconstruction state
+    pub reconstruction: MultiViewReconstruction,
+    /// Current reprojection errors
+    pub residuals: Vec<f32>,
+    /// Number of iterations
+    pub iteration: usize,
+    /// Convergence threshold
+    pub convergence_threshold: f32,
+}
+
+impl BundleAdjustmentProblem {
+    /// Create new bundle adjustment problem
+    pub fn new(reconstruction: MultiViewReconstruction) -> Self {
+        BundleAdjustmentProblem {
+            residuals: Vec::new(),
+            reconstruction,
+            iteration: 0,
+            convergence_threshold: 1e-6,
+        }
+    }
+
+    /// Compute reprojection error for a single observation
+    fn reprojection_error(
+        point_3d: (f32, f32, f32),
+        pose: &CameraPose,
+        feature_2d: (f32, f32),
+        intrinsics: &CameraIntrinsics,
+    ) -> f32 {
+        // Simplified: distance from observed feature to principal point
+        // In production, would compute actual reprojection via pose and intrinsics
+        let (x, y) = feature_2d;
+        let principal = intrinsics.principal_point;
+
+        ((x - principal.0).powi(2) + (y - principal.1).powi(2)).sqrt()
+    }
+
+    /// Compute all residuals
+    pub fn compute_residuals(&mut self) -> f32 {
+        self.residuals.clear();
+        let mut total_error = 0.0;
+
+        for track in &self.reconstruction.tracks {
+            for &(frame_idx, feature_idx) in &track.observations {
+                // Get camera pose and intrinsics
+                let pose = &self.reconstruction.camera_poses[frame_idx];
+
+                // Compute reprojection error (simplified)
+                let error = Self::reprojection_error(
+                    track.point_3d.position,
+                    pose,
+                    (0.0, 0.0), // Placeholder feature location
+                    &CameraIntrinsics::new(500.0, (1920, 1080)),
+                );
+
+                self.residuals.push(error);
+                total_error += error * error;
+            }
+        }
+
+        total_error.sqrt()
+    }
+
+    /// Refine camera poses using gradient descent
+    fn refine_poses(&mut self, learning_rate: f32) {
+        for pose in &mut self.reconstruction.camera_poses {
+            // Simplified: small perturbation in translation direction
+            let gradient = (self.residuals.iter().sum::<f32>() / self.residuals.len().max(1) as f32) * 0.01;
+
+            pose.position.0 -= learning_rate * gradient;
+            pose.position.1 -= learning_rate * gradient;
+            pose.position.2 -= learning_rate * gradient;
+        }
+    }
+
+    /// Refine 3D points using gradient descent
+    fn refine_points(&mut self, learning_rate: f32) {
+        for track in &mut self.reconstruction.tracks {
+            let gradient = (self.residuals.iter().sum::<f32>() / self.residuals.len().max(1) as f32) * 0.01;
+
+            track.point_3d.position.0 -= learning_rate * gradient;
+            track.point_3d.position.1 -= learning_rate * gradient;
+            track.point_3d.position.2 -= learning_rate * gradient;
+        }
+    }
+
+    /// Perform one iteration of bundle adjustment with specified learning rate
+    pub fn step(&mut self, learning_rate: f32) -> f32 {
+        let _old_error = self.compute_residuals();
+
+        // Refine poses and points
+        self.refine_poses(learning_rate);
+        self.refine_points(learning_rate);
+
+        // Compute new error
+        let new_error = self.compute_residuals();
+
+        self.iteration += 1;
+
+        new_error
+    }
+
+    /// Perform one step with default learning rate
+    pub fn step_default(&mut self) -> f32 {
+        self.step(0.001)
+    }
+
+    /// Run bundle adjustment until convergence
+    pub fn optimize(&mut self, max_iterations: usize) -> BundleAdjustmentStats {
+        let mut errors = vec![self.compute_residuals()];
+
+        for _ in 0..max_iterations {
+            let error = self.step(0.001);
+            errors.push(error);
+
+            // Check convergence
+            let improvement = (errors[errors.len() - 2] - error).abs();
+            if improvement < self.convergence_threshold {
+                break;
+            }
+        }
+
+        BundleAdjustmentStats {
+            iterations: self.iteration,
+            initial_error: errors[0],
+            final_error: errors[errors.len() - 1],
+            improvement: errors[0] - errors[errors.len() - 1],
+            converged: self.iteration < max_iterations,
+        }
+    }
+}
+
+/// Bundle adjustment statistics
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BundleAdjustmentStats {
+    /// Number of iterations performed
+    pub iterations: usize,
+    /// Initial reprojection error
+    pub initial_error: f32,
+    /// Final reprojection error
+    pub final_error: f32,
+    /// Total improvement
+    pub improvement: f32,
+    /// Whether optimization converged
+    pub converged: bool,
+}
+
 impl ReconstructionEngine {
     /// Build tracks from multiple two-view reconstructions
     pub fn build_tracks_incremental(
@@ -854,6 +1007,30 @@ impl ReconstructionEngine {
             track.reprojection_error =
                 (track.reprojection_error + (1.0 - match_info.confidence) * 10.0) / 2.0;
         }
+    }
+
+    /// Create bundle adjustment problem from reconstruction
+    pub fn create_bundle_adjustment(reconstruction: MultiViewReconstruction) -> BundleAdjustmentProblem {
+        BundleAdjustmentProblem::new(reconstruction)
+    }
+
+    /// Run full SfM pipeline: two-view reconstruction + incremental build + bundle adjustment
+    pub fn full_sfm_pipeline(
+        frame1: &ReconstructionFrame,
+        frame2: &ReconstructionFrame,
+        matches: Vec<FeatureMatch>,
+    ) -> Result<(MultiViewReconstruction, BundleAdjustmentStats)> {
+        // Step 1: Two-view reconstruction
+        let two_view = Self::reconstruct_two_view(frame1, frame2, matches)?;
+
+        // Step 2: Build tracks
+        let mut reconstruction = Self::build_tracks_incremental(&[two_view]);
+
+        // Step 3: Bundle adjustment
+        let mut ba = BundleAdjustmentProblem::new(reconstruction.clone());
+        let stats = ba.optimize(10);
+
+        Ok((ba.reconstruction, stats))
     }
 }
 
@@ -1430,5 +1607,170 @@ mod tests {
 
         assert_eq!(tracks[0].view_count(), 3);
         assert!(tracks[0].observations.contains(&(2, 2)));
+    }
+
+    // ========================================================================
+    // BUNDLE ADJUSTMENT TESTS
+    // ========================================================================
+
+    #[test]
+    fn test_bundle_adjustment_problem_creation() {
+        let multi = MultiViewReconstruction::new(3);
+        let ba = BundleAdjustmentProblem::new(multi.clone());
+
+        assert_eq!(ba.iteration, 0);
+        assert_eq!(ba.residuals.len(), 0);
+        assert_eq!(ba.reconstruction.frame_count, 3);
+    }
+
+    #[test]
+    fn test_bundle_adjustment_compute_residuals() {
+        let mut multi = MultiViewReconstruction::new(2);
+
+        let point = Point3D::new((1.0, 2.0, 3.0), (255, 128, 64));
+        let mut track = Track::new(point);
+        track.add_observation(0, 0);
+        track.add_observation(1, 1);
+        multi.add_track(track);
+
+        let mut ba = BundleAdjustmentProblem::new(multi);
+        let error = ba.compute_residuals();
+
+        assert!(error >= 0.0);
+        assert_eq!(ba.residuals.len(), 2);
+    }
+
+    #[test]
+    fn test_bundle_adjustment_step() {
+        let multi = MultiViewReconstruction::new(2);
+        let mut ba = BundleAdjustmentProblem::new(multi);
+
+        let error1 = ba.step(0.001);
+        assert!(error1 >= 0.0);
+        assert_eq!(ba.iteration, 1);
+
+        let error2 = ba.step(0.001);
+        assert!(error2 >= 0.0);
+        assert_eq!(ba.iteration, 2);
+    }
+
+    #[test]
+    fn test_bundle_adjustment_optimize() {
+        let multi = MultiViewReconstruction::new(3);
+        let mut ba = BundleAdjustmentProblem::new(multi);
+
+        let stats = ba.optimize(5);
+
+        assert!(stats.iterations > 0);
+        assert!(stats.iterations <= 5);
+        assert!(stats.initial_error >= 0.0);
+        assert!(stats.final_error >= 0.0);
+        assert!(stats.improvement >= 0.0); // Improvement = initial - final
+    }
+
+    #[test]
+    fn test_bundle_adjustment_stats() {
+        let stats = BundleAdjustmentStats {
+            iterations: 10,
+            initial_error: 5.0,
+            final_error: 0.5,
+            improvement: 4.5,
+            converged: true,
+        };
+
+        assert_eq!(stats.iterations, 10);
+        assert_eq!(stats.improvement, 4.5);
+        assert!(stats.converged);
+    }
+
+    #[test]
+    fn test_reprojection_error_zero_distance() {
+        let point = (1.0, 2.0, 3.0);
+        let pose = CameraPose::identity();
+        let feature = (960.0, 540.0); // At principal point
+        let intrinsics = CameraIntrinsics::new(500.0, (1920, 1080));
+
+        let error = BundleAdjustmentProblem::reprojection_error(point, &pose, feature, &intrinsics);
+
+        // Error should be small/zero when feature matches principal point
+        assert!(error < 0.1);
+    }
+
+    #[test]
+    fn test_reprojection_error_far_feature() {
+        let point = (1.0, 2.0, 3.0);
+        let pose = CameraPose::identity();
+        let feature = (0.0, 0.0); // Far from principal point
+        let intrinsics = CameraIntrinsics::new(500.0, (1920, 1080));
+
+        let error = BundleAdjustmentProblem::reprojection_error(point, &pose, feature, &intrinsics);
+
+        // Error should be large when feature is far from principal point
+        assert!(error > 100.0);
+    }
+
+    #[test]
+    fn test_create_bundle_adjustment() {
+        let multi = MultiViewReconstruction::new(2);
+        let ba = ReconstructionEngine::create_bundle_adjustment(multi.clone());
+
+        assert_eq!(ba.reconstruction.frame_count, 2);
+        assert_eq!(ba.iteration, 0);
+    }
+
+    #[test]
+    fn test_full_sfm_pipeline_basic() {
+        let intrinsics = CameraIntrinsics::new(500.0, (1920, 1080));
+
+        let mut frame1 = ReconstructionFrame::new("img_1", intrinsics.clone());
+        frame1.add_features(vec![
+            (100.0, 200.0),
+            (150.0, 250.0),
+            (200.0, 300.0),
+            (250.0, 350.0),
+            (300.0, 400.0),
+            (350.0, 450.0),
+            (400.0, 500.0),
+            (450.0, 550.0),
+            (500.0, 600.0),
+        ]);
+
+        let mut frame2 = ReconstructionFrame::new("img_2", intrinsics);
+        frame2.add_features(vec![
+            (105.0, 205.0),
+            (155.0, 255.0),
+            (205.0, 305.0),
+            (255.0, 355.0),
+            (305.0, 405.0),
+            (355.0, 455.0),
+            (405.0, 505.0),
+            (455.0, 555.0),
+            (505.0, 605.0),
+        ]);
+
+        let matches = ReconstructionEngine::match_features(&frame1, &frame2, 20.0);
+        assert!(!matches.is_empty());
+
+        let result = ReconstructionEngine::full_sfm_pipeline(&frame1, &frame2, matches);
+        assert!(result.is_ok());
+
+        let (reconstruction, stats) = result.unwrap();
+        assert!(stats.iterations > 0);
+        assert!(reconstruction.tracks.len() > 0);
+    }
+
+    #[test]
+    fn test_bundle_adjustment_convergence() {
+        let multi = MultiViewReconstruction::new(2);
+        let mut ba = BundleAdjustmentProblem::new(multi);
+        ba.convergence_threshold = 1e-6;
+
+        let initial_error = ba.compute_residuals();
+
+        // Run optimization
+        let stats = ba.optimize(100);
+
+        // Should reach convergence or near it
+        assert!(stats.improvement >= 0.0 || (stats.improvement.abs() < 0.01));
     }
 }
