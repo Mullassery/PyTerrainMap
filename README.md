@@ -107,6 +107,77 @@ That's it! 🎉
 
 ---
 
+## 🧠 Probabilistic World Modeling (v1.3+)
+
+**Gaussian Splatting for Fleet Intelligence**
+
+PyTerrainMap now includes a probabilistic world model using Gaussian Splatting — think of it as a **continuous, uncertainty-aware 3D map that all your robots learn into collectively**.
+
+### Key Features
+
+✅ **Fleet Learning:** One robot observes an obstacle → all robots instantly know about it  
+✅ **Uncertainty Tracking:** Know what's known, what's guessed, what's out-of-date  
+✅ **Multi-Bot Fusion:** Bayesian observation merging across your entire fleet  
+✅ **Temporal Intelligence:** Objects age gracefully; stale observations decay automatically  
+✅ **Dynamic Object Tracking:** Detect when pallets move, shelves change, obstacles appear/disappear  
+✅ **Real-Time Queries:** Sub-millisecond uncertainty lookups for path planning  
+
+### Quick Example: Warehouse Coordination
+
+```python
+from pyterrain_map import (
+    PyGaussianSplatStore,
+    PyFleetCoordinator,
+    PyBotObservationMessage,
+)
+
+# Shared world model (one instance for entire fleet)
+store = PyGaussianSplatStore()
+coordinator = PyFleetCoordinator(store)
+
+# Bot 01 sees a pallet
+coordinator.register_bot("bot_01")
+observation = PyBotObservationMessage(
+    bot_id="bot_01",
+    lat=40.001, lon=-74.0, elev=1.5,
+    traversability=0.0,  # Impassable
+    confidence=0.95,
+    terrain_type="Obstacle",
+)
+coordinator.broadcast_observation(observation)
+
+# Bot 02 immediately knows (never visited that location)
+uncertainty = store.uncertainty_at(40.001, -74.0, 1.5)
+print(f"Pallet confidence: {1 - uncertainty:.1%}")  # 95% (from bot_01)
+
+# Path planner routes around it
+cost = store.path_cost(
+    from_lat=40.0, from_lon=-74.0, from_elev=0.0,
+    to_lat=40.002, to_lon=-74.0, to_elev=0.0
+)
+print(f"Detour cost: {cost.uncertainty_cost:.2f}")
+```
+
+### Supported Use Cases
+
+| Domain | Example |
+|--------|---------|
+| **Warehouse** | Delivery robots coordinating on shared floor plans; collective pallet tracking |
+| **Surveillance** | Drone fleet building visibility maps; coverage coordination |
+| **Agriculture** | Rover teams monitoring soil conditions; collective field state |
+| **Disaster Response** | Multi-robot hazard mapping; safe passage detection |
+| **Exploration** | Autonomous teams discovering unknown environments collaboratively |
+
+### Documentation
+
+| Topic | Link |
+|-------|------|
+| **User Guide** | [GAUSSIAN_SPLATTING_GUIDE.md](docs/GAUSSIAN_SPLATTING_GUIDE.md) — Core concepts, API, best practices |
+| **GPU Acceleration** | [GAUSSIAN_SPLATTING_GPU_ACCELERATION.md](docs/GAUSSIAN_SPLATTING_GPU_ACCELERATION.md) — CUDA, Metal, WebGPU hints |
+| **Simulation** | [tests/test_warehouse_simulation.py](tests/test_warehouse_simulation.py) — 6 realistic scenarios |
+
+---
+
 ## 📖 Documentation
 
 | I want to... | Read this |
@@ -215,6 +286,29 @@ If you use ROS2:
 - Works with MoveIt2, Nav2, standard TF transforms
 - Pre-configured for Spot, DJI M300, Boston Dynamics, Clearpath
 - Real examples included (Gazebo, Isaac Sim)
+
+### OpenTelemetry Observability (v1.3+)
+Production-grade monitoring of your fleet:
+- **Distributed tracing**: Track observations across fleet with trace/span IDs
+- **Metrics export**: Prometheus-compatible OpenMetrics format
+- **Change event logging**: Automatic detection of object movement, appearance, disappearance
+- **Latency tracking**: Sub-millisecond operation monitoring (fusion, queries, decay)
+- **Fleet aggregation**: Combine metrics across all robots automatically
+- **Alert thresholds**: Define and monitor key metrics (success rates, latencies, event rates)
+
+```python
+from pyterrain_map import GaussianSplattingTracer
+
+tracer = GaussianSplattingTracer()
+metrics = tracer.metrics()
+
+print(f"Observations ingested: {metrics.observations_ingested}")
+print(f"Fusion success rate: {metrics.fusions_successful / (metrics.fusions_successful + metrics.fusions_failed):.1%}")
+print(f"Query latency avg: {metrics.query_latency_us_avg:.1f} µs")
+
+# Export to Prometheus
+prometheus_text = tracer.export_metrics()
+```
 
 ### Change Detection (Out of the Box)
 ```python
