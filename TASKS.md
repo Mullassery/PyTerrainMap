@@ -28,14 +28,14 @@
   - 17 SLAM tests ✅
   - **Published:** https://pypi.org/project/pyterrainMap/1.0.4/ ✅
 
-### PyTerrainMap: Traversability Intelligence (NEW)
-- [ ] **Phase A: Spatial Knowledge Graph** (5-6 days)
-  - Node types (rooms, landmarks, regions, terrain cells)
-  - Edge types (doors, corridors, stairs, elevators, paths)
-  - Core metadata schema
-  - PostgreSQL schema design
-  - Add 15-20 tests
-  - **Blocking:** All subsequent traversability phases
+### PyTerrainMap: Traversability Intelligence (Phase 8 Complete ✅)
+- [x] **Phase 8: Spatial Knowledge Graph** (COMPLETE - 2026-07-20)
+  - Node types (rooms, landmarks, regions, terrain cells) ✅
+  - Edge types (doors, corridors, stairs, elevators, paths) ✅
+  - Core metadata schema ✅
+  - PostgreSQL schema design ✅
+  - 34 tests (exceeds 15-20 target) ✅
+  - **Enables:** Distance models, robot profiles, fleet learning
 
 - [ ] **Phase B: Distance Models** (4-5 days)
   - Geometric layer (Euclidean, 2D, 3D, elevation)
@@ -279,9 +279,9 @@ StatGuardian 2.2 (Lineage) ──→ 2.3 (Quality Gates) ──→ 3.0 (LLM)
 ## 📈 Metrics & Tracking
 
 **PyTerrainMap:**
-- Tests: 120/180 (67% complete) ✅ Phase 6+7 Complete
-- LOC: 3,800+/4,500 (85% complete)
-- Phase 7: SLAM Integration Complete (v1.0.4)
+- Tests: 154/180 (86% complete) ✅ Phases 1-8 Complete
+- LOC: 5,000+/6,000 (83% complete)
+- Phase 8: Spatial Knowledge Graph (34 tests, 2366 LOC)
 
 **TinyBridge:**
 - Phase 1: 100% complete
@@ -298,24 +298,27 @@ StatGuardian 2.2 (Lineage) ──→ 2.3 (Quality Gates) ──→ 3.0 (LLM)
 
 ---
 
-## 🚀 Next Steps (Phase 8+)
+## 🚀 Next Steps (Phase 9+)
 
-**PHASE 7 COMPLETE** — Core SfM + Real-Time SLAM pipeline finished. v1.0.4 ready for production robot mapping.
+**PHASE 8 COMPLETE** — Spatial Knowledge Graph foundation built. 154/180 tests passing.
 
-1. **Immediate (Week 1):**
-   - Start Phase A: Spatial Knowledge Graph (Traversability Intelligence)
-   - Design PostgreSQL schema for graph nodes/edges
-   - Implement core graph data structures (15-20 tests)
+1. **Immediate (Week 2):**
+   - Start Phase 9: Multi-Layer Distance Models
+   - Implement 4 distance types: geometric, topological, cost, semantic
+   - Add 12-15 tests for distance computation
+   - PostgreSQL queries for spatial operations
 
-2. **Week 2:**
-   - Phase B: Multi-Layer Distance Models (4 distance types)
-   - Phase C: Traversability Observations (historical records, confidence)
-   - Integration testing with PyRoboFrames sensor pipelines
+2. **Week 3:**
+   - Phase 10: Robot Capability Profiles
+   - Define dimensions, weight, locomotion type, traction models
+   - Accessibility filtering by robot type
+   - 12-15 tests
 
-3. **Week 3-4:**
-   - Phase D: Connector Intelligence (doors, corridors, etc.)
-   - Phase E: Robot Capability Profiles
-   - Phase F: Fleet Learning & Consensus
+3. **Week 4:**
+   - Phase 11: Fleet Learning Engine
+   - Observation aggregation across robots
+   - Conflict resolution (different robots, different outcomes)
+   - Consensus mechanisms
 
 ---
 
