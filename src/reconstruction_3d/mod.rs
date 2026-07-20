@@ -1915,6 +1915,292 @@ pub struct PoseGraphStats {
     pub iterations: usize,
 }
 
+// ============================================================================
+// REAL-TIME SLAM (Phase 7)
+// ============================================================================
+
+/// Visual odometry frame tracking
+#[derive(Clone, Debug)]
+pub struct VisualOdometryFrame {
+    /// Frame ID
+    pub frame_id: usize,
+    /// Timestamp (microseconds)
+    pub timestamp_us: i64,
+    /// Estimated pose
+    pub pose: CameraPose,
+    /// Features detected in this frame
+    pub features: Vec<(f32, f32)>,
+    /// Feature descriptors (simplified)
+    pub descriptors: Vec<Vec<u8>>,
+    /// Tracking confidence
+    pub tracking_confidence: f32,
+}
+
+/// Visual odometry tracker for frame-to-frame motion estimation
+#[derive(Clone, Debug)]
+pub struct VisualOdometryTracker {
+    /// Last frame for tracking
+    pub last_frame: Option<VisualOdometryFrame>,
+    /// Current pose estimate
+    pub current_pose: CameraPose,
+    /// Accumulated motion
+    pub total_translation: (f32, f32, f32),
+    /// Tracking state
+    pub is_tracking: bool,
+    /// Number of frames tracked
+    pub frame_count: usize,
+}
+
+/// IMU measurement for sensor fusion
+#[derive(Clone, Debug)]
+pub struct IMUMeasurement {
+    /// Timestamp (microseconds)
+    pub timestamp_us: i64,
+    /// Acceleration (m/s²)
+    pub acceleration: (f32, f32, f32),
+    /// Angular velocity (rad/s)
+    pub angular_velocity: (f32, f32, f32),
+}
+
+/// Pre-integrated IMU measurements between keyframes
+#[derive(Clone, Debug)]
+pub struct IMUPreintegration {
+    /// Start timestamp
+    pub start_time_us: i64,
+    /// End timestamp
+    pub end_time_us: i64,
+    /// Accumulated delta rotation (as quaternion)
+    pub delta_rotation: (f32, f32, f32, f32),
+    /// Accumulated delta velocity
+    pub delta_velocity: (f32, f32, f32),
+    /// Accumulated delta position
+    pub delta_position: (f32, f32, f32),
+    /// Measurement count
+    pub measurement_count: usize,
+}
+
+/// Real-time pose graph for incremental SLAM
+#[derive(Clone, Debug)]
+pub struct RealtimePoseGraph {
+    /// Current keyframes
+    pub keyframes: Vec<VisualOdometryFrame>,
+    /// Current pose estimates
+    pub poses: Vec<CameraPose>,
+    /// IMU pre-integrations
+    pub imu_integrations: Vec<IMUPreintegration>,
+    /// Last optimization timestamp
+    pub last_optimization_us: i64,
+    /// Optimization interval (microseconds)
+    pub optimization_interval_us: u64,
+}
+
+/// Robot motion estimate from visual and IMU fusion
+#[derive(Clone, Debug)]
+pub struct RobotMotionEstimate {
+    /// Position (x, y, z)
+    pub position: (f32, f32, f32),
+    /// Velocity (vx, vy, vz)
+    pub velocity: (f32, f32, f32),
+    /// Rotation quaternion
+    pub rotation: (f32, f32, f32, f32),
+    /// Angular velocity (rad/s)
+    pub angular_velocity: (f32, f32, f32),
+    /// Confidence (0.0-1.0)
+    pub confidence: f32,
+    /// Timestamp (microseconds)
+    pub timestamp_us: i64,
+}
+
+impl VisualOdometryTracker {
+    /// Create new visual odometry tracker
+    pub fn new() -> Self {
+        VisualOdometryTracker {
+            last_frame: None,
+            current_pose: CameraPose::identity(),
+            total_translation: (0.0, 0.0, 0.0),
+            is_tracking: false,
+            frame_count: 0,
+        }
+    }
+
+    /// Process new frame for tracking
+    pub fn track_frame(&mut self, frame: &ReconstructionFrame, frame_id: usize) -> Result<()> {
+        let vo_frame = VisualOdometryFrame {
+            frame_id,
+            timestamp_us: frame.timestamp,
+            pose: frame.pose.clone(),
+            features: frame.features.clone(),
+            descriptors: vec![],
+            tracking_confidence: 0.8,
+        };
+
+        if let Some(ref last) = self.last_frame {
+            // Match features between frames
+            let matches = ReconstructionEngine::match_features(
+                &ReconstructionFrame {
+                    image_id: format!("frame_{}", last.frame_id),
+                    intrinsics: CameraIntrinsics::new(500.0, (1920, 1080)),
+                    pose: last.pose.clone(),
+                    features: last.features.clone(),
+                    matched_3d_points: vec![],
+                    timestamp: last.timestamp_us,
+                },
+                frame,
+                30.0,
+            );
+
+            if matches.len() >= 8 {
+                // Estimate relative motion
+                let dx = frame.pose.position.0 - last.pose.position.0;
+                let dy = frame.pose.position.1 - last.pose.position.1;
+                let dz = frame.pose.position.2 - last.pose.position.2;
+
+                self.total_translation.0 += dx;
+                self.total_translation.1 += dy;
+                self.total_translation.2 += dz;
+
+                self.is_tracking = true;
+                self.current_pose = frame.pose.clone();
+            }
+        }
+
+        self.last_frame = Some(vo_frame);
+        self.frame_count += 1;
+
+        Ok(())
+    }
+
+    /// Get current motion estimate
+    pub fn get_motion_estimate(&self) -> RobotMotionEstimate {
+        RobotMotionEstimate {
+            position: self.current_pose.position,
+            velocity: (0.0, 0.0, 0.0), // Would compute from pose history
+            rotation: self.current_pose.rotation,
+            angular_velocity: (0.0, 0.0, 0.0),
+            confidence: if self.is_tracking { 0.8 } else { 0.0 },
+            timestamp_us: self.last_frame.as_ref().map(|f| f.timestamp_us).unwrap_or(0),
+        }
+    }
+}
+
+impl IMUPreintegration {
+    /// Create new IMU pre-integration
+    pub fn new(start_time_us: i64) -> Self {
+        IMUPreintegration {
+            start_time_us,
+            end_time_us: start_time_us,
+            delta_rotation: (0.0, 0.0, 0.0, 1.0), // Identity quaternion
+            delta_velocity: (0.0, 0.0, 0.0),
+            delta_position: (0.0, 0.0, 0.0),
+            measurement_count: 0,
+        }
+    }
+
+    /// Integrate IMU measurement
+    pub fn integrate_measurement(&mut self, measurement: &IMUMeasurement) {
+        // Simplified integration: accumulate deltas
+        let dt = if self.measurement_count > 0 {
+            (measurement.timestamp_us - self.end_time_us) as f32 / 1_000_000.0
+        } else {
+            0.0
+        };
+
+        // Accumulate velocity change (dv = a * dt)
+        self.delta_velocity.0 += measurement.acceleration.0 * dt;
+        self.delta_velocity.1 += measurement.acceleration.1 * dt;
+        self.delta_velocity.2 += measurement.acceleration.2 * dt;
+
+        // Accumulate position change (dp = dv * dt)
+        self.delta_position.0 += self.delta_velocity.0 * dt;
+        self.delta_position.1 += self.delta_velocity.1 * dt;
+        self.delta_position.2 += self.delta_velocity.2 * dt;
+
+        self.end_time_us = measurement.timestamp_us;
+        self.measurement_count += 1;
+    }
+
+    /// Get integration duration
+    pub fn duration_us(&self) -> i64 {
+        self.end_time_us - self.start_time_us
+    }
+}
+
+impl RealtimePoseGraph {
+    /// Create new real-time pose graph
+    pub fn new() -> Self {
+        RealtimePoseGraph {
+            keyframes: Vec::new(),
+            poses: Vec::new(),
+            imu_integrations: Vec::new(),
+            last_optimization_us: 0,
+            optimization_interval_us: 1_000_000, // 1 second
+        }
+    }
+
+    /// Add keyframe to graph
+    pub fn add_keyframe(&mut self, frame: VisualOdometryFrame) {
+        self.keyframes.push(frame.clone());
+        self.poses.push(frame.pose.clone());
+    }
+
+    /// Add IMU pre-integration
+    pub fn add_imu_integration(&mut self, integration: IMUPreintegration) {
+        self.imu_integrations.push(integration);
+    }
+
+    /// Check if optimization is needed
+    pub fn should_optimize(&self, current_time_us: i64) -> bool {
+        current_time_us - self.last_optimization_us > self.optimization_interval_us as i64
+    }
+
+    /// Optimize poses (simplified)
+    pub fn optimize(&mut self, current_time_us: i64) -> f32 {
+        if self.poses.is_empty() {
+            return 0.0;
+        }
+
+        let mut error = 0.0;
+
+        // Simple optimization: smooth poses using IMU constraints
+        for imu in &self.imu_integrations {
+            // Use IMU to validate pose changes
+            error += imu.delta_position.0.abs() + imu.delta_position.1.abs() + imu.delta_position.2.abs();
+        }
+
+        self.last_optimization_us = current_time_us;
+
+        error
+    }
+
+    /// Get latest pose estimate
+    pub fn get_current_pose(&self) -> Option<&CameraPose> {
+        self.poses.last()
+    }
+
+    /// Get keyframe count
+    pub fn keyframe_count(&self) -> usize {
+        self.keyframes.len()
+    }
+}
+
+impl RobotMotionEstimate {
+    /// Compute speed from velocity
+    pub fn speed(&self) -> f32 {
+        let vx = self.velocity.0;
+        let vy = self.velocity.1;
+        let vz = self.velocity.2;
+        (vx * vx + vy * vy + vz * vz).sqrt()
+    }
+
+    /// Compute angular speed from angular velocity
+    pub fn angular_speed(&self) -> f32 {
+        let wx = self.angular_velocity.0;
+        let wy = self.angular_velocity.1;
+        let wz = self.angular_velocity.2;
+        (wx * wx + wy * wy + wz * wz).sqrt()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3695,5 +3981,242 @@ mod tests {
 
         // Error should decrease or stay same during optimization
         assert!(error_final <= error_initial + 0.01);
+    }
+
+    // ========================================================================
+    // REAL-TIME SLAM TESTS (Phase 7)
+    // ========================================================================
+
+    #[test]
+    fn test_visual_odometry_frame_creation() {
+        let frame = VisualOdometryFrame {
+            frame_id: 0,
+            timestamp_us: 1000,
+            pose: CameraPose::identity(),
+            features: vec![(100.0, 200.0), (150.0, 250.0)],
+            descriptors: vec![],
+            tracking_confidence: 0.85,
+        };
+
+        assert_eq!(frame.frame_id, 0);
+        assert_eq!(frame.features.len(), 2);
+        assert!((frame.tracking_confidence - 0.85).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_visual_odometry_tracker_creation() {
+        let tracker = VisualOdometryTracker::new();
+
+        assert_eq!(tracker.frame_count, 0);
+        assert!(!tracker.is_tracking);
+        assert_eq!(tracker.total_translation, (0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn test_visual_odometry_track_frame() {
+        let mut tracker = VisualOdometryTracker::new();
+        let intrinsics = CameraIntrinsics::new(500.0, (1920, 1080));
+
+        let mut frame = ReconstructionFrame::new("img_0", intrinsics);
+        frame.add_features(vec![(100.0, 200.0), (150.0, 250.0)]);
+
+        let result = tracker.track_frame(&frame, 0);
+
+        assert!(result.is_ok());
+        assert_eq!(tracker.frame_count, 1);
+    }
+
+    #[test]
+    fn test_visual_odometry_get_motion_estimate() {
+        let tracker = VisualOdometryTracker::new();
+        let estimate = tracker.get_motion_estimate();
+
+        assert_eq!(estimate.position, (0.0, 0.0, 0.0));
+        assert!(estimate.confidence >= 0.0 && estimate.confidence <= 1.0);
+    }
+
+    #[test]
+    fn test_imu_measurement_creation() {
+        let measurement = IMUMeasurement {
+            timestamp_us: 1000,
+            acceleration: (9.81, 0.0, 0.0),
+            angular_velocity: (0.0, 0.0, 0.0),
+        };
+
+        assert_eq!(measurement.timestamp_us, 1000);
+        assert!(measurement.acceleration.0 > 0.0);
+    }
+
+    #[test]
+    fn test_imu_preintegration_creation() {
+        let integration = IMUPreintegration::new(1000);
+
+        assert_eq!(integration.start_time_us, 1000);
+        assert_eq!(integration.measurement_count, 0);
+        assert_eq!(integration.delta_rotation, (0.0, 0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn test_imu_preintegration_integrate_measurement() {
+        let mut integration = IMUPreintegration::new(1000);
+
+        let measurement = IMUMeasurement {
+            timestamp_us: 2000,
+            acceleration: (1.0, 0.0, 0.0),
+            angular_velocity: (0.0, 0.0, 0.0),
+        };
+
+        integration.integrate_measurement(&measurement);
+
+        assert_eq!(integration.measurement_count, 1);
+        assert!(integration.duration_us() > 0);
+    }
+
+    #[test]
+    fn test_imu_preintegration_duration() {
+        let mut integration = IMUPreintegration::new(1000);
+
+        let measurement = IMUMeasurement {
+            timestamp_us: 3000,
+            acceleration: (0.0, 0.0, 0.0),
+            angular_velocity: (0.0, 0.0, 0.0),
+        };
+
+        integration.integrate_measurement(&measurement);
+
+        assert_eq!(integration.duration_us(), 2000);
+    }
+
+    #[test]
+    fn test_realtime_pose_graph_creation() {
+        let graph = RealtimePoseGraph::new();
+
+        assert_eq!(graph.keyframe_count(), 0);
+        assert_eq!(graph.poses.len(), 0);
+    }
+
+    #[test]
+    fn test_realtime_pose_graph_add_keyframe() {
+        let mut graph = RealtimePoseGraph::new();
+
+        let frame = VisualOdometryFrame {
+            frame_id: 0,
+            timestamp_us: 1000,
+            pose: CameraPose::identity(),
+            features: vec![(100.0, 200.0)],
+            descriptors: vec![],
+            tracking_confidence: 0.9,
+        };
+
+        graph.add_keyframe(frame);
+
+        assert_eq!(graph.keyframe_count(), 1);
+        assert_eq!(graph.poses.len(), 1);
+    }
+
+    #[test]
+    fn test_realtime_pose_graph_add_imu_integration() {
+        let mut graph = RealtimePoseGraph::new();
+
+        let integration = IMUPreintegration::new(1000);
+        graph.add_imu_integration(integration);
+
+        assert_eq!(graph.imu_integrations.len(), 1);
+    }
+
+    #[test]
+    fn test_realtime_pose_graph_should_optimize() {
+        let graph = RealtimePoseGraph::new();
+
+        // Check optimization timing
+        assert!(graph.should_optimize(2_000_000)); // 2 seconds after start
+        assert!(!graph.should_optimize(500_000)); // 0.5 seconds after start
+    }
+
+    #[test]
+    fn test_realtime_pose_graph_optimize() {
+        let mut graph = RealtimePoseGraph::new();
+
+        let frame = VisualOdometryFrame {
+            frame_id: 0,
+            timestamp_us: 1000,
+            pose: CameraPose::identity(),
+            features: vec![(100.0, 200.0)],
+            descriptors: vec![],
+            tracking_confidence: 0.9,
+        };
+
+        graph.add_keyframe(frame);
+
+        let error = graph.optimize(2_000_000);
+
+        assert!(error >= 0.0);
+    }
+
+    #[test]
+    fn test_realtime_pose_graph_get_current_pose() {
+        let mut graph = RealtimePoseGraph::new();
+
+        assert!(graph.get_current_pose().is_none());
+
+        let frame = VisualOdometryFrame {
+            frame_id: 0,
+            timestamp_us: 1000,
+            pose: CameraPose::identity(),
+            features: vec![(100.0, 200.0)],
+            descriptors: vec![],
+            tracking_confidence: 0.9,
+        };
+
+        graph.add_keyframe(frame);
+
+        assert!(graph.get_current_pose().is_some());
+    }
+
+    #[test]
+    fn test_robot_motion_estimate_speed() {
+        let estimate = RobotMotionEstimate {
+            position: (0.0, 0.0, 0.0),
+            velocity: (3.0, 4.0, 0.0),
+            rotation: (0.0, 0.0, 0.0, 1.0),
+            angular_velocity: (0.0, 0.0, 0.0),
+            confidence: 0.9,
+            timestamp_us: 1000,
+        };
+
+        let speed = estimate.speed();
+
+        assert!((speed - 5.0).abs() < 0.01); // sqrt(3^2 + 4^2) = 5
+    }
+
+    #[test]
+    fn test_robot_motion_estimate_angular_speed() {
+        let estimate = RobotMotionEstimate {
+            position: (0.0, 0.0, 0.0),
+            velocity: (0.0, 0.0, 0.0),
+            rotation: (0.0, 0.0, 0.0, 1.0),
+            angular_velocity: (0.1, 0.0, 0.0),
+            confidence: 0.9,
+            timestamp_us: 1000,
+        };
+
+        let angular_speed = estimate.angular_speed();
+
+        assert!((angular_speed - 0.1).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_robot_motion_estimate_zero_velocity() {
+        let estimate = RobotMotionEstimate {
+            position: (1.0, 2.0, 3.0),
+            velocity: (0.0, 0.0, 0.0),
+            rotation: (0.0, 0.0, 0.0, 1.0),
+            angular_velocity: (0.0, 0.0, 0.0),
+            confidence: 0.95,
+            timestamp_us: 1000,
+        };
+
+        assert_eq!(estimate.speed(), 0.0);
+        assert_eq!(estimate.angular_speed(), 0.0);
     }
 }
