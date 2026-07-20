@@ -42,6 +42,7 @@ pub mod predictive_caching;  // Predictive cache warming and intent inference
 pub mod late_arrival;  // Late-arrival observation reprocessing
 pub mod adapters;  // PyRoboFrames and PyRoboVision ecosystem integration
 pub mod traversability;  // Spatial knowledge graph for traversability intelligence (Phase 8+)
+pub mod exploration;  // Autonomous exploration intelligence engine (Phase 9+)
 
 // Re-export all public types
 pub use types::{
@@ -204,6 +205,15 @@ pub use predictive_caching::{
 pub use traversability::{
     Node, NodeType, Edge, EdgeType, TraversabilityObservation, TraversalOutcome,
     ConsensusResult, SpatialMetadata, EnvironmentVersion, SpatialGraph,
+};
+
+// Re-export Exploration (Autonomous exploration intelligence engine)
+pub use exploration::{
+    EnvironmentType, EnvironmentPattern, PatternLibrary,
+    PredictiveModel, TraversabilityPredictor,
+    Hypothesis, HypothesisType, HypothesisManager, PredictionValue,
+    FleetStatistics, RobotProfile,
+    SemanticContext, SemanticClassifier, StructureTemplate,
 };
 
 // TODO: Implement in future weeks
