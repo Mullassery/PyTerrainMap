@@ -236,6 +236,7 @@ pub use gaussian_splatting::{
     ObjectClass, ObjectMobility, DynamicObjectSplat, PositionSnapshot,
     ChangeEvent, ChangeEventType, ChangeEventLog,
     FleetLearningEngine, ObjectObservation, ObjectState, ObjectPrediction, AreaDynamicsProfile,
+    H3SpatialIndex, H3Resolution, H3IndexStats,
 };
 
 // TODO: Implement in future weeks
