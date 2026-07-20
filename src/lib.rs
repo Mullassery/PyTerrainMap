@@ -41,6 +41,7 @@ pub mod security;  // Security-first and auditability-first architecture
 pub mod predictive_caching;  // Predictive cache warming and intent inference
 pub mod late_arrival;  // Late-arrival observation reprocessing
 pub mod adapters;  // PyRoboFrames and PyRoboVision ecosystem integration
+pub mod traversability;  // Spatial knowledge graph for traversability intelligence (Phase 8+)
 
 // Re-export all public types
 pub use types::{
@@ -197,6 +198,12 @@ pub use predictive_caching::{
     EnvironmentalContext, TrajectoryPredictor, InferredIntent, IntentInferrer,
     DefaultIntentInferrer, CacheWarmingBudget, PrioritizedPrefetch,
     AccuracyStatistics, PredictionRecord, PredictionLearner,
+};
+
+// Re-export Traversability (Spatial knowledge graph for route planning)
+pub use traversability::{
+    Node, NodeType, Edge, EdgeType, TraversabilityObservation, TraversalOutcome,
+    ConsensusResult, SpatialMetadata, EnvironmentVersion, SpatialGraph,
 };
 
 // TODO: Implement in future weeks
