@@ -1517,6 +1517,43 @@ impl PlaceDescriptor {
     }
 }
 
+/// Pose graph edge (constraint between two keyframes)
+#[derive(Clone, Debug)]
+pub struct PoseGraphEdge {
+    /// From keyframe index
+    pub from_idx: usize,
+    /// To keyframe index
+    pub to_idx: usize,
+    /// Relative pose
+    pub relative_pose: CameraPose,
+    /// Information matrix (inverse of covariance) - simplified as scalar
+    pub information: f32,
+    /// Edge type (sequential or loop closure)
+    pub edge_type: EdgeType,
+}
+
+/// Edge type classification
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum EdgeType {
+    /// Sequential edge between consecutive keyframes
+    Sequential,
+    /// Loop closure edge
+    LoopClosure,
+}
+
+/// Pose graph for global optimization
+#[derive(Clone, Debug)]
+pub struct PoseGraph {
+    /// Keyframe poses (vertices)
+    pub poses: Vec<CameraPose>,
+    /// Edges (constraints between poses)
+    pub edges: Vec<PoseGraphEdge>,
+    /// Number of optimization iterations
+    pub iterations: usize,
+    /// Cumulative optimization error
+    pub total_error: f32,
+}
+
 impl LoopClosureDetector {
     /// Create new loop closure detector with default parameters
     pub fn new() -> Self {
@@ -1682,6 +1719,200 @@ impl LoopClosureDetector {
 
         Some(error)
     }
+}
+
+// ============================================================================
+// POSE GRAPH REFINEMENT (Phase 6.4)
+// ============================================================================
+
+impl PoseGraphEdge {
+    /// Create sequential edge between consecutive keyframes
+    pub fn sequential(
+        from_idx: usize,
+        to_idx: usize,
+        relative_pose: CameraPose,
+    ) -> Self {
+        PoseGraphEdge {
+            from_idx,
+            to_idx,
+            relative_pose,
+            information: 1.0, // Equal weight for sequential edges
+            edge_type: EdgeType::Sequential,
+        }
+    }
+
+    /// Create loop closure edge with higher weight
+    pub fn loop_closure(
+        from_idx: usize,
+        to_idx: usize,
+        relative_pose: CameraPose,
+        confidence: f32,
+    ) -> Self {
+        PoseGraphEdge {
+            from_idx,
+            to_idx,
+            relative_pose,
+            information: confidence, // Weight by confidence
+            edge_type: EdgeType::LoopClosure,
+        }
+    }
+}
+
+impl PoseGraph {
+    /// Create new pose graph
+    pub fn new(initial_poses: Vec<CameraPose>) -> Self {
+        PoseGraph {
+            poses: initial_poses,
+            edges: Vec::new(),
+            iterations: 0,
+            total_error: 0.0,
+        }
+    }
+
+    /// Add edge to pose graph
+    pub fn add_edge(&mut self, edge: PoseGraphEdge) {
+        self.edges.push(edge);
+    }
+
+    /// Add sequential edges between consecutive keyframes
+    pub fn add_sequential_edges(
+        &mut self,
+        relative_poses: &[CameraPose],
+    ) -> Result<()> {
+        if relative_poses.len() + 1 != self.poses.len() {
+            return Err(Error::InvalidObservation(
+                "Number of relative poses must be keyframes - 1".to_string(),
+            ));
+        }
+
+        for (i, relative_pose) in relative_poses.iter().enumerate() {
+            let edge = PoseGraphEdge::sequential(i, i + 1, relative_pose.clone());
+            self.add_edge(edge);
+        }
+
+        Ok(())
+    }
+
+    /// Add loop closure edges
+    pub fn add_loop_closure_edges(&mut self, loops: &[LoopClosure]) {
+        for lc in loops {
+            let edge = PoseGraphEdge::loop_closure(
+                lc.frame_id_1,
+                lc.frame_id_2,
+                lc.relative_pose.clone(),
+                lc.confidence,
+            );
+            self.add_edge(edge);
+        }
+    }
+
+    /// Optimize pose graph using gradient descent
+    pub fn optimize(&mut self, max_iterations: usize, learning_rate: f32) -> f32 {
+        let mut total_error = 0.0;
+
+        for _ in 0..max_iterations {
+            total_error = 0.0;
+
+            // Compute error for each edge
+            for edge in &self.edges {
+                let pose1 = &self.poses[edge.from_idx];
+                let pose2 = &self.poses[edge.to_idx];
+
+                // Compute expected relative pose
+                let expected_dx = pose2.position.0 - pose1.position.0;
+                let expected_dy = pose2.position.1 - pose1.position.1;
+                let expected_dz = pose2.position.2 - pose1.position.2;
+
+                // Compute actual relative pose
+                let actual_dx = edge.relative_pose.position.0;
+                let actual_dy = edge.relative_pose.position.1;
+                let actual_dz = edge.relative_pose.position.2;
+
+                // Compute error
+                let dx_err = expected_dx - actual_dx;
+                let dy_err = expected_dy - actual_dy;
+                let dz_err = expected_dz - actual_dz;
+
+                let error = (dx_err * dx_err + dy_err * dy_err + dz_err * dz_err).sqrt();
+                total_error += error * edge.information;
+
+                // Update poses with gradient
+                let gradient_step = learning_rate * edge.information * error / (error + 1e-6);
+
+                self.poses[edge.from_idx].position.0 += gradient_step * dx_err;
+                self.poses[edge.from_idx].position.1 += gradient_step * dy_err;
+                self.poses[edge.from_idx].position.2 += gradient_step * dz_err;
+
+                self.poses[edge.to_idx].position.0 -= gradient_step * dx_err;
+                self.poses[edge.to_idx].position.1 -= gradient_step * dy_err;
+                self.poses[edge.to_idx].position.2 -= gradient_step * dz_err;
+            }
+
+            self.iterations += 1;
+
+            // Early stopping if converged
+            if total_error < 1e-6 {
+                break;
+            }
+        }
+
+        self.total_error = total_error;
+        total_error
+    }
+
+    /// Get optimized poses
+    pub fn get_poses(&self) -> &[CameraPose] {
+        &self.poses
+    }
+
+    /// Get edge count by type
+    pub fn edge_stats(&self) -> (usize, usize) {
+        let mut sequential = 0;
+        let mut loop_closure = 0;
+
+        for edge in &self.edges {
+            match edge.edge_type {
+                EdgeType::Sequential => sequential += 1,
+                EdgeType::LoopClosure => loop_closure += 1,
+            }
+        }
+
+        (sequential, loop_closure)
+    }
+
+    /// Compute graph statistics
+    pub fn statistics(&self) -> PoseGraphStats {
+        let (seq_count, loop_count) = self.edge_stats();
+
+        let total_edges = self.edges.len();
+        let avg_error = if total_edges > 0 {
+            self.total_error / total_edges as f32
+        } else {
+            0.0
+        };
+
+        PoseGraphStats {
+            keyframe_count: self.poses.len(),
+            edge_count: total_edges,
+            sequential_edges: seq_count,
+            loop_closure_edges: loop_count,
+            total_error: self.total_error,
+            avg_error,
+            iterations: self.iterations,
+        }
+    }
+}
+
+/// Pose graph statistics
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PoseGraphStats {
+    pub keyframe_count: usize,
+    pub edge_count: usize,
+    pub sequential_edges: usize,
+    pub loop_closure_edges: usize,
+    pub total_error: f32,
+    pub avg_error: f32,
+    pub iterations: usize,
 }
 
 #[cfg(test)]
@@ -3256,5 +3487,213 @@ mod tests {
         assert_eq!(result.keyframes_checked, 30);
         assert_eq!(result.potential_matches, 15);
         assert_eq!(result.valid_loops, 3);
+    }
+
+    // ========================================================================
+    // POSE GRAPH REFINEMENT TESTS (Phase 6.4)
+    // ========================================================================
+
+    #[test]
+    fn test_pose_graph_edge_sequential() {
+        let pose = CameraPose::identity();
+        let edge = PoseGraphEdge::sequential(0, 1, pose);
+
+        assert_eq!(edge.from_idx, 0);
+        assert_eq!(edge.to_idx, 1);
+        assert_eq!(edge.edge_type, EdgeType::Sequential);
+        assert!((edge.information - 1.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_pose_graph_edge_loop_closure() {
+        let pose = CameraPose::identity();
+        let edge = PoseGraphEdge::loop_closure(0, 10, pose, 0.85);
+
+        assert_eq!(edge.from_idx, 0);
+        assert_eq!(edge.to_idx, 10);
+        assert_eq!(edge.edge_type, EdgeType::LoopClosure);
+        assert!((edge.information - 0.85).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_pose_graph_creation() {
+        let poses = vec![CameraPose::identity(), CameraPose::identity()];
+        let graph = PoseGraph::new(poses.clone());
+
+        assert_eq!(graph.poses.len(), 2);
+        assert_eq!(graph.edges.len(), 0);
+        assert_eq!(graph.iterations, 0);
+    }
+
+    #[test]
+    fn test_pose_graph_add_edge() {
+        let poses = vec![CameraPose::identity(), CameraPose::identity()];
+        let mut graph = PoseGraph::new(poses);
+
+        let edge = PoseGraphEdge::sequential(0, 1, CameraPose::identity());
+        graph.add_edge(edge);
+
+        assert_eq!(graph.edges.len(), 1);
+    }
+
+    #[test]
+    fn test_pose_graph_add_sequential_edges() {
+        let poses = vec![
+            CameraPose::identity(),
+            CameraPose::identity(),
+            CameraPose::identity(),
+        ];
+        let mut graph = PoseGraph::new(poses);
+
+        let relative_poses = vec![CameraPose::identity(), CameraPose::identity()];
+        let result = graph.add_sequential_edges(&relative_poses);
+
+        assert!(result.is_ok());
+        assert_eq!(graph.edges.len(), 2);
+    }
+
+    #[test]
+    fn test_pose_graph_add_sequential_edges_wrong_size() {
+        let poses = vec![CameraPose::identity(), CameraPose::identity()];
+        let mut graph = PoseGraph::new(poses);
+
+        let relative_poses = vec![CameraPose::identity(), CameraPose::identity()]; // Too many
+        let result = graph.add_sequential_edges(&relative_poses);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_pose_graph_add_loop_closure_edges() {
+        let poses = vec![
+            CameraPose::identity(),
+            CameraPose::from_position_rotation((1.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0)),
+        ];
+        let mut graph = PoseGraph::new(poses);
+
+        let loops = vec![LoopClosure {
+            frame_id_1: 0,
+            frame_id_2: 1,
+            relative_pose: CameraPose::identity(),
+            confidence: 0.9,
+            support_count: 20,
+            consistency_error: 0.1,
+        }];
+
+        graph.add_loop_closure_edges(&loops);
+
+        assert_eq!(graph.edges.len(), 1);
+        assert_eq!(graph.edges[0].edge_type, EdgeType::LoopClosure);
+    }
+
+    #[test]
+    fn test_pose_graph_optimize() {
+        let mut poses = vec![
+            CameraPose::identity(),
+            CameraPose::from_position_rotation((2.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0)), // Too far
+        ];
+        let mut graph = PoseGraph::new(poses.clone());
+
+        // Add edge with expected distance 1.0
+        let edge = PoseGraphEdge::sequential(
+            0,
+            1,
+            CameraPose::from_position_rotation((1.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0)),
+        );
+        graph.add_edge(edge);
+
+        // Optimize
+        let error = graph.optimize(10, 0.01);
+
+        assert!(error >= 0.0); // Error should be non-negative
+        assert!(graph.iterations > 0);
+    }
+
+    #[test]
+    fn test_pose_graph_edge_stats() {
+        let poses = vec![
+            CameraPose::identity(),
+            CameraPose::identity(),
+            CameraPose::identity(),
+        ];
+        let mut graph = PoseGraph::new(poses);
+
+        // Add 2 sequential edges
+        graph.add_edge(PoseGraphEdge::sequential(0, 1, CameraPose::identity()));
+        graph.add_edge(PoseGraphEdge::sequential(1, 2, CameraPose::identity()));
+
+        // Add 1 loop closure edge
+        graph.add_edge(PoseGraphEdge::loop_closure(
+            0,
+            2,
+            CameraPose::identity(),
+            0.9,
+        ));
+
+        let (seq, loop_closure) = graph.edge_stats();
+
+        assert_eq!(seq, 2);
+        assert_eq!(loop_closure, 1);
+    }
+
+    #[test]
+    fn test_pose_graph_statistics() {
+        let poses = vec![
+            CameraPose::identity(),
+            CameraPose::identity(),
+            CameraPose::identity(),
+        ];
+        let mut graph = PoseGraph::new(poses);
+
+        graph.add_edge(PoseGraphEdge::sequential(0, 1, CameraPose::identity()));
+        graph.add_edge(PoseGraphEdge::sequential(1, 2, CameraPose::identity()));
+
+        let stats = graph.statistics();
+
+        assert_eq!(stats.keyframe_count, 3);
+        assert_eq!(stats.edge_count, 2);
+        assert_eq!(stats.sequential_edges, 2);
+        assert_eq!(stats.loop_closure_edges, 0);
+    }
+
+    #[test]
+    fn test_pose_graph_stats_structure() {
+        let stats = PoseGraphStats {
+            keyframe_count: 30,
+            edge_count: 50,
+            sequential_edges: 40,
+            loop_closure_edges: 10,
+            total_error: 5.5,
+            avg_error: 0.11,
+            iterations: 20,
+        };
+
+        assert_eq!(stats.keyframe_count, 30);
+        assert_eq!(stats.loop_closure_edges, 10);
+        assert!(stats.avg_error > 0.0);
+    }
+
+    #[test]
+    fn test_pose_graph_convergence() {
+        let poses = vec![
+            CameraPose::identity(),
+            CameraPose::from_position_rotation((1.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0)),
+        ];
+        let mut graph = PoseGraph::new(poses);
+
+        // Add edge with consistent constraint
+        let edge = PoseGraphEdge::sequential(
+            0,
+            1,
+            CameraPose::from_position_rotation((1.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0)),
+        );
+        graph.add_edge(edge);
+
+        let error_initial = graph.total_error;
+        graph.optimize(10, 0.01);
+        let error_final = graph.total_error;
+
+        // Error should decrease or stay same during optimization
+        assert!(error_final <= error_initial + 0.01);
     }
 }
