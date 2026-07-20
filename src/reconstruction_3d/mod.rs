@@ -409,6 +409,36 @@ pub struct RansacResult {
     pub inlier_ratio: f32,
 }
 
+/// Keyframe selection scoring
+#[derive(Clone, Debug)]
+pub struct KeyframeScore {
+    /// Frame index
+    pub frame_idx: usize,
+    /// Baseline distance from previous keyframe (meters)
+    pub baseline: f32,
+    /// Parallax angle (degrees)
+    pub parallax_angle: f32,
+    /// Feature overlap with previous frame (0.0-1.0)
+    pub feature_overlap: f32,
+    /// Overall importance score (0.0-1.0)
+    pub score: f32,
+}
+
+/// Keyframe selector for efficient incremental SfM
+#[derive(Clone, Debug)]
+pub struct KeyframeSelector {
+    /// Minimum baseline threshold (meters)
+    pub min_baseline: f32,
+    /// Minimum parallax angle (degrees)
+    pub min_parallax: f32,
+    /// Maximum feature overlap (above this, skip frame)
+    pub max_overlap: f32,
+    /// Selected keyframe indices
+    pub keyframe_indices: Vec<usize>,
+    /// Frame scores
+    pub scores: Vec<KeyframeScore>,
+}
+
 impl RansacResult {
     /// Get indices of inlier matches
     pub fn get_inliers(&self) -> Vec<usize> {
@@ -1203,6 +1233,164 @@ impl ReconstructionEngine {
         let stats = ba.optimize(10);
 
         Ok((ba.reconstruction, stats))
+    }
+}
+
+// ============================================================================
+// KEYFRAME SELECTION
+// ============================================================================
+
+impl KeyframeSelector {
+    /// Create new keyframe selector with default thresholds
+    pub fn new() -> Self {
+        KeyframeSelector {
+            min_baseline: 0.5, // meters
+            min_parallax: 5.0, // degrees
+            max_overlap: 0.8,  // 80% overlap triggers skip
+            keyframe_indices: Vec::new(),
+            scores: Vec::new(),
+        }
+    }
+
+    /// Compute baseline distance between two poses
+    pub fn compute_baseline(pose1: &CameraPose, pose2: &CameraPose) -> f32 {
+        let dx = pose1.position.0 - pose2.position.0;
+        let dy = pose1.position.1 - pose2.position.1;
+        let dz = pose1.position.2 - pose2.position.2;
+        (dx * dx + dy * dy + dz * dz).sqrt()
+    }
+
+    /// Compute parallax angle from two poses (simplified)
+    /// Returns angle in degrees
+    pub fn compute_parallax(pose1: &CameraPose, pose2: &CameraPose) -> f32 {
+        // Compute angle between rotation quaternions
+        let (qx1, qy1, qz1, qw1) = pose1.rotation;
+        let (qx2, qy2, qz2, qw2) = pose2.rotation;
+
+        // Dot product of quaternions
+        let dot = qx1 * qx2 + qy1 * qy2 + qz1 * qz2 + qw1 * qw2;
+        let dot_clamped = dot.clamp(-1.0, 1.0);
+
+        // Angle in radians, convert to degrees
+        let angle_rad = 2.0 * dot_clamped.acos();
+        (angle_rad * 180.0) / std::f32::consts::PI
+    }
+
+    /// Compute feature overlap between two frames
+    /// Returns ratio of shared features
+    pub fn compute_feature_overlap(matches: &[FeatureMatch], frame_size: usize) -> f32 {
+        if frame_size == 0 {
+            return 0.0;
+        }
+        matches.len() as f32 / frame_size as f32
+    }
+
+    /// Score a frame for keyframe selection
+    pub fn score_frame(
+        frame_idx: usize,
+        pose: &CameraPose,
+        last_keyframe_pose: &CameraPose,
+        matches: &[FeatureMatch],
+        frame_size: usize,
+    ) -> KeyframeScore {
+        let baseline = Self::compute_baseline(pose, last_keyframe_pose);
+        let parallax_angle = Self::compute_parallax(pose, last_keyframe_pose);
+        let feature_overlap = Self::compute_feature_overlap(matches, frame_size);
+
+        // Score: weighted combination of importance factors
+        // Baseline and parallax are good (want high), overlap is bad (want low)
+        let baseline_score = (baseline / 2.0).min(1.0); // Normalize by expected distance
+        let parallax_score = (parallax_angle / 45.0).min(1.0); // Normalize by target angle
+        let overlap_score = 1.0 - feature_overlap; // Invert: low overlap is good
+
+        let score = (baseline_score * 0.4 + parallax_score * 0.4 + overlap_score * 0.2).min(1.0);
+
+        KeyframeScore {
+            frame_idx,
+            baseline,
+            parallax_angle,
+            feature_overlap,
+            score,
+        }
+    }
+
+    /// Decide if frame should be a keyframe
+    pub fn should_be_keyframe(&self, ks: &KeyframeScore) -> bool {
+        // Frame is keyframe if it meets criteria
+        ks.baseline >= self.min_baseline
+            || ks.parallax_angle >= self.min_parallax
+            || ks.feature_overlap <= self.max_overlap
+    }
+
+    /// Add keyframe and track it
+    pub fn add_keyframe(&mut self, idx: usize, score: KeyframeScore) {
+        self.keyframe_indices.push(idx);
+        self.scores.push(score);
+    }
+
+    /// Select keyframes from frame sequence
+    pub fn select_keyframes(
+        frames: &[ReconstructionFrame],
+        poses: &[CameraPose],
+        frame_matches: &[Vec<FeatureMatch>],
+    ) -> Result<KeyframeSelector> {
+        if frames.is_empty() {
+            return Err(Error::InvalidObservation("No frames provided".to_string()));
+        }
+
+        let mut selector = KeyframeSelector::new();
+
+        // First frame is always a keyframe
+        selector.add_keyframe(0, KeyframeScore {
+            frame_idx: 0,
+            baseline: 0.0,
+            parallax_angle: 0.0,
+            feature_overlap: 0.0,
+            score: 1.0,
+        });
+
+        // Score remaining frames
+        for i in 1..frames.len() {
+            let last_keyframe_pose = &poses[*selector.keyframe_indices.last().unwrap()];
+            let matches: &[FeatureMatch] = if i - 1 < frame_matches.len() {
+                frame_matches[i - 1].as_slice()
+            } else {
+                &[]
+            };
+
+            let score = Self::score_frame(
+                i,
+                &poses[i],
+                last_keyframe_pose,
+                matches,
+                frames[i].features.len(),
+            );
+
+            if selector.should_be_keyframe(&score) {
+                selector.add_keyframe(i, score);
+            }
+        }
+
+        Ok(selector)
+    }
+
+    /// Get keyframe indices
+    pub fn get_keyframe_indices(&self) -> Vec<usize> {
+        self.keyframe_indices.clone()
+    }
+
+    /// Get keyframe count
+    pub fn keyframe_count(&self) -> usize {
+        self.keyframe_indices.len()
+    }
+
+    /// Get reduction ratio (kept frames / total frames)
+    pub fn reduction_ratio(&self, total_frames: usize) -> f32 {
+        if total_frames == 0 {
+            1.0
+        } else {
+            self.keyframe_indices.len() as f32 / total_frames as f32
+        }
     }
 }
 
@@ -2211,5 +2399,290 @@ mod tests {
 
         // With more iterations, should get at least as many inliers
         assert!(result_10.inlier_count >= result_1.inlier_count);
+    }
+
+    // ========================================================================
+    // KEYFRAME SELECTION TESTS (Phase 6 Enhancement 2)
+    // ========================================================================
+
+    #[test]
+    fn test_keyframe_selector_creation() {
+        let selector = KeyframeSelector::new();
+
+        assert_eq!(selector.min_baseline, 0.5);
+        assert_eq!(selector.min_parallax, 5.0);
+        assert_eq!(selector.max_overlap, 0.8);
+        assert_eq!(selector.keyframe_count(), 0);
+    }
+
+    #[test]
+    fn test_keyframe_score_creation() {
+        let score = KeyframeScore {
+            frame_idx: 5,
+            baseline: 1.5,
+            parallax_angle: 15.0,
+            feature_overlap: 0.4,
+            score: 0.8,
+        };
+
+        assert_eq!(score.frame_idx, 5);
+        assert!((score.baseline - 1.5).abs() < 0.01);
+        assert!((score.score - 0.8).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_compute_baseline_same_pose() {
+        let pose = CameraPose::identity();
+        let baseline = KeyframeSelector::compute_baseline(&pose, &pose);
+
+        assert!(baseline < 0.01); // Should be zero or very close
+    }
+
+    #[test]
+    fn test_compute_baseline_different_pose() {
+        let pose1 = CameraPose::identity();
+        let pose2 = CameraPose::from_position_rotation((1.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0));
+
+        let baseline = KeyframeSelector::compute_baseline(&pose1, &pose2);
+
+        assert!((baseline - 1.0).abs() < 0.01); // Should be ~1.0 meter
+    }
+
+    #[test]
+    fn test_compute_parallax_same_rotation() {
+        let pose1 = CameraPose::identity();
+        let pose2 = CameraPose::from_position_rotation((1.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0));
+
+        let parallax = KeyframeSelector::compute_parallax(&pose1, &pose2);
+
+        assert!(parallax < 10.0); // Should be small angle
+    }
+
+    #[test]
+    fn test_compute_parallax_different_rotation() {
+        let pose1 = CameraPose::identity();
+        // 90-degree rotation around Z-axis: (0, 0, sin(45°), cos(45°))
+        let pose2 = CameraPose::from_position_rotation((0.0, 0.0, 0.0), (0.0, 0.0, 0.707, 0.707));
+
+        let parallax = KeyframeSelector::compute_parallax(&pose1, &pose2);
+
+        assert!(parallax > 0.0 && parallax < 180.0);
+    }
+
+    #[test]
+    fn test_compute_feature_overlap() {
+        let matches = vec![
+            FeatureMatch { idx1: 0, idx2: 0, confidence: 0.9 },
+            FeatureMatch { idx1: 1, idx2: 1, confidence: 0.9 },
+            FeatureMatch { idx1: 2, idx2: 2, confidence: 0.9 },
+        ];
+
+        let overlap = KeyframeSelector::compute_feature_overlap(&matches, 10);
+
+        assert!((overlap - 0.3).abs() < 0.01); // 3/10 = 0.3
+    }
+
+    #[test]
+    fn test_compute_feature_overlap_all() {
+        let matches = vec![
+            FeatureMatch { idx1: 0, idx2: 0, confidence: 0.9 },
+            FeatureMatch { idx1: 1, idx2: 1, confidence: 0.9 },
+        ];
+
+        let overlap = KeyframeSelector::compute_feature_overlap(&matches, 2);
+
+        assert!((overlap - 1.0).abs() < 0.01); // 2/2 = 1.0
+    }
+
+    #[test]
+    fn test_score_frame() {
+        let pose1 = CameraPose::identity();
+        let pose2 = CameraPose::from_position_rotation((1.0, 0.0, 0.0), (0.0, 0.0, 0.0, 1.0));
+
+        let matches = vec![
+            FeatureMatch { idx1: 0, idx2: 0, confidence: 0.9 },
+            FeatureMatch { idx1: 1, idx2: 1, confidence: 0.9 },
+        ];
+
+        let score = KeyframeSelector::score_frame(1, &pose2, &pose1, &matches, 10);
+
+        assert_eq!(score.frame_idx, 1);
+        assert!(score.score > 0.0 && score.score <= 1.0);
+    }
+
+    #[test]
+    fn test_should_be_keyframe_high_baseline() {
+        let selector = KeyframeSelector::new();
+
+        let score = KeyframeScore {
+            frame_idx: 1,
+            baseline: 2.0, // > min_baseline of 0.5
+            parallax_angle: 2.0,
+            feature_overlap: 0.9,
+            score: 0.7,
+        };
+
+        assert!(selector.should_be_keyframe(&score));
+    }
+
+    #[test]
+    fn test_should_be_keyframe_high_parallax() {
+        let selector = KeyframeSelector::new();
+
+        let score = KeyframeScore {
+            frame_idx: 1,
+            baseline: 0.2,
+            parallax_angle: 30.0, // > min_parallax of 5.0
+            feature_overlap: 0.9,
+            score: 0.7,
+        };
+
+        assert!(selector.should_be_keyframe(&score));
+    }
+
+    #[test]
+    fn test_should_be_keyframe_low_overlap() {
+        let selector = KeyframeSelector::new();
+
+        let score = KeyframeScore {
+            frame_idx: 1,
+            baseline: 0.2,
+            parallax_angle: 2.0,
+            feature_overlap: 0.5, // < max_overlap of 0.8
+            score: 0.7,
+        };
+
+        assert!(selector.should_be_keyframe(&score));
+    }
+
+    #[test]
+    fn test_should_skip_redundant_frame() {
+        let selector = KeyframeSelector::new();
+
+        let score = KeyframeScore {
+            frame_idx: 1,
+            baseline: 0.1,
+            parallax_angle: 1.0,
+            feature_overlap: 0.95, // Too much overlap
+            score: 0.1,
+        };
+
+        assert!(!selector.should_be_keyframe(&score));
+    }
+
+    #[test]
+    fn test_add_keyframe() {
+        let mut selector = KeyframeSelector::new();
+
+        let score = KeyframeScore {
+            frame_idx: 5,
+            baseline: 1.0,
+            parallax_angle: 10.0,
+            feature_overlap: 0.3,
+            score: 0.8,
+        };
+
+        selector.add_keyframe(5, score);
+
+        assert_eq!(selector.keyframe_count(), 1);
+        assert_eq!(selector.get_keyframe_indices(), vec![5]);
+    }
+
+    #[test]
+    fn test_keyframe_selector_reduction_ratio() {
+        let mut selector = KeyframeSelector::new();
+
+        // Add 3 keyframes
+        for i in 0..3 {
+            selector.add_keyframe(i, KeyframeScore {
+                frame_idx: i,
+                baseline: 1.0,
+                parallax_angle: 10.0,
+                feature_overlap: 0.3,
+                score: 0.8,
+            });
+        }
+
+        // Out of 20 frames, kept 3
+        let ratio = selector.reduction_ratio(20);
+        assert!((ratio - 0.15).abs() < 0.01); // 3/20 = 0.15
+    }
+
+    #[test]
+    fn test_select_keyframes_basic() {
+        let intrinsics = CameraIntrinsics::new(500.0, (1920, 1080));
+
+        let mut frames = Vec::new();
+        let mut poses = Vec::new();
+        let mut frame_matches = Vec::new();
+
+        // Create 3 frames
+        for i in 0..3 {
+            let mut frame = ReconstructionFrame::new(&format!("img_{}", i), intrinsics.clone());
+            frame.add_features(vec![
+                (100.0 + i as f32, 200.0),
+                (150.0 + i as f32, 250.0),
+            ]);
+            frames.push(frame);
+
+            let pose = if i == 0 {
+                CameraPose::identity()
+            } else {
+                CameraPose::from_position_rotation(
+                    (i as f32 * 0.5, 0.0, 0.0),
+                    (0.0, 0.0, 0.0, 1.0),
+                )
+            };
+            poses.push(pose);
+        }
+
+        // Add dummy matches
+        frame_matches.push(vec![
+            FeatureMatch { idx1: 0, idx2: 0, confidence: 0.9 },
+            FeatureMatch { idx1: 1, idx2: 1, confidence: 0.9 },
+        ]);
+        frame_matches.push(vec![
+            FeatureMatch { idx1: 0, idx2: 0, confidence: 0.9 },
+            FeatureMatch { idx1: 1, idx2: 1, confidence: 0.9 },
+        ]);
+
+        let result = KeyframeSelector::select_keyframes(&frames, &poses, &frame_matches);
+
+        assert!(result.is_ok());
+        let selector = result.unwrap();
+        assert!(selector.keyframe_count() >= 1);
+        assert!(selector.keyframe_indices[0] == 0); // First frame is always keyframe
+    }
+
+    #[test]
+    fn test_select_keyframes_no_frames() {
+        let result = KeyframeSelector::select_keyframes(&[], &[], &[]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_keyframe_indices() {
+        let mut selector = KeyframeSelector::new();
+
+        selector.add_keyframe(0, KeyframeScore {
+            frame_idx: 0,
+            baseline: 0.0,
+            parallax_angle: 0.0,
+            feature_overlap: 0.0,
+            score: 1.0,
+        });
+        selector.add_keyframe(5, KeyframeScore {
+            frame_idx: 5,
+            baseline: 1.0,
+            parallax_angle: 10.0,
+            feature_overlap: 0.3,
+            score: 0.8,
+        });
+
+        let indices = selector.get_keyframe_indices();
+
+        assert_eq!(indices.len(), 2);
+        assert_eq!(indices, vec![0, 5]);
     }
 }
