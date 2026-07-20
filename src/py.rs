@@ -21,7 +21,7 @@ use crate::py_api::{
 /// Core classes: TerrainMap, Observation, QueryResult, GeoPoint, Region
 #[pymodule]
 fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("__version__", "1.0.3")?;
+    m.add("__version__", "1.0.4")?;
     m.add(
         "__doc__",
         "PyTerrainMap: Spatial Intelligence Companion for multi-robot terrain mapping",
