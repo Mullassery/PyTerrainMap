@@ -387,6 +387,511 @@ impl PyTerrainMap {
     }
 }
 
+// ============================================================================
+// TerrainAnalysis Wrapper (Phase 2)
+// ============================================================================
+
+/// Terrain intelligence analysis for a location
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct PyTerrainAnalysis {
+    pub location: (f64, f64),
+    pub timestamp_us: i64,
+    pub summary: String,
+    pub observations: Vec<String>,
+    pub risks: Vec<PyRisk>,
+    pub recommendations: std::collections::HashMap<String, Vec<String>>,
+    pub confidence: f32,
+}
+
+#[pymethods]
+impl PyTerrainAnalysis {
+    #[new]
+    pub fn new(lat: f64, lon: f64) -> Self {
+        PyTerrainAnalysis {
+            location: (lat, lon),
+            timestamp_us: chrono::Utc::now().timestamp_micros(),
+            summary: String::new(),
+            observations: Vec::new(),
+            risks: Vec::new(),
+            recommendations: std::collections::HashMap::new(),
+            confidence: 0.7,
+        }
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!(
+            "TerrainAnalysis(location={:?}, confidence={:.2}, risks={}, obs={})",
+            self.location,
+            self.confidence,
+            self.risks.len(),
+            self.observations.len()
+        )
+    }
+
+    #[getter]
+    pub fn location(&self) -> (f64, f64) {
+        self.location
+    }
+
+    #[getter]
+    pub fn summary(&self) -> String {
+        self.summary.clone()
+    }
+
+    #[setter]
+    pub fn set_summary(&mut self, summary: String) {
+        self.summary = summary;
+    }
+
+    #[getter]
+    pub fn observations(&self) -> Vec<String> {
+        self.observations.clone()
+    }
+
+    #[getter]
+    pub fn risks(&self) -> Vec<PyRisk> {
+        self.risks.clone()
+    }
+
+    #[getter]
+    pub fn confidence(&self) -> f32 {
+        self.confidence
+    }
+
+    #[setter]
+    pub fn set_confidence(&mut self, confidence: f32) {
+        self.confidence = confidence.clamp(0.0, 1.0);
+    }
+
+    pub fn add_observation(&mut self, obs: String) {
+        self.observations.push(obs);
+    }
+
+    pub fn add_risk(&mut self, risk: PyRisk) {
+        self.risks.push(risk);
+    }
+
+    pub fn add_recommendation(&mut self, persona: String, recommendation: String) {
+        self.recommendations
+            .entry(persona)
+            .or_insert_with(Vec::new)
+            .push(recommendation);
+    }
+
+    pub fn advice_for(&self, persona: &str) -> Vec<String> {
+        self.recommendations
+            .get(persona)
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
+// ============================================================================
+// Risk Wrapper (Phase 2)
+// ============================================================================
+
+/// Risk assessment for terrain analysis
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct PyRisk {
+    pub risk_type: String,
+    pub severity: f32,
+    pub description: String,
+    pub affected_personas: Vec<String>,
+    pub mitigations: Vec<String>,
+}
+
+#[pymethods]
+impl PyRisk {
+    #[new]
+    pub fn new(risk_type: String, severity: f32, description: String) -> Self {
+        PyRisk {
+            risk_type,
+            severity: severity.clamp(0.0, 1.0),
+            description,
+            affected_personas: Vec::new(),
+            mitigations: Vec::new(),
+        }
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!(
+            "Risk(type={}, severity={:.2}, label={})",
+            self.risk_type,
+            self.severity,
+            self.severity_label()
+        )
+    }
+
+    #[getter]
+    pub fn risk_type(&self) -> String {
+        self.risk_type.clone()
+    }
+
+    #[getter]
+    pub fn severity(&self) -> f32 {
+        self.severity
+    }
+
+    #[setter]
+    pub fn set_severity(&mut self, severity: f32) {
+        self.severity = severity.clamp(0.0, 1.0);
+    }
+
+    #[getter]
+    pub fn description(&self) -> String {
+        self.description.clone()
+    }
+
+    #[getter]
+    pub fn affected_personas(&self) -> Vec<String> {
+        self.affected_personas.clone()
+    }
+
+    #[getter]
+    pub fn mitigations(&self) -> Vec<String> {
+        self.mitigations.clone()
+    }
+
+    pub fn severity_label(&self) -> String {
+        match self.severity {
+            s if s > 0.8 => "Critical".to_string(),
+            s if s > 0.6 => "High".to_string(),
+            s if s > 0.4 => "Medium".to_string(),
+            _ => "Low".to_string(),
+        }
+    }
+
+    pub fn affects(mut slf: PyRefMut<'_, Self>, persona: String) -> PyRefMut<'_, Self> {
+        slf.affected_personas.push(persona);
+        slf
+    }
+
+    pub fn with_mitigation(mut slf: PyRefMut<'_, Self>, mitigation: String) -> PyRefMut<'_, Self> {
+        slf.mitigations.push(mitigation);
+        slf
+    }
+}
+
+// ============================================================================
+// MobilityAssessment Wrapper (Phase 2)
+// ============================================================================
+
+/// Robot mobility assessment for terrain
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct PyMobilityAssessment {
+    pub traversable: bool,
+    pub difficulty: f32,
+    pub hazards: Vec<String>,
+    pub recommended_speed_ms: f32,
+    pub battery_impact: f32,
+    pub time_to_cross_100m_seconds: f32,
+}
+
+#[pymethods]
+impl PyMobilityAssessment {
+    #[new]
+    pub fn new() -> Self {
+        PyMobilityAssessment {
+            traversable: true,
+            difficulty: 0.3,
+            hazards: Vec::new(),
+            recommended_speed_ms: 0.5,
+            battery_impact: 1.0,
+            time_to_cross_100m_seconds: 200.0,
+        }
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!(
+            "MobilityAssessment(difficulty={:.2}, label={}, traversable={})",
+            self.difficulty,
+            self.difficulty_label(),
+            self.traversable
+        )
+    }
+
+    #[getter]
+    pub fn traversable(&self) -> bool {
+        self.traversable
+    }
+
+    #[setter]
+    pub fn set_traversable(&mut self, traversable: bool) {
+        self.traversable = traversable;
+    }
+
+    #[getter]
+    pub fn difficulty(&self) -> f32 {
+        self.difficulty
+    }
+
+    #[setter]
+    pub fn set_difficulty(&mut self, difficulty: f32) {
+        self.difficulty = difficulty.clamp(0.0, 1.0);
+    }
+
+    #[getter]
+    pub fn hazards(&self) -> Vec<String> {
+        self.hazards.clone()
+    }
+
+    #[getter]
+    pub fn recommended_speed_ms(&self) -> f32 {
+        self.recommended_speed_ms
+    }
+
+    #[setter]
+    pub fn set_recommended_speed_ms(&mut self, speed: f32) {
+        self.recommended_speed_ms = speed;
+    }
+
+    #[getter]
+    pub fn battery_impact(&self) -> f32 {
+        self.battery_impact
+    }
+
+    #[setter]
+    pub fn set_battery_impact(&mut self, impact: f32) {
+        self.battery_impact = impact;
+    }
+
+    #[getter]
+    pub fn time_to_cross_100m_seconds(&self) -> f32 {
+        self.time_to_cross_100m_seconds
+    }
+
+    #[setter]
+    pub fn set_time_to_cross_100m_seconds(&mut self, time: f32) {
+        self.time_to_cross_100m_seconds = time;
+    }
+
+    pub fn difficulty_label(&self) -> String {
+        match self.difficulty {
+            d if d > 0.8 => "Extremely difficult".to_string(),
+            d if d > 0.6 => "Very difficult".to_string(),
+            d if d > 0.4 => "Moderately difficult".to_string(),
+            d if d > 0.2 => "Slightly difficult".to_string(),
+            _ => "Easy".to_string(),
+        }
+    }
+
+    pub fn add_hazard(&mut self, hazard: String) {
+        self.hazards.push(hazard);
+    }
+}
+
+// ============================================================================
+// EnvironmentalConditions Wrapper (Phase 2)
+// ============================================================================
+
+/// Environmental conditions (weather + soil)
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct PyEnvironmentalConditions {
+    pub location: (f64, f64),
+    pub timestamp_us: i64,
+    pub mission_suitability: f32,
+}
+
+#[pymethods]
+impl PyEnvironmentalConditions {
+    #[new]
+    pub fn new(lat: f64, lon: f64) -> Self {
+        PyEnvironmentalConditions {
+            location: (lat, lon),
+            timestamp_us: chrono::Utc::now().timestamp_micros(),
+            mission_suitability: 0.5,
+        }
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!(
+            "EnvironmentalConditions(location={:?}, suitability={:.2})",
+            self.location, self.mission_suitability
+        )
+    }
+
+    #[getter]
+    pub fn location(&self) -> (f64, f64) {
+        self.location
+    }
+
+    #[getter]
+    pub fn mission_suitability(&self) -> f32 {
+        self.mission_suitability
+    }
+
+    #[setter]
+    pub fn set_mission_suitability(&mut self, suitability: f32) {
+        self.mission_suitability = suitability.clamp(0.0, 1.0);
+    }
+
+    pub fn update_suitability(&mut self, score: f32) {
+        self.mission_suitability = score.clamp(0.0, 1.0);
+    }
+}
+
+// ============================================================================
+// DataExplanation Wrapper (Phase 2)
+// ============================================================================
+
+/// Explanation of a data field for agent introspection
+#[pyclass]
+#[derive(Clone, Debug)]
+pub struct PyDataExplanation {
+    pub field: String,
+    pub description: String,
+    pub applications: Vec<String>,
+    pub confidence: f32,
+    pub source: String,
+    pub units: String,
+    pub normal_range: String,
+}
+
+#[pymethods]
+impl PyDataExplanation {
+    #[new]
+    pub fn new(
+        field: String,
+        description: String,
+        confidence: f32,
+        source: String,
+        units: String,
+        normal_range: String,
+    ) -> Self {
+        PyDataExplanation {
+            field,
+            description,
+            applications: Vec::new(),
+            confidence: confidence.clamp(0.0, 1.0),
+            source,
+            units,
+            normal_range,
+        }
+    }
+
+    pub fn __repr__(&self) -> String {
+        format!(
+            "DataExplanation(field={}, confidence={:.2}, source={})",
+            self.field, self.confidence, self.source
+        )
+    }
+
+    #[getter]
+    pub fn field(&self) -> String {
+        self.field.clone()
+    }
+
+    #[getter]
+    pub fn description(&self) -> String {
+        self.description.clone()
+    }
+
+    #[getter]
+    pub fn applications(&self) -> Vec<String> {
+        self.applications.clone()
+    }
+
+    #[getter]
+    pub fn confidence(&self) -> f32 {
+        self.confidence
+    }
+
+    #[getter]
+    pub fn source(&self) -> String {
+        self.source.clone()
+    }
+
+    #[getter]
+    pub fn units(&self) -> String {
+        self.units.clone()
+    }
+
+    #[getter]
+    pub fn normal_range(&self) -> String {
+        self.normal_range.clone()
+    }
+
+    pub fn add_application(&mut self, app: String) {
+        self.applications.push(app);
+    }
+
+    #[staticmethod]
+    pub fn soil_moisture() -> Self {
+        PyDataExplanation {
+            field: "soil_moisture".to_string(),
+            description: "Amount of water retained in the upper soil layer (volumetric percentage)".to_string(),
+            applications: vec![
+                "Agricultural planning".to_string(),
+                "Robot mobility prediction".to_string(),
+                "Flood risk assessment".to_string(),
+                "Crop health monitoring".to_string(),
+            ],
+            confidence: 0.75,
+            source: "SoilGrids / USDA NRCS".to_string(),
+            units: "Volumetric % (0-100)".to_string(),
+            normal_range: "20-40% for most crops".to_string(),
+        }
+    }
+
+    #[staticmethod]
+    pub fn temperature() -> Self {
+        PyDataExplanation {
+            field: "temperature".to_string(),
+            description: "Current air temperature at location".to_string(),
+            applications: vec![
+                "Robot battery performance".to_string(),
+                "Sensor calibration".to_string(),
+                "Mission feasibility".to_string(),
+                "Weather forecasting".to_string(),
+            ],
+            confidence: 0.95,
+            source: "Open-Meteo / NOAA / OpenWeather".to_string(),
+            units: "Celsius (°C)".to_string(),
+            normal_range: "-20 to +50°C typical".to_string(),
+        }
+    }
+
+    #[staticmethod]
+    pub fn visibility() -> Self {
+        PyDataExplanation {
+            field: "visibility".to_string(),
+            description: "How far visual and LiDAR sensors can effectively see".to_string(),
+            applications: vec![
+                "Camera/LiDAR range planning".to_string(),
+                "Obstacle detection capability".to_string(),
+                "Mission safety assessment".to_string(),
+                "Sensor confidence adjustment".to_string(),
+            ],
+            confidence: 0.80,
+            source: "Weather station data".to_string(),
+            units: "Meters".to_string(),
+            normal_range: ">5000m in clear weather, <1000m in fog/rain".to_string(),
+        }
+    }
+
+    #[staticmethod]
+    pub fn slope() -> Self {
+        PyDataExplanation {
+            field: "slope".to_string(),
+            description: "Terrain gradient (steepness)".to_string(),
+            applications: vec![
+                "Robot traversability assessment".to_string(),
+                "Vehicle capability planning".to_string(),
+                "Erosion risk".to_string(),
+                "Agricultural suitability".to_string(),
+            ],
+            confidence: 0.9,
+            source: "SRTM / USGS DEM".to_string(),
+            units: "Degrees from horizontal (0-90)".to_string(),
+            normal_range: "0-10° passable, >30° challenging for most robots".to_string(),
+        }
+    }
+}
+
 impl Default for PyTerrainMap {
     fn default() -> Self {
         Self::new()

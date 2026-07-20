@@ -51,19 +51,71 @@ impl SensorWeights {
 /// Sensor fusion engine
 pub struct SensorFusion {
     weights: SensorWeights,
+    /// Apply temporal quality weighting (default: true)
+    temporal_quality_enabled: bool,
 }
 
 impl SensorFusion {
     /// Create fusion engine with custom sensor weights
     pub fn new(weights: SensorWeights) -> Self {
-        SensorFusion { weights }
+        SensorFusion {
+            weights,
+            temporal_quality_enabled: true,
+        }
     }
 
     /// Create fusion with default equal weights
     pub fn default() -> Self {
         SensorFusion {
             weights: SensorWeights::default_equal(),
+            temporal_quality_enabled: true,
         }
+    }
+
+    /// Enable/disable temporal quality weighting
+    pub fn set_temporal_quality_enabled(&mut self, enabled: bool) {
+        self.temporal_quality_enabled = enabled;
+    }
+
+    /// Extract temporal quality from observation
+    ///
+    /// Quality based on latency (ingestion_time - event_time):
+    /// - <100ms: quality 1.0
+    /// - >5s: quality 0.3
+    /// - Linear interpolation in between
+    fn extract_temporal_quality(&self, obs: &Observation) -> f32 {
+        let latency_us = obs.temporal.ingestion_time_us.saturating_sub(obs.temporal.event_time_us);
+        let latency_ms = (latency_us / 1_000) as i64;
+
+        if latency_ms <= 100 {
+            1.0
+        } else if latency_ms >= 5000 {
+            0.3
+        } else {
+            // Linear interpolation between 100ms (1.0) and 5000ms (0.3)
+            let ratio = (latency_ms - 100) as f32 / (5000.0 - 100.0);
+            1.0 - (ratio * 0.7)
+        }
+    }
+
+    /// Calculate sensor weight with optional temporal quality factor
+    ///
+    /// Weight = sensor_weight × confidence × temporal_quality
+    fn calculate_weight(
+        &self,
+        sensor_weight: f32,
+        confidence: f32,
+        temporal_quality: Option<f32>,
+    ) -> f32 {
+        let mut weight = sensor_weight * confidence;
+
+        if self.temporal_quality_enabled {
+            if let Some(tq) = temporal_quality {
+                weight *= tq.clamp(0.0, 1.0);
+            }
+        }
+
+        weight
     }
 
     /// Fuse multiple observations into single estimate
@@ -86,7 +138,7 @@ impl SensorFusion {
         })
     }
 
-    /// Fuse temperature observations
+    /// Fuse temperature observations with temporal quality weighting
     fn fuse_temperature(&self, observations: &[&Observation]) -> Option<TemperatureEstimate> {
         let mut temps = Vec::new();
         let mut total_weight = 0.0;
@@ -94,7 +146,10 @@ impl SensorFusion {
 
         for obs in observations {
             if let SensorValue::Temperature { celsius } = &obs.value {
-                let weight = self.weights.for_sensor(obs.sensor_type) * obs.confidence;
+                let sensor_weight = self.weights.for_sensor(obs.sensor_type);
+                let temporal_quality = self.extract_temporal_quality(obs);
+                let weight = self.calculate_weight(sensor_weight, obs.confidence, Some(temporal_quality));
+
                 weighted_sum += celsius * weight;
                 total_weight += weight;
                 temps.push(*celsius);
@@ -108,7 +163,7 @@ impl SensorFusion {
         // Weighted average
         let mean = weighted_sum / total_weight;
 
-        // Variance
+        // Variance (unweighted for now - represents observation spread)
         let variance = temps
             .iter()
             .map(|t| (t - mean).powi(2))
@@ -122,7 +177,7 @@ impl SensorFusion {
         })
     }
 
-    /// Fuse object detections with consensus
+    /// Fuse object detections with consensus and temporal quality weighting
     fn fuse_detections(&self, observations: &[&Observation]) -> Vec<FusedDetection> {
         // Group detections by class label
         let mut detection_groups: HashMap<String, Vec<(f32, [f32; 4])>> = HashMap::new();
@@ -131,10 +186,16 @@ impl SensorFusion {
         for obs in observations {
             if let SensorValue::Camera { detections } = &obs.value {
                 let sensor_weight = self.weights.for_sensor(obs.sensor_type);
-                let confidence_weight = obs.confidence;
+                let temporal_quality = self.extract_temporal_quality(obs);
 
                 for detection in detections {
-                    let weight = sensor_weight * confidence_weight * detection.confidence;
+                    let base_weight = sensor_weight * obs.confidence * detection.confidence;
+                    let weight = if self.temporal_quality_enabled {
+                        base_weight * temporal_quality
+                    } else {
+                        base_weight
+                    };
+
                     detection_groups
                         .entry(detection.class_label.clone())
                         .or_insert_with(Vec::new)
@@ -183,19 +244,22 @@ impl SensorFusion {
         fused
     }
 
-    /// Compute activity level as weighted movement detection rate
+    /// Compute activity level as weighted movement detection rate with temporal quality
     fn compute_activity_level(&self, observations: &[&Observation]) -> f32 {
         let mut total_weight = 0.0;
         let mut weighted_activity = 0.0;
 
         for obs in observations {
             let sensor_weight = self.weights.for_sensor(obs.sensor_type);
-            total_weight += sensor_weight * obs.confidence;
+            let temporal_quality = self.extract_temporal_quality(obs);
+            let weight = self.calculate_weight(sensor_weight, obs.confidence, Some(temporal_quality));
+
+            total_weight += weight;
 
             // Movement sensor contributes directly
             if let SensorValue::Movement { velocity, .. } = &obs.value {
                 let motion_factor = (velocity / 10.0).min(1.0); // Normalize to 0-1
-                weighted_activity += motion_factor * sensor_weight * obs.confidence;
+                weighted_activity += motion_factor * weight;
             }
 
             // Other sensors contribute based on presence of data

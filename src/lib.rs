@@ -39,6 +39,8 @@ pub mod parallel_execution;  // Multi-GPU parallel execution runtime
 pub mod caching;  // Layered caching and progressive world understanding
 pub mod security;  // Security-first and auditability-first architecture
 pub mod predictive_caching;  // Predictive cache warming and intent inference
+pub mod late_arrival;  // Late-arrival observation reprocessing
+pub mod adapters;  // PyRoboFrames and PyRoboVision ecosystem integration
 
 // Re-export all public types
 pub use types::{

@@ -174,6 +174,180 @@ impl TemporalIndex {
     }
 }
 
+/// Enhanced temporal index with event-time ordering and watermarking
+///
+/// Tracks both event_time (when observation occurred) and arrival_time (when we received it).
+/// Maintains watermark to detect and handle late arrivals.
+pub struct TemporalIndexEnhanced {
+    /// Event timestamps (sorted by event time, not arrival)
+    event_times: Vec<i64>,
+    /// Arrival timestamps (parallel to event_times)
+    arrival_times: Vec<i64>,
+    /// Maximum event time seen so far (watermark)
+    watermark_us: i64,
+    /// Late arrivals detected (event_time < watermark but arrival after)
+    late_arrivals: Vec<usize>,
+    /// Decay function to apply
+    decay: DecayFunction,
+}
+
+impl TemporalIndexEnhanced {
+    /// Create new enhanced temporal index
+    pub fn new(decay: DecayFunction) -> Self {
+        TemporalIndexEnhanced {
+            event_times: Vec::new(),
+            arrival_times: Vec::new(),
+            watermark_us: 0,
+            late_arrivals: Vec::new(),
+            decay,
+        }
+    }
+
+    /// Insert observation with event_time and arrival_time
+    ///
+    /// Returns true if this is a late arrival (event_time < watermark)
+    pub fn insert(&mut self, event_time_us: i64, arrival_time_us: i64) -> Result<bool> {
+        if event_time_us < 0 || arrival_time_us < 0 {
+            return Err(Error::TimeError("Timestamps must be non-negative".to_string()));
+        }
+
+        // Check if this is a late arrival
+        let is_late = event_time_us < self.watermark_us;
+
+        // Update watermark if this observation is newer
+        if event_time_us > self.watermark_us {
+            self.watermark_us = event_time_us;
+        }
+
+        // Insert in sorted order by event_time
+        match self.event_times.binary_search(&event_time_us) {
+            Ok(pos) => {
+                // Duplicate event time - insert after existing
+                self.event_times.insert(pos + 1, event_time_us);
+                self.arrival_times.insert(pos + 1, arrival_time_us);
+            }
+            Err(pos) => {
+                self.event_times.insert(pos, event_time_us);
+                self.arrival_times.insert(pos, arrival_time_us);
+            }
+        }
+
+        // Track late arrivals
+        if is_late {
+            let idx = self.event_times.iter().position(|&t| t == event_time_us)
+                .unwrap_or(self.event_times.len() - 1);
+            self.late_arrivals.push(idx);
+        }
+
+        Ok(is_late)
+    }
+
+    /// Get watermark (maximum event_time seen)
+    pub fn watermark(&self) -> i64 {
+        self.watermark_us
+    }
+
+    /// Get observations that arrived late
+    pub fn late_arrivals(&self) -> &[usize] {
+        &self.late_arrivals
+    }
+
+    /// Check if observation is late arrival
+    pub fn is_late_arrival(&self, index: usize) -> bool {
+        self.late_arrivals.contains(&index)
+    }
+
+    /// Get latency (arrival_time - event_time) in milliseconds
+    pub fn latency_ms(&self, index: usize) -> Result<i64> {
+        if index >= self.event_times.len() {
+            return Err(Error::QueryError(format!("Index {} out of range", index)));
+        }
+        // arrival and event times are in microseconds, convert to milliseconds
+        let latency_us = self.arrival_times[index] - self.event_times[index];
+        Ok(latency_us / 1_000)
+    }
+
+    /// Get all event times (for debugging)
+    pub fn event_times(&self) -> &[i64] {
+        &self.event_times
+    }
+
+    /// Get all arrival times (for debugging)
+    pub fn arrival_times(&self) -> &[i64] {
+        &self.arrival_times
+    }
+
+    /// Query by event time range [from_us, to_us]
+    pub fn range_query(&self, from_us: i64, to_us: i64) -> Result<Vec<usize>> {
+        if from_us < 0 || to_us < 0 {
+            return Err(Error::TimeError("Timestamps must be non-negative".to_string()));
+        }
+        if from_us > to_us {
+            return Err(Error::TimeError("from_us must be <= to_us".to_string()));
+        }
+
+        let start_idx = self.event_times
+            .binary_search(&from_us)
+            .unwrap_or_else(|x| x);
+        let end_idx = self.event_times
+            .binary_search(&to_us)
+            .map(|x| x + 1)
+            .unwrap_or_else(|x| x);
+
+        Ok((start_idx..end_idx).collect())
+    }
+
+    /// Get observations newer than event_time
+    pub fn since(&self, event_time_us: i64) -> Result<Vec<usize>> {
+        if event_time_us < 0 {
+            return Err(Error::TimeError("Timestamp must be non-negative".to_string()));
+        }
+
+        let start_idx = self.event_times
+            .binary_search(&event_time_us)
+            .unwrap_or_else(|x| x);
+
+        Ok((start_idx..self.event_times.len()).collect())
+    }
+
+    /// Calculate temporal quality factor (0.0-1.0) based on latency
+    ///
+    /// Quality decreases with latency:
+    /// - <100ms latency: quality 1.0
+    /// - >5s latency: quality 0.3
+    pub fn temporal_quality(&self, index: usize) -> Result<f32> {
+        let latency_ms = self.latency_ms(index)?;
+
+        if latency_ms <= 100 {
+            Ok(1.0)
+        } else if latency_ms >= 5000 {
+            Ok(0.3)
+        } else {
+            // Linear interpolation between 100ms (1.0) and 5000ms (0.3)
+            let ratio = (latency_ms - 100) as f32 / (5000.0 - 100.0);
+            Ok(1.0 - (ratio * 0.7))
+        }
+    }
+
+    /// Get number of observations
+    pub fn len(&self) -> usize {
+        self.event_times.len()
+    }
+
+    /// Check if empty
+    pub fn is_empty(&self) -> bool {
+        self.event_times.is_empty()
+    }
+
+    /// Clear all observations
+    pub fn clear(&mut self) {
+        self.event_times.clear();
+        self.arrival_times.clear();
+        self.late_arrivals.clear();
+        self.watermark_us = 0;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -347,5 +521,150 @@ mod tests {
         let decay = DecayFunction::Exponential { half_life_ms: 1000 };
         // Negative age means future timestamp - should return original
         assert_eq!(decay.apply(0.9, -1000), 0.9);
+    }
+
+    // ========== TemporalIndexEnhanced Tests ==========
+
+    #[test]
+    fn test_enhanced_index_creation() {
+        let index = TemporalIndexEnhanced::new(DecayFunction::None);
+        assert_eq!(index.watermark(), 0);
+        assert!(index.is_empty());
+        assert_eq!(index.late_arrivals().len(), 0);
+    }
+
+    #[test]
+    fn test_enhanced_index_in_order_insertion() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        // Events in order
+        assert!(!index.insert(1000, 1100).unwrap());  // event_time=1000, arrival_time=1100
+        assert!(!index.insert(2000, 2100).unwrap());  // event_time=2000, arrival_time=2100
+        assert!(!index.insert(3000, 3100).unwrap());  // event_time=3000, arrival_time=3100
+
+        assert_eq!(index.len(), 3);
+        assert_eq!(index.watermark(), 3000);
+        assert_eq!(index.late_arrivals().len(), 0);
+    }
+
+    #[test]
+    fn test_enhanced_index_late_arrival() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        // Insert in-order events to establish watermark
+        index.insert(1000, 1100).unwrap();
+        index.insert(3000, 3100).unwrap();
+        assert_eq!(index.watermark(), 3000);
+
+        // Now insert an event with earlier event_time (late arrival)
+        assert!(index.insert(2000, 5000).unwrap());
+        assert_eq!(index.late_arrivals().len(), 1);
+    }
+
+    #[test]
+    fn test_enhanced_index_latency_calculation() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        // Event at 1_000_000µs (1s), arrives at 1_100_000µs (1.1s) -> latency 100ms
+        index.insert(1_000_000, 1_100_000).unwrap();
+        assert_eq!(index.latency_ms(0).unwrap(), 100);
+
+        // Event at 2_000_000µs (2s), arrives at 7_000_000µs (7s) -> latency 5000ms
+        index.insert(2_000_000, 7_000_000).unwrap();
+        assert_eq!(index.latency_ms(1).unwrap(), 5000);
+    }
+
+    #[test]
+    fn test_enhanced_index_temporal_quality() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        // Fast arrival (100ms latency) -> quality 1.0
+        index.insert(1_000_000, 1_100_000).unwrap();
+        assert!((index.temporal_quality(0).unwrap() - 1.0).abs() < 0.001);
+
+        // Slow arrival (5000ms latency) -> quality 0.3
+        index.insert(2_000_000, 7_000_000).unwrap();
+        assert!((index.temporal_quality(1).unwrap() - 0.3).abs() < 0.001);
+
+        // Medium latency (2550ms = midpoint) -> quality ~0.65
+        index.insert(3_000_000, 5_550_000).unwrap();
+        let quality = index.temporal_quality(2).unwrap();
+        assert!(quality > 0.6 && quality < 0.7);
+    }
+
+    #[test]
+    fn test_enhanced_index_out_of_order_events() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        // Insert completely out of order
+        // First event: event_time=5000, arrival=5100, watermark becomes 5000
+        index.insert(5_000_000, 5_100_000).unwrap();
+
+        // Subsequent events have event_time < 5000, so they're late arrivals
+        index.insert(1_000_000, 1_100_000).unwrap();  // Late arrival (1000 < 5000)
+        index.insert(3_000_000, 3_100_000).unwrap();  // Late arrival (3000 < 5000)
+        index.insert(2_000_000, 2_100_000).unwrap();  // Late arrival (2000 < 5000)
+
+        // Should be sorted by event_time
+        assert_eq!(index.event_times(), &[1_000_000, 2_000_000, 3_000_000, 5_000_000]);
+        assert_eq!(index.watermark(), 5_000_000);
+
+        // Three late arrivals (indices 0, 1, 2 all have event_time < watermark)
+        assert_eq!(index.late_arrivals().len(), 3);
+    }
+
+    #[test]
+    fn test_enhanced_index_range_query() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        for i in 0..10 {
+            index.insert(i * 1000, i * 1000 + 100).unwrap();
+        }
+
+        // Query [2000, 6000]
+        let results = index.range_query(2000, 6000).unwrap();
+        assert_eq!(results, vec![2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn test_enhanced_index_since_query() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        for i in 0..5 {
+            index.insert(i * 1000, i * 1000 + 100).unwrap();
+        }
+
+        // Query since 2000 (inclusive)
+        let results = index.since(2000).unwrap();
+        assert_eq!(results, vec![2, 3, 4]);
+    }
+
+    #[test]
+    fn test_enhanced_index_clear() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        index.insert(1000, 1100).unwrap();
+        index.insert(2000, 2100).unwrap();
+        assert_eq!(index.len(), 2);
+
+        index.clear();
+        assert!(index.is_empty());
+        assert_eq!(index.watermark(), 0);
+        assert_eq!(index.late_arrivals().len(), 0);
+    }
+
+    #[test]
+    fn test_enhanced_index_watermark_invariant() {
+        let mut index = TemporalIndexEnhanced::new(DecayFunction::None);
+
+        // Watermark should never go backwards
+        index.insert(1000, 1100).unwrap();
+        assert_eq!(index.watermark(), 1000);
+
+        index.insert(500, 1200).unwrap();  // Earlier event_time
+        assert_eq!(index.watermark(), 1000);  // Watermark unchanged
+
+        index.insert(1500, 1300).unwrap();
+        assert_eq!(index.watermark(), 1500);  // Watermark moves forward
     }
 }

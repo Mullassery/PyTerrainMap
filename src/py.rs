@@ -10,7 +10,10 @@
 
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
-use crate::py_api::{PyTerrainMap, PyObservation, PyQueryResult, PyGeoPoint, PyRegion};
+use crate::py_api::{
+    PyTerrainMap, PyObservation, PyQueryResult, PyGeoPoint, PyRegion,
+    PyTerrainAnalysis, PyRisk, PyMobilityAssessment, PyEnvironmentalConditions, PyDataExplanation,
+};
 
 /// PyTerrainMap Python module
 ///
@@ -18,7 +21,7 @@ use crate::py_api::{PyTerrainMap, PyObservation, PyQueryResult, PyGeoPoint, PyRe
 /// Core classes: TerrainMap, Observation, QueryResult, GeoPoint, Region
 #[pymodule]
 fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("__version__", "0.0.1")?;
+    m.add("__version__", "1.0.0")?;
     m.add(
         "__doc__",
         "PyTerrainMap: Spatial Intelligence Companion for multi-robot terrain mapping",
@@ -30,6 +33,13 @@ fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyObservation>()?;
     m.add_class::<PyQueryResult>()?;
     m.add_class::<PyTerrainMap>()?;
+
+    // Phase 2: Intelligence & Analysis classes
+    m.add_class::<PyTerrainAnalysis>()?;
+    m.add_class::<PyRisk>()?;
+    m.add_class::<PyMobilityAssessment>()?;
+    m.add_class::<PyEnvironmentalConditions>()?;
+    m.add_class::<PyDataExplanation>()?;
 
     // Persona constants
     m.add("Persona", py_persona_dict(py))?;
