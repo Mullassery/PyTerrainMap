@@ -297,3 +297,100 @@ fn test_frontier_exploration_decision() {
     let top = hypothesis_mgr.get_top_hypothesis("next_region");
     assert!(top.is_some());
 }
+
+#[test]
+fn test_frontier_prioritization_workflow() {
+    use crate::exploration::frontier::*;
+
+    let prioritizer = FrontierPrioritizer::new();
+
+    // Create frontiers with different characteristics
+    let mut frontier_high_gain = Frontier::new(
+        "frontier_high_gain".to_string(),
+        (0.0, 0.0, 0.0),
+    );
+    frontier_high_gain.evaluate(
+        0.9,  // high information gain
+        0.3,  // moderate cost
+        0.4,  // moderate risk
+        0.8,  // high curiosity
+    );
+
+    let mut frontier_risky = Frontier::new(
+        "frontier_risky".to_string(),
+        (0.001, 0.001, 0.0),
+    );
+    frontier_risky.evaluate(
+        0.8,
+        0.5,
+        0.9,  // very high risk
+        0.7,
+    );
+
+    let ranked = prioritizer.rank_frontiers(vec![frontier_risky, frontier_high_gain.clone()]);
+
+    // High gain, low risk should rank first
+    assert_eq!(ranked[0].id, "frontier_high_gain");
+}
+
+#[test]
+fn test_robot_specific_frontier_selection() {
+    use crate::exploration::frontier::*;
+
+    let prioritizer = FrontierPrioritizer::new();
+
+    // Create diverse frontiers
+    let mut frontier_high_value = Frontier::new(
+        "frontier_high_value".to_string(),
+        (0.0, 0.0, 0.0),
+    );
+    frontier_high_value.evaluate(0.95, 0.1, 0.2, 0.9);
+
+    let mut frontier_moderate_risk = Frontier::new(
+        "frontier_moderate_risk".to_string(),
+        (0.001, 0.001, 0.0),
+    );
+    frontier_moderate_risk.evaluate(0.7, 0.3, 0.5, 0.6);
+
+    let mut frontier_high_risk = Frontier::new(
+        "frontier_high_risk".to_string(),
+        (0.002, 0.002, 0.0),
+    );
+    frontier_high_risk.evaluate(0.8, 0.2, 0.85, 0.7);
+
+    let frontiers = vec![frontier_high_value, frontier_moderate_risk, frontier_high_risk];
+
+    // Aerial prefers high info gain
+    let aerial = prioritizer.frontier_for_robot(&frontiers, "aerial");
+    assert!(aerial.is_some());
+    assert_eq!(aerial.unwrap().id, "frontier_high_value");  // Highest gain (0.95)
+
+    // Wheeled avoids high risk
+    let wheeled = prioritizer.frontier_for_robot(&frontiers, "wheeled");
+    assert!(wheeled.is_some());
+    assert!(wheeled.unwrap().risk_estimate < 0.7);
+
+    // Tracked can handle risk
+    let tracked = prioritizer.frontier_for_robot(&frontiers, "tracked");
+    assert!(tracked.is_some());
+}
+
+#[test]
+fn test_curiosity_vs_cost_tradeoff() {
+    use crate::exploration::frontier::*;
+
+    let prioritizer = FrontierPrioritizer::new();
+
+    // High curiosity, low cost (explore)
+    let mut good_frontier = Frontier::new("good".to_string(), (0.0, 0.0, 0.0));
+    good_frontier.evaluate(0.8, 0.2, 0.3, 0.9);
+
+    // High curiosity, high cost (don't explore)
+    let mut expensive_frontier = Frontier::new("expensive".to_string(), (0.001, 0.001, 0.0));
+    expensive_frontier.evaluate(0.8, 0.8, 0.8, 0.9);
+
+    let ranked = prioritizer.rank_frontiers(vec![expensive_frontier, good_frontier.clone()]);
+
+    assert_eq!(ranked[0].id, "good");
+    assert!(ranked[0].priority > ranked[1].priority);
+}

@@ -214,6 +214,7 @@ pub use exploration::{
     Hypothesis, HypothesisType, HypothesisManager, PredictionValue,
     FleetStatistics, RobotProfile,
     SemanticContext, SemanticClassifier, StructureTemplate,
+    Frontier, FrontierDetector, CuriosityScorer, RiskEvaluator, FrontierPrioritizer,
 };
 
 // TODO: Implement in future weeks

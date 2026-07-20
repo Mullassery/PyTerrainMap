@@ -8,6 +8,7 @@ pub mod predictions;
 pub mod hypotheses;
 pub mod statistics;
 pub mod semantics;
+pub mod frontier;
 
 // Re-exports for convenience
 pub use patterns::{EnvironmentType, EnvironmentPattern, PatternLibrary};
@@ -15,6 +16,9 @@ pub use predictions::{PredictiveModel, TraversabilityPredictor};
 pub use hypotheses::{Hypothesis, HypothesisType, HypothesisManager, PredictionValue};
 pub use statistics::{FleetStatistics, RobotProfile};
 pub use semantics::{SemanticContext, SemanticClassifier, StructureTemplate};
+pub use frontier::{
+    Frontier, FrontierDetector, CuriosityScorer, RiskEvaluator, FrontierPrioritizer,
+};
 
 #[cfg(test)]
 mod tests;
