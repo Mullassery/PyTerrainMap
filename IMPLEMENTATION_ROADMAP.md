@@ -586,6 +586,313 @@ Image registration, Structure from Motion
 
 ---
 
+## Phase 5: Ecosystem Integration (Weeks 19-26) — NEW
+
+**Strategic integrations with PyRoboFrames and PyRoboVision to enhance terrain intelligence while maintaining architectural boundaries.**
+
+### Weeks 19-20: PyRoboFrames Integration — Sensor Data Pipelines
+
+**What this adds:** High-throughput multi-robot sensor ingest, temporal alignment, sensor composition tracking
+
+**Priority:** P0 (unblocks real-world multi-robot use cases)
+
+**Implementation:**
+```python
+# pyterrain_map/adapters/pyroboframes_adapter.py
+
+from pyroboframes import RoboticsDataFrame
+from pyterrain_map.observation import Observation, TemporalMetadata
+
+class RoboticsDataFrameAdapter:
+    """Convert PyRoboFrames RoboticsDataFrame to PyTerrainMap Observations"""
+    
+    async def ingest_dataframe(self, df: RoboticsDataFrame, robot_id: str) -> List[Observation]:
+        """
+        Transform aligned, normalized sensor data into georeferenced observations
+        
+        - Handles multi-rate sensor composition (10fps camera + 1fps probe + GPS)
+        - Preserves sensor quality from PyRoboFrames
+        - Tracks which sensors contributed to each observation
+        - Maintains lineage (episode_id, source_dataset, frame_index)
+        """
+        observations = []
+        
+        for frame_idx, row in df.iterrows():
+            obs = Observation(
+                observation_id=f"{robot_id}_{frame_idx}",
+                robot_id=robot_id,
+                timestamp=row['timestamp_ns'],
+                location=GeoPoint(
+                    lat=row['gps_0_lat'],
+                    lon=row['gps_0_lon']
+                ),
+                temporal_metadata=TemporalMetadata(
+                    event_time=row['timestamp_ns'],
+                    capture_times={
+                        'camera_0': row['camera_0_timestamp_ns'],
+                        'lidar_0': row['lidar_0_timestamp_ns'],
+                        'imu_0': row['imu_0_timestamp_ns'],
+                    },
+                    quality={
+                        'camera_0': row['quality']['camera_0'],
+                        'lidar_0': row['quality']['lidar_0'],
+                        'imu_0': row['quality']['imu_0'],
+                    }
+                ),
+                sensor_values=self._extract_sensor_values(row),
+                provenance={
+                    'source_episode': df.metadata.get('episode_id'),
+                    'source_dataset': df.metadata.get('dataset_name'),
+                    'global_frame_index': frame_idx,
+                }
+            )
+            observations.append(obs)
+        
+        return observations
+```
+
+**Dependencies to add:**
+```toml
+pyroboframes = "1.2.1"  # Requires PyRoboFrames in Python environment
+```
+
+**Success Criteria:**
+- ✅ Can ingest MCAP/ROS2 streams via PyRoboFrames
+- ✅ Multi-rate sensor alignment working (50-100ms windows)
+- ✅ Temporal metadata preserved (capture times, quality per sensor)
+- ✅ Provenance tracked (robot_id, episode_id, frame_index)
+- ✅ 3 use case tests passing: Construction, Agricultural, Disaster
+
+**Time:** 2 weeks  
+**Tests:** Unit tests for adapter, end-to-end tests with 3 use cases
+
+**Use Cases Validated:**
+1. **Construction Site Inspection** — 3-drone MCAP streams with 4K RGB, thermal, LiDAR, barometer
+2. **Agricultural Monitoring** — Multi-rate sensors (10fps RGB, 1fps hyperspectral, 0.1Hz soil probe)
+3. **Security Surveillance** — 24/7 perimeter drone observations with 50ms temporal windows
+
+---
+
+### Weeks 21-22: PyRoboVision Integration — Vision Model Performance Tracking
+
+**What this adds:** Terrain-specific vision model selection, performance degradation tracking, model-aware quality weighting
+
+**Priority:** P0 (enables adaptive perception pipelines)
+
+**Implementation:**
+```python
+# pyterrain_map/adapters/pyrobovision_adapter.py
+
+from pyrobovision.registry import ModelRegistry
+from pyterrain_map.fusion import FusionWeighting
+
+class VisionModelAwareAdapter:
+    """Embed PyRoboVision model registry into PyTerrainMap fusion"""
+    
+    def __init__(self, vision_registry: ModelRegistry):
+        self.registry = vision_registry
+    
+    async def compute_fusion_weight(
+        self,
+        model_id: str,
+        inference_confidence: float,
+        sensor_quality: float,
+        terrain_type: str
+    ) -> float:
+        """
+        Compute model-aware fusion weight: 
+        weight = model_mAP(terrain) × inference_confidence × sensor_quality
+        """
+        
+        # Query model performance for this terrain
+        model_perf = await self.registry.performance(
+            model_id=model_id,
+            terrain_type=terrain_type
+        )
+        
+        if not model_perf:
+            # Fallback: use inference confidence alone
+            return inference_confidence * sensor_quality
+        
+        # Weight = registry mAP × inference confidence × sensor quality
+        fusion_weight = (
+            model_perf.mAP *
+            inference_confidence *
+            sensor_quality
+        )
+        
+        return fusion_weight
+    
+    async def select_best_model(
+        self,
+        task: str,
+        terrain_type: str,
+        max_latency_ms: int = 100
+    ) -> str:
+        """Select best-performing model for terrain + task"""
+        candidates = await self.registry.models_for_task(task)
+        
+        best_model = None
+        best_score = 0
+        
+        for model_id in candidates:
+            perf = await self.registry.performance(
+                model_id=model_id,
+                terrain_type=terrain_type
+            )
+            
+            if perf.inference_latency_ms > max_latency_ms:
+                continue  # Latency constraint violated
+            
+            # Score = mAP + (1 - normalized_latency)
+            score = perf.mAP + (1.0 - perf.inference_latency_ms / 200)
+            
+            if score > best_score:
+                best_model = model_id
+                best_score = score
+        
+        return best_model
+```
+
+**Dependencies:**
+```toml
+pyrobovision = "1.2.1"  # Vision model registry
+```
+
+**Success Criteria:**
+- ✅ Model registry lookups working (mAP by terrain)
+- ✅ Fusion weights computed correctly (model mAP × confidence × sensor quality)
+- ✅ Adaptive model selection by terrain type
+- ✅ Model-terrain performance degradation tracked (shadows, weather)
+- ✅ 3 use case tests passing: Disaster Response, Agriculture Yield, Tree Detection
+
+**Time:** 2 weeks  
+**Tests:** Unit tests for model adapter, end-to-end tests with 3 use cases
+
+**Use Cases Validated:**
+1. **Disaster Response** — 3-model ensemble (YOLOv11 RGB, thermal, LiDAR) with multi-model agreement tracking
+2. **Agricultural Yield** — Adaptive model selection (wheat/corn/soy) with terrain-aware mAP
+3. **Tree Detection** — Cross-terrain model comparison (forest vs. urban) with confidence bounds
+
+---
+
+### Weeks 23-24: Data Type Alignment & Provenance
+
+**What this adds:** Unified data contracts across all 3 projects, end-to-end provenance tracking
+
+**Priority:** P1 (enables future diagnostics with PyVectorHound)
+
+**Implementation:**
+```rust
+// src/contracts/observation_contract.rs
+
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ObservationContract {
+    /// From PyRoboFrames: sensor composition metadata
+    pub temporal_metadata: TemporalMetadata,
+    
+    /// From PyRoboVision: model performance metadata
+    pub vision_metadata: Option<VisionMetadata>,
+    
+    /// PyTerrainMap: fusion & quality gates
+    pub fusion_result: FusionResult,
+    
+    /// Full provenance chain
+    pub lineage: Lineage,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Lineage {
+    pub robot_id: String,
+    pub episode_id: String,
+    pub frame_index: u64,
+    pub dataset_name: String,
+    pub source_models: Vec<String>,
+    pub source_sensors: Vec<String>,
+    pub timestamp_created: i64,
+}
+```
+
+**Success Criteria:**
+- ✅ Data contracts enforceable at observation boundaries
+- ✅ Full provenance chain (robot→episode→frame→models→sensors→fusion)
+- ✅ Lineage queryable (reverse tracing for diagnostics)
+
+**Time:** 2 weeks
+
+---
+
+### Weeks 25-26: Integration Testing & Documentation
+
+**What this adds:** Production-ready integration tests, reference architectures
+
+**Priority:** P0 (blocks release)
+
+**Test Cases:**
+1. **End-to-End Multi-Robot Survey**
+   - PyRoboFrames: Ingest 3 MCAP streams (Drone A/B/C)
+   - PyRoboVision: Run 3 models in parallel
+   - PyTerrainMap: Fuse with model-aware weighting
+   - Output: Georeferenced 3D model with confidence annotations
+
+2. **Temporal Alignment Stress Test**
+   - PyRoboFrames: Compose 1000 observations with variable sensor rates
+   - PyTerrainMap: Verify temporal metadata preserved
+   - Validate: All timestamps, quality scores intact
+
+3. **Model Adaptation Scenario**
+   - PyRoboVision: Switch from day model → night model based on time
+   - PyTerrainMap: Re-weight observations accordingly
+   - Validate: Model switch doesn't lose data
+
+**Documentation:**
+- Architecture diagrams (data flow through 3 projects)
+- Example: Construction inspection workflow
+- Example: Agricultural monitoring workflow
+- Example: Disaster response workflow
+- Troubleshooting guide (when models unavailable, when PyRoboFrames unavailable, graceful degradation)
+
+**Time:** 2 weeks  
+**Deliverables:**
+- `ECOSYSTEM_INTEGRATION_GUIDE.md`
+- `MULTI_ROBOT_SURVEY_EXAMPLE.py`
+- `DISASTER_RESPONSE_EXAMPLE.py`
+- 15+ integration tests
+
+---
+
+## Build Priorities (P0-P2 Classification)
+
+### P0 (Blocking Release) — Weeks 1-10
+1. PyTerrainMap core (storage, queries, fusion)
+2. PyTerrainAI basics (RBAC, decay, anomaly detection)
+3. Python bindings working
+4. MVP success criteria met
+
+### P0 (Phase 5: Ecosystem) — Weeks 19-24
+1. **PyRoboFrames adapter** (weeks 19-20) — Unblocks real multi-robot ingest
+2. **PyRoboVision adapter** (weeks 21-22) — Enables terrain-aware model selection
+3. **Data type alignment** (weeks 23-24) — Ensures contract between projects
+4. **Integration tests** (weeks 25-26) — Validates multi-project workflows
+
+**Rationale:** Without these, PyTerrainMap can only ingest pre-normalized data. With them, PyTerrainMap becomes the central hub for multi-robot terrain intelligence.
+
+### P1 (After MVP, Nice to Have) — Weeks 11-18, 27+
+1. Persistent storage (SQLite/PostgreSQL)
+2. Image stitching (Structure from Motion)
+3. Advanced anomaly detection (ML-based)
+4. Performance optimization (1M+ observations)
+
+### P2 (Future Research)
+1. Real-time model retraining based on observation feedback
+2. Distributed terrain mapping (federated learning)
+3. Historical terrain change detection
+4. Cost optimization for multi-cloud deployment
+
+---
+
 ## Quick Start Command Sequence
 
 ```bash
