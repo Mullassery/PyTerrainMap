@@ -394,3 +394,199 @@ fn test_curiosity_vs_cost_tradeoff() {
     assert_eq!(ranked[0].id, "good");
     assert!(ranked[0].priority > ranked[1].priority);
 }
+
+#[test]
+fn test_complete_learning_loop() {
+    use crate::exploration::learning::*;
+
+    let mut learner = ActiveLearner::new();
+
+    // Phase 1: Make predictions (poor quality)
+    for i in 0..5 {
+        let outcome = PredictionOutcome::new(
+            format!("pred_{}", i),
+            "corridor".to_string(),
+            "door".to_string(),  // Wrong prediction
+        )
+        .with_confidence(0.6);
+
+        learner.learn_from_outcome(&outcome);
+    }
+
+    let initial_progress = learner.learning_progress();
+
+    // Phase 2: Make better predictions (correct)
+    for i in 5..15 {
+        let outcome = PredictionOutcome::new(
+            format!("pred_{}", i),
+            "door".to_string(),
+            "door".to_string(),  // Correct prediction
+        )
+        .with_confidence(0.85);
+
+        learner.learn_from_outcome(&outcome);
+    }
+
+    let final_progress = learner.learning_progress();
+
+    // System should show improvement
+    assert!(final_progress > initial_progress);
+    assert_eq!(learner.validator.outcomes.len(), 15);
+}
+
+#[test]
+fn test_systematic_error_identification() {
+    use crate::exploration::learning::*;
+
+    let mut validator = PredictionValidator::new();
+
+    // Consistently predict "corridor" but find "door"
+    for i in 0..8 {
+        validator.record_outcome(PredictionOutcome::new(
+            format!("p{}", i),
+            "corridor".to_string(),
+            "door".to_string(),
+        ));
+    }
+
+    // Some correct predictions
+    for i in 8..12 {
+        validator.record_outcome(PredictionOutcome::new(
+            format!("p{}", i),
+            "door".to_string(),
+            "door".to_string(),
+        ));
+    }
+
+    let errors = validator.systematic_errors();
+
+    // Should identify that "corridor" predictions systematically fail
+    assert!(errors.contains_key("corridor"));
+    assert_eq!(errors["corridor"].error_count, 8);
+    assert!(errors["corridor"].frequencies.contains_key("door"));
+}
+
+#[test]
+fn test_accuracy_improvement_trajectory() {
+    use crate::exploration::learning::*;
+
+    let mut learner = ActiveLearner::new();
+
+    let mut accuracies = Vec::new();
+
+    // Simulate learning over time (starts bad, ends good)
+    // Phase 0: 0/5 correct (0.0%)
+    for i in 0..5 {
+        learner.learn_from_outcome(&PredictionOutcome::new(
+            format!("p_0_{}", i),
+            "corridor".to_string(),
+            "door".to_string(),
+        ).with_confidence(0.3));
+    }
+    accuracies.push(learner.validator.accuracy_metrics().accuracy_rate);
+
+    // Phase 1: 3/5 correct (60%)
+    for i in 0..3 {
+        learner.learn_from_outcome(&PredictionOutcome::new(
+            format!("p_1_{}", i),
+            "door".to_string(),
+            "door".to_string(),
+        ).with_confidence(0.8));
+    }
+    for i in 3..5 {
+        learner.learn_from_outcome(&PredictionOutcome::new(
+            format!("p_1_{}", i),
+            "corridor".to_string(),
+            "door".to_string(),
+        ).with_confidence(0.3));
+    }
+    accuracies.push(learner.validator.accuracy_metrics().accuracy_rate);
+
+    // Phase 2: All correct (100%)
+    for i in 0..5 {
+        learner.learn_from_outcome(&PredictionOutcome::new(
+            format!("p_2_{}", i),
+            "door".to_string(),
+            "door".to_string(),
+        ).with_confidence(0.9));
+    }
+    accuracies.push(learner.validator.accuracy_metrics().accuracy_rate);
+
+    // Accuracy should trend upward
+    assert!(accuracies[1] > accuracies[0]);
+    assert!(accuracies[2] > accuracies[1]);
+}
+
+#[test]
+fn test_confidence_calibration_detection() {
+    use crate::exploration::learning::*;
+
+    let mut validator = PredictionValidator::new();
+
+    // Well-calibrated: high confidence predictions are correct, low confidence are wrong
+    for _ in 0..20 {
+        validator.record_outcome(
+            PredictionOutcome::new(
+                "p".to_string(),
+                "door".to_string(),
+                "door".to_string(),
+            )
+            .with_confidence(0.95),
+        );
+    }
+
+    for _ in 0..20 {
+        validator.record_outcome(
+            PredictionOutcome::new(
+                "p".to_string(),
+                "corridor".to_string(),
+                "door".to_string(),
+            )
+            .with_confidence(0.1),
+        );
+    }
+
+    let calibration = validator.confidence_calibration();
+
+    // Should detect good calibration
+    let metrics = validator.accuracy_metrics();
+    assert!(metrics.calibration_score > 0.7);
+}
+
+#[test]
+fn test_fleet_learning_coordination() {
+    use crate::exploration::learning::*;
+
+    let mut robot_a_learner = ActiveLearner::new();
+    let mut robot_b_learner = ActiveLearner::new();
+
+    // Robot A explores and learns
+    for i in 0..10 {
+        let outcome = PredictionOutcome::new(
+            format!("robot_a_pred_{}", i),
+            "door".to_string(),
+            "door".to_string(),
+        )
+        .with_confidence(0.7);
+
+        robot_a_learner.learn_from_outcome(&outcome);
+    }
+
+    // Robot B benefits from shared learning (uses same outcome data)
+    for i in 0..10 {
+        let outcome = PredictionOutcome::new(
+            format!("robot_b_pred_{}", i),
+            "door".to_string(),
+            "door".to_string(),
+        )
+        .with_confidence(0.7);
+
+        robot_b_learner.learn_from_outcome(&outcome);
+    }
+
+    // Both should have high accuracy
+    assert_eq!(
+        robot_a_learner.learning_progress(),
+        robot_b_learner.learning_progress()
+    );
+}

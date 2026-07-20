@@ -215,6 +215,8 @@ pub use exploration::{
     FleetStatistics, RobotProfile,
     SemanticContext, SemanticClassifier, StructureTemplate,
     Frontier, FrontierDetector, CuriosityScorer, RiskEvaluator, FrontierPrioritizer,
+    PredictionOutcome, PredictionValidator, AccuracyMetrics, ErrorPattern,
+    ConfidenceCalibration, ActiveLearner, LearningUpdate,
 };
 
 // TODO: Implement in future weeks
