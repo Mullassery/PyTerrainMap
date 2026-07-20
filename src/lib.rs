@@ -35,6 +35,7 @@ pub mod cli;
 pub mod spatial_reasoning;
 pub mod py;  // PyO3 Python bindings
 pub mod py_api;  // Python wrapper classes (TerrainMap, Observation, QueryResult, etc.)
+pub mod py_gaussian_splatting;  // Python wrapper classes for Gaussian Splatting
 pub mod parallel_execution;  // Multi-GPU parallel execution runtime
 pub mod caching;  // Layered caching and progressive world understanding
 pub mod security;  // Security-first and auditability-first architecture
@@ -43,6 +44,7 @@ pub mod late_arrival;  // Late-arrival observation reprocessing
 pub mod adapters;  // PyRoboFrames and PyRoboVision ecosystem integration
 pub mod traversability;  // Spatial knowledge graph for traversability intelligence (Phase 8+)
 pub mod exploration;  // Autonomous exploration intelligence engine (Phase 9+)
+pub mod gaussian_splatting;  // Gaussian Splatting probabilistic mapping layer (Phase 10+)
 
 // Re-export all public types
 pub use types::{
@@ -217,6 +219,23 @@ pub use exploration::{
     Frontier, FrontierDetector, CuriosityScorer, RiskEvaluator, FrontierPrioritizer,
     PredictionOutcome, PredictionValidator, AccuracyMetrics, ErrorPattern,
     ConfidenceCalibration, ActiveLearner, LearningUpdate,
+};
+
+// Re-export Gaussian Splatting (Probabilistic mapping layer)
+pub use gaussian_splatting::{
+    GaussianCovariance, TerrainGaussian, TerrainType, SplatKind,
+    GaussianSplatStore, H3SplatKey, StoreStats,
+    FusionAction, FusionResult, ObservationFuser,
+    PathCost, TerrainCostMap, TraversabilityDistanceEngine,
+    PassageType, PassageSplat, PassageTraversal,
+    PredictedSplat, UnknownRegionPredictor, VerificationResult,
+    TemporalGaussianManager,
+    BotMissionProfile, SemanticGaussianMapper,
+    HierarchicalLOD, LODLevel,
+    ExplorationTarget, GaussianExplorationStrategy, StorePatch, SyncResult, MultiSplatSynchronizer,
+    ObjectClass, ObjectMobility, DynamicObjectSplat, PositionSnapshot,
+    ChangeEvent, ChangeEventType, ChangeEventLog,
+    FleetLearningEngine, ObjectObservation, ObjectState, ObjectPrediction, AreaDynamicsProfile,
 };
 
 // TODO: Implement in future weeks

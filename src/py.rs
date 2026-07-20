@@ -14,6 +14,12 @@ use crate::py_api::{
     PyTerrainMap, PyObservation, PyQueryResult, PyGeoPoint, PyRegion,
     PyTerrainAnalysis, PyRisk, PyMobilityAssessment, PyEnvironmentalConditions, PyDataExplanation,
 };
+use crate::py_gaussian_splatting::{
+    PyGaussianCovariance, PyTerrainGaussian, PyDynamicObjectSplat, PyChangeEvent,
+    PyPathCost, PyObjectObservation, PyObjectState, PyGaussianSplatStore,
+    PyUnifiedPathCost, PyFrontier, PyGaussianFrontierScorer, PyGaussianCacheManager,
+    PyBotObservationMessage, PyBotStatus, PyFleetCoordinator,
+};
 
 /// PyTerrainMap Python module
 ///
@@ -40,6 +46,31 @@ fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyMobilityAssessment>()?;
     m.add_class::<PyEnvironmentalConditions>()?;
     m.add_class::<PyDataExplanation>()?;
+
+    // Phase 3: Gaussian Splatting probabilistic mapping layer
+    m.add_class::<PyGaussianCovariance>()?;
+    m.add_class::<PyTerrainGaussian>()?;
+    m.add_class::<PyDynamicObjectSplat>()?;
+    m.add_class::<PyChangeEvent>()?;
+    m.add_class::<PyPathCost>()?;
+    m.add_class::<PyObjectObservation>()?;
+    m.add_class::<PyObjectState>()?;
+    m.add_class::<PyGaussianSplatStore>()?;
+
+    // Phase 4: Unified path planning (Traversability + Gaussian integration)
+    m.add_class::<PyUnifiedPathCost>()?;
+
+    // Phase 5: Frontier detection with Gaussian uncertainty
+    m.add_class::<PyFrontier>()?;
+    m.add_class::<PyGaussianFrontierScorer>()?;
+
+    // Phase 6: Caching integration with Gaussian world model
+    m.add_class::<PyGaussianCacheManager>()?;
+
+    // Phase 7: Multi-bot synchronization for fleet coordination
+    m.add_class::<PyBotObservationMessage>()?;
+    m.add_class::<PyBotStatus>()?;
+    m.add_class::<PyFleetCoordinator>()?;
 
     // Persona constants
     m.add("Persona", py_persona_dict(py))?;
