@@ -41,6 +41,7 @@ pub mod objects;
 pub mod change_events;
 pub mod fleet_learning;
 pub mod h3_optimization;
+pub mod memory_pool;
 
 // Re-export main public types for ergonomic access
 pub use core::{
@@ -84,4 +85,8 @@ pub use fleet_learning::{
 };
 pub use h3_optimization::{
     H3SpatialIndex, H3Resolution, H3IndexStats,
+};
+pub use memory_pool::{
+    MemoryPoolManager, PoolConfig, PoolStats, MemoryPoolStats,
+    SplatPool, ObservationPool, PooledSplat, PooledObservation,
 };

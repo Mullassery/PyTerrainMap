@@ -237,6 +237,7 @@ pub use gaussian_splatting::{
     ChangeEvent, ChangeEventType, ChangeEventLog,
     FleetLearningEngine, ObjectObservation, ObjectState, ObjectPrediction, AreaDynamicsProfile,
     H3SpatialIndex, H3Resolution, H3IndexStats,
+    MemoryPoolManager, PoolConfig, PoolStats, MemoryPoolStats,
 };
 
 // TODO: Implement in future weeks
