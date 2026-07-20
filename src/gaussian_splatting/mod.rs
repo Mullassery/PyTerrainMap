@@ -42,6 +42,7 @@ pub mod change_events;
 pub mod fleet_learning;
 pub mod h3_optimization;
 pub mod memory_pool;
+pub mod observability;
 
 // Re-export main public types for ergonomic access
 pub use core::{
@@ -89,4 +90,7 @@ pub use h3_optimization::{
 pub use memory_pool::{
     MemoryPoolManager, PoolConfig, PoolStats, MemoryPoolStats,
     SplatPool, ObservationPool, PooledSplat, PooledObservation,
+};
+pub use observability::{
+    ObsContext, GaussianMetrics, ObsEvent, GaussianSplattingTracer,
 };

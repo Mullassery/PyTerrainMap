@@ -238,6 +238,7 @@ pub use gaussian_splatting::{
     FleetLearningEngine, ObjectObservation, ObjectState, ObjectPrediction, AreaDynamicsProfile,
     H3SpatialIndex, H3Resolution, H3IndexStats,
     MemoryPoolManager, PoolConfig, PoolStats, MemoryPoolStats,
+    ObsContext, GaussianMetrics, ObsEvent, GaussianSplattingTracer,
 };
 
 // TODO: Implement in future weeks
