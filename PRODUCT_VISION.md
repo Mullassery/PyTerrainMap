@@ -264,9 +264,9 @@ Route planners use this confidence to **avoid risky paths** even if they're shor
 
 ### Framework Integration
 - **ROS:** Full integration via PyTerrainMap ROS bridge (planned Phase 15)
-- **PyRoboFrames:** Sensor pipeline → PyTerrainMap (video decode + feature extraction)
-- **PyRoboVision:** Model registry for learned constraints (e.g., terrain classifier)
-- **OpenTelemetry:** Trace 3D reconstruction, SLAM optimization, route planning
+- **Video Processing Pipelines:** Sensor streams → PyTerrainMap (frame decode, feature extraction)
+- **ML Model Registry:** Terrain classifiers and learned constraints feed traversability scoring
+- **Observability/Monitoring:** Trace reconstruction, optimization, and route planning performance
 
 ---
 
@@ -288,33 +288,33 @@ Route planners use this confidence to **avoid risky paths** even if they're shor
 
 | System | Responsibility | Interface to PyTerrainMap |
 |---|---|---|
-| **ROS/Middleware** | Hardware abstraction, message passing, TF frames | PyTerrainMap listens to ROS topics, publishes paths |
-| **Robot Control** | Wheel speeds, servo angles, thrust allocation | PyTerrainMap provides plans; controllers execute |
-| **Sensor Hardware** | Camera drivers, IMU calibration, USB/CAN | PyTerrainMap receives preprocessed sensor data |
-| **Quality Assurance** | Data contract validation, drift detection | StatGuardian owns quality gates; PyTerrainMap uses them |
-| **Data Activation** | Push maps/plans to robots, streaming pipelines | PyReverseETL owns activation/movement |
-| **Semantic Understanding** | "Is this a tree or a person?" object detection | PyRoboVision owns semantic classifiers |
-| **Route Execution** | Obstacle avoidance during execution, replanning | Autonomous navigation stacks (MuZero, Nav2) own this |
-| **Localization Correction** | "Am I actually where I think I am?" global relocalization | GNSS/LTE triangulation external; PyTerrainMap uses closure |
-| **Energy Budgeting** | "Do I have enough battery?" per-robot decisions | Robot firmware owns; PyTerrainMap provides distance estimates |
+| **Middleware & Communication** | Hardware abstraction, message passing, frame transforms | PyTerrainMap integrates via standard protocols (ROS, REST, protobuf) |
+| **Robot Control Layer** | Wheel speeds, servo angles, thrust allocation | PyTerrainMap provides high-level plans; low-level control is external |
+| **Sensor Hardware** | Camera drivers, IMU calibration, USB/CAN bus | PyTerrainMap receives preprocessed sensor streams |
+| **Data Quality & Monitoring** | Data contract validation, drift detection, anomalies | Quality layer validates inputs; PyTerrainMap uses confidence signals |
+| **Mission Orchestration** | Deploy plans to robots, manage fleet scheduling | Orchestration layer handles robot activation and mission dispatch |
+| **Semantic Understanding** | Object detection, terrain classification, obstacle types | Semantic classifiers provide labels; PyTerrainMap uses for cost estimates |
+| **Autonomous Navigation** | Real-time obstacle avoidance, local replanning | Navigation stack handles execution; PyTerrainMap provides global routes |
+| **Global Localization** | GNSS/LTE positioning, global constraints | External positioning systems provide corrections for loop closure |
+| **Energy Management** | Battery state tracking, mission constraints | Robot firmware manages power; PyTerrainMap estimates distance costs |
 
 ### Clear Separation of Concerns
 
 ```
 User/Application Layer
          ↓
-[PyReverseETL: Activation/Movement] ← Commands robots to move
+[Data Pipeline & Activation] ← Send plans to robots, execute missions
          ↓
 [PyTerrainMap: Spatial Intelligence] ← THIS REPO
    ├─ Layer 1: 3D Reconstruction
    ├─ Layer 2: Real-Time SLAM
    └─ Layer 3: Traversability
          ↓
-[ROS/Nav2: Robot Control] ← Executes low-level commands
+[Robot Control & Navigation Stack] ← Executes movement, obstacle avoidance
          ↓
-[PyRoboVision: Semantics] ← Classifies terrain, detects obstacles
+[Semantic Understanding & Classifiers] ← Terrain types, obstacle detection
          ↓
-[StatGuardian: Quality] ← Validates data contracts, detects drift
+[Quality Validation & Monitoring] ← Data contracts, drift detection
          ↓
 Hardware (Cameras, IMU, Motors, Sensors)
 ```
@@ -327,7 +327,7 @@ Hardware (Cameras, IMU, Motors, Sensors)
 | **IMU measurements** | For real-time odometry | Gyro, accel vectors at 100+ Hz |
 | **Robot odometry** | For SLAM initialization | Wheel counts or visual initialization |
 | **Semantic labels** (optional) | For traversability learning | "muddy", "paved", "rocky" from classifiers |
-| **Quality signals** (optional) | For confidence weighting | Validation passes/failures from StatGuardian |
+| **Quality signals** (optional) | For confidence weighting | Validation passes/failures from monitoring systems |
 
 ### What PyTerrainMap **Provides** to Other Systems
 
@@ -335,7 +335,7 @@ Hardware (Cameras, IMU, Motors, Sensors)
 |---|---|---|
 | **3D maps** | Visualization, planning, localization | PLY, glTF, LAZ, GeoJSON |
 | **Pose estimates** | Navigation, collision detection, telemetry | ROS tf, JSON, Protobuf |
-| **Routes** | Nav2, execution planners, telemetry | GeoJSON, ROS nav_msgs, CSV |
+| **Routes** | Navigation systems, execution planners, telemetry | GeoJSON, standard nav_msgs, CSV |
 | **Traversability scores** | Route optimization, robot selection | JSON, REST API, SQL queries |
 | **Confidence metrics** | Risk assessment, replanning triggers | Per-point/pose/observation |
 | **Fleet observations** | Learning, anomaly detection, analytics | Time-series database records |
@@ -345,10 +345,10 @@ Hardware (Cameras, IMU, Motors, Sensors)
 1. **Single Responsibility:** PyTerrainMap solves "what is the world geometry and can we traverse it?" — not everything in robotics.
 
 2. **Composability:** Every system can be swapped:
-   - Use ROS or your own middleware
-   - Use Nav2 or your custom planner
-   - Use PyRoboVision or OpenCV + ML models
-   - Use StatGuardian or your own validators
+   - Use any middleware (ROS, custom)
+   - Use any navigation stack (commercial or open-source)
+   - Use any semantic classifiers (ML frameworks, computer vision libraries)
+   - Use any quality monitoring (custom validators, commercial tools)
 
 3. **Speed:** Narrow scope = 3-month development cycles. Broad scope = 18-month vaporware.
 
