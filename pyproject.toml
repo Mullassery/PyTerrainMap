@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "pyterrainMap"
-version = "1.2.0"
+version = "1.3.0"
 description = "Production-ready spatial intelligence platform for multi-robot terrain mapping with PyRoboFrames/PyRoboVision ecosystem integration, temporal normalization (5-dimensional), late-arrival handling, multi-model consensus, and full provenance tracking"
 readme = "README.md"
 requires-python = ">=3.10"
