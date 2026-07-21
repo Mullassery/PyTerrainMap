@@ -1,4 +1,4 @@
-# PyTerrainMap 🗺️
+# PyTerrainMap 
 
 [![PyPI version](https://badge.fury.io/py/pyterrainMap.svg)](https://badge.fury.io/py/pyterrainMap)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -13,28 +13,28 @@ Turn sensor data from your robots into shared knowledge. Deploy on your infrastr
 
 ---
 
-## 🎯 What Problem Does It Solve?
+## What Problem Does It Solve?
 
 You have multiple robots collecting sensor data. Right now:
-- 🔴 Sensor data quality is unknown — garbage in, garbage out
-- 🔴 No validation that sensors are calibrated or trustworthy
-- 🔴 Multi-sensor conflicts are invisible until they break your maps
-- 🔴 Each robot works in isolation — no shared situational awareness
-- 🔴 You rebuild multi-robot coordination for every project
-- 🔴 No audit trail: can't answer "where did this bad data come from?"
+- Sensor data quality is unknown — garbage in, garbage out
+- No validation that sensors are calibrated or trustworthy
+- Multi-sensor conflicts are invisible until they break your maps
+- Each robot works in isolation — no shared situational awareness
+- You rebuild multi-robot coordination for every project
+- No audit trail: can't answer "where did this bad data come from?"
 
 The result: Bad maps, wrong decisions, wasted robot hours.
 
-## ✨ What's the Solution?
+## What's the Solution?
 
 PyTerrainMap is a **high-fidelity terrain intelligence platform** that:
-- ✅ **Validates sensor quality before fusion** — calibration, drift, consistency checks
-- ✅ **Catches conflicts early** — multi-sensor agreement validation
-- ✅ **Fuses only high-confidence data** — quality-aware sensor fusion
-- ✅ **Collects observations from ALL your robots** (LiDAR, thermal, camera, IMU, etc)
-- ✅ **Stores immutably** in YOUR storage choice (S3, GCS, ADLS, or local)
-- ✅ **Detects changes over time** with quality metadata (thermal anomalies, structural damage, movement)
-- ✅ **Provides zero-vendor-lock-in** with open-source, self-validating architecture
+- **Validates sensor quality before fusion** — calibration, drift, consistency checks
+- **Catches conflicts early** — multi-sensor agreement validation
+- **Fuses only high-confidence data** — quality-aware sensor fusion
+- **Collects observations from ALL your robots** (LiDAR, thermal, camera, IMU, etc)
+- **Stores immutably** in YOUR storage choice (S3, GCS, ADLS, or local)
+- **Detects changes over time** with quality metadata (thermal anomalies, structural damage, movement)
+- **Provides zero-vendor-lock-in** with open-source, self-validating architecture
 
 **Architectural Role:** PyTerrainMap owns **spatial intelligence and sensor data movement** across your fleet. Quality validation (calibration, consistency, anomalies) is embedded and non-negotiable.
 
@@ -42,7 +42,7 @@ PyTerrainMap is a **high-fidelity terrain intelligence platform** that:
 
 ---
 
-## 🚀 Get Started in 5 Minutes
+## Get Started in 5 Minutes
 
 ### 1. Install
 ```bash
@@ -63,21 +63,21 @@ from pyterrain_map.storage import StorageObservation
 import asyncio, time
 
 async def main():
-    backend = LocalStorageBackend({"base_path": "~/.pyterrain"})
-    
-    # Your robot found something
-    obs = StorageObservation(
-        id="obs-1",
-        robot_id="robot-alpha",
-        timestamp=int(time.time() * 1_000_000),
-        location_lat=40.7128,        # New York
-        location_lon=-74.0060,
-        sensor_type="thermal",
-        value_json='{"temp_celsius": 42.5}',
-        confidence=0.95,
-    )
-    await backend.write_observation(obs)
-    print("✅ Observation stored!")
+ backend = LocalStorageBackend({"base_path": "~/.pyterrain"})
+ 
+ # Your robot found something
+ obs = StorageObservation(
+ id="obs-1",
+ robot_id="robot-alpha",
+ timestamp=int(time.time() * 1_000_000),
+ location_lat=40.7128, # New York
+ location_lon=-74.0060,
+ sensor_type="thermal",
+ value_json='{"temp_celsius": 42.5}',
+ confidence=0.95,
+ )
+ await backend.write_observation(obs)
+ print(" Observation stored!")
 
 asyncio.run(main())
 ```
@@ -86,9 +86,9 @@ asyncio.run(main())
 ```python
 # What did robot-alpha see at that location?
 results = await backend.query(
-    robot_id="robot-alpha",
-    location_lat=40.7128,
-    location_lon=-74.0060
+ robot_id="robot-alpha",
+ location_lat=40.7128,
+ location_lon=-74.0060
 )
 print(f"Found {len(results)} observations")
 
@@ -96,18 +96,18 @@ print(f"Found {len(results)} observations")
 import time
 one_hour_ago = int((time.time() - 3600) * 1_000_000)
 recent = await backend.query(
-    sensor_type="thermal",
-    location_lat=40.7128,
-    location_lon=-74.0060,
-    start_time=one_hour_ago
+ sensor_type="thermal",
+ location_lat=40.7128,
+ location_lon=-74.0060,
+ start_time=one_hour_ago
 )
 ```
 
-That's it! 🎉
+That's it! 
 
 ---
 
-## 🧠 Probabilistic World Modeling (v1.3+)
+## Probabilistic World Modeling (v1.3+)
 
 **Gaussian Splatting for Fleet Intelligence**
 
@@ -115,20 +115,20 @@ PyTerrainMap now includes a probabilistic world model using Gaussian Splatting �
 
 ### Key Features
 
-✅ **Fleet Learning:** One robot observes an obstacle → all robots instantly know about it  
-✅ **Uncertainty Tracking:** Know what's known, what's guessed, what's out-of-date  
-✅ **Multi-Bot Fusion:** Bayesian observation merging across your entire fleet  
-✅ **Temporal Intelligence:** Objects age gracefully; stale observations decay automatically  
-✅ **Dynamic Object Tracking:** Detect when pallets move, shelves change, obstacles appear/disappear  
-✅ **Real-Time Queries:** Sub-millisecond uncertainty lookups for path planning  
+ **Fleet Learning:** One robot observes an obstacle  all robots instantly know about it 
+ **Uncertainty Tracking:** Know what's known, what's guessed, what's out-of-date 
+ **Multi-Bot Fusion:** Bayesian observation merging across your entire fleet 
+ **Temporal Intelligence:** Objects age gracefully; stale observations decay automatically 
+ **Dynamic Object Tracking:** Detect when pallets move, shelves change, obstacles appear/disappear 
+ **Real-Time Queries:** Sub-millisecond uncertainty lookups for path planning 
 
 ### Quick Example: Warehouse Coordination
 
 ```python
 from pyterrain_map import (
-    PyGaussianSplatStore,
-    PyFleetCoordinator,
-    PyBotObservationMessage,
+ PyGaussianSplatStore,
+ PyFleetCoordinator,
+ PyBotObservationMessage,
 )
 
 # Shared world model (one instance for entire fleet)
@@ -138,22 +138,22 @@ coordinator = PyFleetCoordinator(store)
 # Bot 01 sees a pallet
 coordinator.register_bot("bot_01")
 observation = PyBotObservationMessage(
-    bot_id="bot_01",
-    lat=40.001, lon=-74.0, elev=1.5,
-    traversability=0.0,  # Impassable
-    confidence=0.95,
-    terrain_type="Obstacle",
+ bot_id="bot_01",
+ lat=40.001, lon=-74.0, elev=1.5,
+ traversability=0.0, # Impassable
+ confidence=0.95,
+ terrain_type="Obstacle",
 )
 coordinator.broadcast_observation(observation)
 
 # Bot 02 immediately knows (never visited that location)
 uncertainty = store.uncertainty_at(40.001, -74.0, 1.5)
-print(f"Pallet confidence: {1 - uncertainty:.1%}")  # 95% (from bot_01)
+print(f"Pallet confidence: {1 - uncertainty:.1%}") # 95% (from bot_01)
 
 # Path planner routes around it
 cost = store.path_cost(
-    from_lat=40.0, from_lon=-74.0, from_elev=0.0,
-    to_lat=40.002, to_lon=-74.0, to_elev=0.0
+ from_lat=40.0, from_lon=-74.0, from_elev=0.0,
+ to_lat=40.002, to_lon=-74.0, to_elev=0.0
 )
 print(f"Detour cost: {cost.uncertainty_cost:.2f}")
 ```
@@ -178,7 +178,7 @@ print(f"Detour cost: {cost.uncertainty_cost:.2f}")
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 | I want to... | Read this |
 |-------------|-----------|
@@ -191,50 +191,50 @@ print(f"Detour cost: {cost.uncertainty_cost:.2f}")
 
 ---
 
-## 💡 Real-World Use Cases
+## Real-World Use Cases
 
-### 🏗️ Construction Site Inspection
+### Construction Site Inspection
 ```
 Monday: Drone scans building site with LiDAR + thermal camera
-  → Stores 50,000 observations to S3
-  → Identifies hot spots, structural defects
-  
+  Stores 50,000 observations to S3
+  Identifies hot spots, structural defects
+ 
 Friday: Same drone revisits
-  → Queries Monday's data automatically
-  → AI detects changes: new damage, shifted materials, etc.
-  → Generates report with before/after
+  Queries Monday's data automatically
+  AI detects changes: new damage, shifted materials, etc.
+  Generates report with before/after
 ```
 
-### 🚁 Multi-Robot Survey
+### Multi-Robot Survey
 ```
 You have: Spot (thermal), DJI M300 (LiDAR), ground rover (camera)
-  → All three publish to same storage bucket
-  → Automatically partitioned by robot ID
-  → Query: "Show me all observations in this area from any robot"
-  → Result: Unified coverage map from all perspectives
+  All three publish to same storage bucket
+  Automatically partitioned by robot ID
+  Query: "Show me all observations in this area from any robot"
+  Result: Unified coverage map from all perspectives
 ```
 
-### 🚨 Security Monitoring
+### Security Monitoring
 ```
 Perimeter drones collect observations 24/7
-  → Store immutably (audit trail for liability)
-  → Real-time query: "Did anything change in Sector 7 since last hour?"
-  → Anomaly detection: "Thermal signature at fence line?"
-  → Compliance: "Show me all observations from 2-4 PM on March 15"
+  Store immutably (audit trail for liability)
+  Real-time query: "Did anything change in Sector 7 since last hour?"
+  Anomaly detection: "Thermal signature at fence line?"
+  Compliance: "Show me all observations from 2-4 PM on March 15"
 ```
 
-### 🌾 Precision Agriculture
+### Precision Agriculture
 ```
 Multiple rovers collect soil, crop health, moisture data
-  → Central storage in cloud (no robot has local storage)
-  → Each rover queries: "What did neighbor robot learn 1 km north?"
-  → Machine learning pipeline: detect diseased crops early
-  → Coordinate all rovers to revisit flagged areas
+  Central storage in cloud (no robot has local storage)
+  Each rover queries: "What did neighbor robot learn 1 km north?"
+  Machine learning pipeline: detect diseased crops early
+  Coordinate all rovers to revisit flagged areas
 ```
 
 ---
 
-## 🎯 Key Features
+## Key Features
 
 ### Storage That Scales (Your Choice)
 | Provider | Cost | Setup | Latency |
@@ -258,25 +258,25 @@ Every observation is:
 ```python
 # "Show me all thermal readings from the last 2 hours"
 recent_thermal = await backend.query(
-    sensor_type="thermal",
-    start_time=two_hours_ago
+ sensor_type="thermal",
+ start_time=two_hours_ago
 )
 
 # "What's the freshest data at this location?"
 latest = await backend.query(
-    location_lat=40.71,
-    location_lon=-74.00,
-    order_by="timestamp_desc",
-    limit=10
+ location_lat=40.71,
+ location_lon=-74.00,
+ order_by="timestamp_desc",
+ limit=10
 )
 
 # "Find observations matching multiple filters"
 filtered = await backend.query(
-    robot_id="robot-alpha",
-    sensor_type="lidar",
-    confidence_min=0.9,
-    start_time=today_start,
-    end_time=today_end
+ robot_id="robot-alpha",
+ sensor_type="lidar",
+ confidence_min=0.9,
+ start_time=today_start,
+ end_time=today_end
 )
 ```
 
@@ -304,7 +304,7 @@ metrics = tracer.metrics()
 
 print(f"Observations ingested: {metrics.observations_ingested}")
 print(f"Fusion success rate: {metrics.fusions_successful / (metrics.fusions_successful + metrics.fusions_failed):.1%}")
-print(f"Query latency avg: {metrics.query_latency_us_avg:.1f} µs")
+print(f"Query latency avg: {metrics.query_latency_us_avg:.1f} s")
 
 # Export to Prometheus
 prometheus_text = tracer.export_metrics()
@@ -318,16 +318,16 @@ afternoon = await backend.query(location_lat=40.71, location_lon=-74.00, start_t
 
 # Your ML model detects differences
 changed = detect_changes(morning, afternoon)
-# → "Temperature rose 5°C"
-# → "New obstacle at 40.7103, -74.0065"
-# → "Thermal anomaly (possible fire)"
+#  "Temperature rose 5C"
+#  "New obstacle at 40.7103, -74.0065"
+#  "Thermal anomaly (possible fire)"
 ```
 
 ---
 
-## 🏃 When to Use PyTerrainMap
+## When to Use PyTerrainMap
 
-### ✅ Good Fit
+### Good Fit
 - Multiple robots collecting sensor data
 - Need to share observations in real-time
 - Audit trail / compliance is important
@@ -335,7 +335,7 @@ changed = detect_changes(morning, afternoon)
 - Need to detect changes over time
 - Data lives on-premise or multi-cloud
 
-### ❌ Not a Good Fit
+### Not a Good Fit
 - Single robot, no multi-robot coordination needed
 - Visualization is your primary need (use RViz instead)
 - Real-time 3D reconstruction (use other SfM tools)
@@ -345,7 +345,7 @@ changed = detect_changes(morning, afternoon)
 
 ---
 
-## 🔧 Configuration (3 Ways)
+## Configuration (3 Ways)
 
 ### Option 1: Interactive Setup (Easiest)
 ```bash
@@ -363,28 +363,28 @@ export PYTERRAIN_AWS_SECRET_ACCESS_KEY=***
 
 # Then:
 from pyterrain_map import get_storage_backend
-backend = get_storage_backend()  # Reads env vars
+backend = get_storage_backend() # Reads env vars
 ```
 
 ### Option 3: Docker Compose (Production)
 ```yaml
 version: '3'
 services:
-  pyterrain-bridge:
-    image: pyterrain:0.2.0
-    environment:
-      PYTERRAIN_WAREHOUSE: s3
-      PYTERRAIN_BUCKET: fleet-data
-      PYTERRAIN_REGION: us-west-2
-      PYTERRAIN_AWS_ACCESS_KEY_ID: ${AWS_KEY}
-      PYTERRAIN_AWS_SECRET_ACCESS_KEY: ${AWS_SECRET}
-    volumes:
-      - ./robots.yaml:/config/robots.yaml
+ pyterrain-bridge:
+ image: pyterrain:0.2.0
+ environment:
+ PYTERRAIN_WAREHOUSE: s3
+ PYTERRAIN_BUCKET: fleet-data
+ PYTERRAIN_REGION: us-west-2
+ PYTERRAIN_AWS_ACCESS_KEY_ID: ${AWS_KEY}
+ PYTERRAIN_AWS_SECRET_ACCESS_KEY: ${AWS_SECRET}
+ volumes:
+ - ./robots.yaml:/config/robots.yaml
 ```
 
 ---
 
-## 📊 Performance (What You Can Expect)
+## Performance (What You Can Expect)
 
 | Operation | Speed | Throughput |
 |-----------|-------|-----------|
@@ -402,56 +402,56 @@ Tested with:
 
 ---
 
-## 🚀 Roadmap (What's Coming)
+## Roadmap (What's Coming)
 
-### v0.1.0 ✅ (Current)
+### v0.1.0 (Current)
 - All storage backends working
 - Python async API
 - ROS2 sensor adapters
 - Coordinate transforms
 
-### v0.2.0 🟡 (Q3 2026)
+### v0.2.0 (Q3 2026)
 - Complete ROS2 bridge node
 - MoveIt2/Nav2 integration
 - Launch files for all platforms
 - Additional sensor support
 
-### v0.3.0 🔴 (Q4 2026)
+### v0.3.0 (Q4 2026)
 - Change detection algorithms
 - Time-series analytics
 - Web dashboard (heat maps, queries, reports)
 - Kubernetes scaling
 
-### v1.0.0 🔴 (Q2 2027)
+### v1.0.0 (Q2 2027)
 - Production hardening
 - Enterprise support options
 - Advanced analytics
 
 ---
 
-## 🤝 Contributing & Support
+## Contributing & Support
 
-### 📖 Documentation
+### Documentation
 - **Quick Start:** [GETTING_STARTED.md](GETTING_STARTED.md)
 - **Installation:** [INSTALLATION.md](INSTALLATION.md)
 - **ROS Integration:** [ROS_BRIDGE_ARCHITECTURE.md](ROS_BRIDGE_ARCHITECTURE.md)
 - **Full Index:** [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
 
-### 🐛 Found a Bug?
+### Found a Bug?
 [Open an issue on GitHub](https://github.com/Mullassery/PyTerrainMap/issues) — Include steps to reproduce and your environment.
 
-### 💬 Questions or Ideas?
+### Questions or Ideas?
 [Start a discussion](https://github.com/Mullassery/PyTerrainMap/discussions) — Ask questions, suggest features, share use cases.
 
-### 🛠️ Want to Contribute?
+### Want to Contribute?
 We welcome PRs! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-### 📧 Direct Help
+### Direct Help
 Email: mullassery@gmail.com
 
 ---
 
-## 🌟 Why PyTerrainMap?
+## Why PyTerrainMap?
 
 | Feature | Why It Matters |
 |---------|---|
@@ -465,7 +465,7 @@ Email: mullassery@gmail.com
 
 ---
 
-## 🧠 Part of the Intelligent Robotics Stack
+## Part of the Intelligent Robotics Stack
 
 PyTerrainMap powers **multi-robot situational awareness** and pairs naturally with:
 - **[StatGuardian](https://github.com/Mullassery/StatGuardian)** — Data quality & anomaly detection (v2.0)
@@ -476,7 +476,7 @@ Together, they form a complete observability + quality + intelligence platform f
 
 ---
 
-## 📜 License & Attribution
+## License & Attribution
 
 **MIT License** — Use freely in commercial and personal projects. No restrictions.
 
@@ -489,13 +489,13 @@ Designed for robotics teams like yours. Tested in production deployments.
 
 ---
 
-## ⭐ If This Helped You
+## If This Helped You
 
 If PyTerrainMap is useful in your robotics stack:
-- **⭐ Star this repo** — It helps others discover the project
-- **📢 Share your use case** — Start a [discussion](https://github.com/Mullassery/PyTerrainMap/discussions) with how you're using it
-- **🐛 Report issues** — Found a bug? [Open an issue](https://github.com/Mullassery/PyTerrainMap/issues)
-- **🤝 Contribute** — Have an improvement? Submit a PR!
+- ** Star this repo** — It helps others discover the project
+- ** Share your use case** — Start a [discussion](https://github.com/Mullassery/PyTerrainMap/discussions) with how you're using it
+- ** Report issues** — Found a bug? [Open an issue](https://github.com/Mullassery/PyTerrainMap/issues)
+- ** Contribute** — Have an improvement? Submit a PR!
 
 ---
 
@@ -505,4 +505,4 @@ If PyTerrainMap is useful in your robotics stack:
 pip install pyterrainMap && pytm setup
 ```
 
-[Get started →](GETTING_STARTED.md) | [View roadmap](https://github.com/Mullassery/PyTerrainMap/projects) | [Ask a question](https://github.com/Mullassery/PyTerrainMap/discussions)
+[Get started ](GETTING_STARTED.md) | [View roadmap](https://github.com/Mullassery/PyTerrainMap/projects) | [Ask a question](https://github.com/Mullassery/PyTerrainMap/discussions)
