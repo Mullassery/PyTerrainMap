@@ -185,7 +185,7 @@ print(f"Detour cost: {cost.uncertainty_cost:.2f}")
 | **Understand the basics** | [GETTING_STARTED.md](GETTING_STARTED.md) — Real examples, step-by-step |
 | **Set up with ROS2** | [ROS_BRIDGE_ARCHITECTURE.md](ROS_BRIDGE_ARCHITECTURE.md) — How to connect your robots |
 | **Integrate with MoveIt/Nav2** | [ROS_MOVEIT_INTEGRATION.md](ROS_MOVEIT_INTEGRATION.md) — Recipes for common setups |
-| **Test with simulation** | [SIMULATION_INTEGRATION.md](SIMULATION_INTEGRATION.md) — Gazebo & Isaac Sim |
+| **Test with simulation** | [SIMULATION_INTEGRATION.md](SIMULATION_INTEGRATION.md) — Gazebo (open-source) & sim integrations |
 | **Deploy to production** | [INSTALLATION.md](INSTALLATION.md) — Docker, environment setup, performance tuning |
 | **Full Documentation Index** | [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) — All guides & references |
 
@@ -285,7 +285,7 @@ If you use ROS2:
 - Drop-in node that bridges any sensor to PyTerrainMap
 - Works with MoveIt2, Nav2, standard TF transforms
 - Pre-configured for Spot, DJI M300, Boston Dynamics, Clearpath
-- Real examples included (Gazebo, Isaac Sim)
+- Real examples included (Gazebo, sim integrations)
 
 ### OpenTelemetry Observability (v1.3+)
 Production-grade monitoring of your fleet:
@@ -461,7 +461,7 @@ Email: mullassery@gmail.com
 | **Multi-Robot Native** | 3 robots = 1 storage, unified queries, shared intelligence across your fleet |
 | **Production Proven** | Real deployments, real scale (50M+ observations), real reliability |
 | **Open Source** | Pure MIT, contribute or fork as needed |
-| **Fast Integration** | Drop-in node architecture, works with Spot, DJI, MoveIt2, Nav2, Gazebo, Isaac Sim |
+| **Fast Integration** | Drop-in node architecture, works with Spot, DJI, MoveIt2, Nav2, Gazebo, and sim platforms |
 
 ---
 
