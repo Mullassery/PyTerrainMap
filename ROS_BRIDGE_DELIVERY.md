@@ -414,4 +414,4 @@ $ PYTERRAIN_WAREHOUSE=postgresql \
 **Version:** 0.1.0  
 **Date:** July 19, 2026  
 **Author:** Georgi Mammen Mullassery  
-**License:** MIT
+**License:** Proprietary

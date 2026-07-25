@@ -45,7 +45,7 @@ The PyTerrain ecosystem consists of two independent repositories with clear sepa
 ## PyTerrainMap (Core Spatial Layer)
 
 **Repository:** `github.com/Mullassery/pyterrain-map`  
-**License:** MIT  
+**License:** Proprietary  
 **Language:** Rust (core) + Python (bindings)
 
 ### Responsibilities
@@ -100,7 +100,7 @@ pub struct PyTerrainMap {
 ## PyTerrainAI (Middleware + Intelligence Layer)
 
 **Repository:** `github.com/Mullassery/pyterrain-ai`  
-**License:** MIT  
+**License:** Proprietary  
 **Language:** Python (primary)
 
 ### Responsibilities

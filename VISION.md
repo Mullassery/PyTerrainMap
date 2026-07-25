@@ -348,5 +348,5 @@ The future of robotics is collaborative. PyTerrainMap enables it.
 ---
 
 **Status:** Vision document (in development)  
-**License:** MIT  
+**License:** Proprietary  
 **Repository:** github.com/Mullassery/pyterrain-map
