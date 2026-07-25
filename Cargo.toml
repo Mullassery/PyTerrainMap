@@ -3,7 +3,6 @@ name = "pyterrain-map"
 version = "1.3.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
-license = "MIT"
 description = "Collaborative terrain mapping platform for multi-robot fleets"
 repository = "https://github.com/Mullassery/pyterrain-map"
 
