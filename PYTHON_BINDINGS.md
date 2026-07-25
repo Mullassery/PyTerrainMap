@@ -392,7 +392,7 @@ PyO3 bindings require Python 3.10-3.12.
 
 ## License
 
-MIT License - See LICENSE file
+Proprietary License - See LICENSE file
 
 ## Support
 

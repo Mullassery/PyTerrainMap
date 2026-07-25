@@ -299,7 +299,7 @@ If monitoring is added:
 
 ---
 
-## MIT License Commitment
+## Proprietary License Commitment
 
 Both PyTerrainMap and PyTerrainAI are **MIT licensed**, meaning:
 - Users can use freely

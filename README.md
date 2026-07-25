@@ -478,11 +478,11 @@ Together, they form a complete observability + quality + intelligence platform f
 
 ## License & Attribution
 
-**MIT License** — Use freely in commercial and personal projects. No restrictions.
+**Proprietary License** — Use freely in commercial and personal projects. No restrictions.
 
 ```
 Copyright (c) 2026 Georgi Mammen Mullassery
-Licensed under the MIT License - see LICENSE file for details
+Licensed under the Proprietary License - see LICENSE file for details
 ```
 
 Designed for robotics teams like yours. Tested in production deployments.

@@ -39,7 +39,7 @@ License:
 __version__ = "0.0.1"
 __author__ = "Georgi Mammen Mullassery"
 __email__ = "mullassery@gmail.com"
-__license__ = "MIT"
+__license__ = "Proprietary"
 
 # Import Rust extension
 try:
