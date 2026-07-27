@@ -256,7 +256,7 @@ System recognizes:
 - PyO3 docs: https://pyo3.rs/
 - maturin guide: https://www.maturin.rs/
 - Stable ABI: https://pyo3.rs/latest/faq
-- Temporal modeling: Kafka streams, Google Cloud Dataflow patterns
+- Temporal modeling: Kafka streams, Cloud Services Dataflow patterns
 
 ## Files Modified This Week
 

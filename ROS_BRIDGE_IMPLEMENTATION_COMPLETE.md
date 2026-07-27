@@ -42,7 +42,7 @@ backend = S3StorageBackend({
 - Zero vendor lock-in (Iceberg tables)
 - Query via S3 + Athena
 
-#### Google Cloud Storage (`gcs.py`) ✅
+#### Cloud Services Storage (`gcs.py`) ✅
 ```python
 backend = GCSStorageBackend({
     "bucket": "my-bucket",
@@ -509,7 +509,7 @@ python/pyterrain_map/storage/
 ├── base.py                     # StorageBackend interface (400 LOC)
 ├── local.py                    # Local filesystem backend (300 LOC)
 ├── s3.py                       # AWS S3 backend (300 LOC)
-├── gcs.py                      # Google Cloud Storage backend (300 LOC)
+├── gcs.py                      # Cloud Services Storage backend (300 LOC)
 └── adls.py                     # Azure Data Lake Storage backend (300 LOC)
 
 python/pyterrain_ros/

@@ -46,7 +46,7 @@ OR: Just use simple object storage:
 
 1. Local Disk (for testing)
 2. AWS S3 (production)
-3. Google Cloud Storage (production)
+3. Cloud Services Storage (production)
 4. Azure Data Lake (production)
 
 Select: 1
@@ -545,7 +545,7 @@ cat ~/.pyterrain/config.json
 from pyterrain_map.storage import (
     LocalStorageBackend,      # Local disk
     S3StorageBackend,         # AWS S3
-    GCSStorageBackend,        # Google Cloud Storage
+    GCSStorageBackend,        # Cloud Services Storage
     ADLSStorageBackend,       # Azure Data Lake
 )
 

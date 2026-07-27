@@ -366,6 +366,6 @@ gps_obs.temporal.is_late_arrival = true;
 ## References
 
 - Kafka: Event time vs processing time watermarking
-- Google Cloud Dataflow: Windowing by event time
+- Cloud Services Dataflow: Windowing by event time
 - Apache Flink: Late data handling
 - Apache Beam: Temporal reasoning patterns

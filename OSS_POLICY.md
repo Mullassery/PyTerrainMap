@@ -5,7 +5,7 @@
 **PyTerrainMap and PyTerrainAI use ONLY open-source components.**
 
 - ❌ No proprietary libraries
-- ❌ No cloud services (AWS, Google Cloud, Azure)
+- ❌ No cloud services (AWS, Cloud Services, Azure)
 - ❌ No commercial APIs
 - ❌ No closed-source dependencies
 - ✅ All dependencies must have permissive licenses (MIT, Apache 2.0, BSD)
@@ -73,7 +73,7 @@ This ensures:
 | rocksdb | 0.21+ | Apache 2.0 | RocksDB bindings |
 
 **NO:**
-- ❌ Google Cloud libraries
+- ❌ Cloud Services libraries
 - ❌ AWS SDK
 - ❌ Azure SDK
 - ❌ Proprietary geospatial libs
@@ -131,7 +131,7 @@ This ensures:
 - ❌ TensorFlow (too heavyweight)
 - ❌ PyTorch (too heavyweight)
 - ❌ AWS boto3 (cloud-specific)
-- ❌ Google Cloud libraries
+- ❌ Cloud Services libraries
 - ❌ Azure SDK
 - ❌ Proprietary APIs
 - ❌ Commercial ML services
@@ -213,7 +213,7 @@ If ML features are added:
 - PyTorch (too heavy for mapping layer)
 - Hugging Face Transformers (only for OSS models)
 - AWS SageMaker (proprietary)
-- Google Cloud ML (proprietary)
+- Cloud Services ML (proprietary)
 - Azure ML (proprietary)
 
 ---
@@ -248,7 +248,7 @@ PyTerrain is self-hosted. Users can deploy to:
 - Open-source cloud platforms
 
 ⚠️ **User's Choice (not required by PyTerrain):**
-- AWS, Google Cloud, Azure (users can deploy there, PyTerrain doesn't require it)
+- AWS, Cloud Services, Azure (users can deploy there, PyTerrain doesn't require it)
 - Proprietary PaaS (users can use, but not required)
 
 **Key:** PyTerrain doesn't mandate or integrate with proprietary cloud services.

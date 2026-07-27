@@ -54,7 +54,7 @@ Which data warehouse would you like to use for PyTerrainMap?
    Best for: Small to medium deployments, already running on-premise.
    💰 Free (self-hosted) or ~$0.30-1.00/hour (managed RDS)
 
-2. BigQuery (Google Cloud)
+2. BigQuery (Cloud Services)
    Serverless data warehouse with blazing-fast SQL queries.
    Best for: Analytical workloads, cloud-native deployments, auto-scaling.
    💰 ~$7 per TB scanned (no storage fees for first 1GB/month)
@@ -96,7 +96,7 @@ Password (will be stored securely): ***
 ```
 
 **BigQuery:**
-- Download service account JSON from Google Cloud Console
+- Download service account JSON from Cloud Services Console
 - Path to service account JSON key: /path/to/service-account.json
 - GCP Project ID: my-project
 - BigQuery dataset ID [pyterrain]: pyterrain
@@ -277,7 +277,7 @@ After setup, PyTerrainMap creates these files in `~/.pyterrain/`:
 
 **⚠️ Security Note:** Credentials are stored with restricted permissions (0600). In production, use:
 - AWS Secrets Manager for AWS credentials
-- Google Cloud Secret Manager for GCP credentials
+- Cloud Services Secret Manager for GCP credentials
 - Hashicorp Vault for general secrets
 - Kubernetes Secrets for containerized deployments
 
@@ -306,7 +306,7 @@ Option 1: PostgreSQL
 # AWS: S3 + Iceberg (cheapest long-term)
 Option 4: S3 + Iceberg
 
-# Google Cloud: BigQuery (fastest queries)
+# Cloud Services: BigQuery (fastest queries)
 Option 2: BigQuery
 
 # Multi-cloud: Snowflake (portability)
