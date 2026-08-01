@@ -39,6 +39,9 @@
 pip install pyterrainmap
 # or with uv
 uv pip install pyterrainmap
+
+# Verify installation
+terrainmap --version
 ```
 
 ### Requirements
