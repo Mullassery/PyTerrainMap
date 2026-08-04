@@ -139,3 +139,9 @@ For production deployments: **mullassery@gmail.com**
 **Python**: 3.10+  
 
 Built for production multi-robot systems.
+
+## License
+
+Proprietary License — Free to use with explicit attribution
+
+See [LICENSE](LICENSE) for full terms.
