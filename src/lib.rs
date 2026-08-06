@@ -47,6 +47,7 @@ pub mod exploration;  // Autonomous exploration intelligence engine (Phase 9+)
 pub mod gaussian_splatting;  // Gaussian Splatting probabilistic mapping layer (Phase 10+)
 pub mod fleet;  // Multi-robot consensus & fleet learning (Phase 4)
 pub mod advanced;  // Advanced capabilities & optimization (Phase 5)
+pub mod analytics;  // Advanced analytics & prediction (Phase 6)
 
 // Re-export all public types
 pub use types::{
