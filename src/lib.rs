@@ -45,6 +45,7 @@ pub mod adapters;  // PyRoboFrames and PyRoboVision ecosystem integration
 pub mod traversability;  // Spatial knowledge graph for traversability intelligence (Phase 8+)
 pub mod exploration;  // Autonomous exploration intelligence engine (Phase 9+)
 pub mod gaussian_splatting;  // Gaussian Splatting probabilistic mapping layer (Phase 10+)
+pub mod fleet;  // Multi-robot consensus & fleet learning (Phase 4)
 
 // Re-export all public types
 pub use types::{
