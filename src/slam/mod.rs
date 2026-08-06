@@ -2,10 +2,27 @@
 //!
 //! Visual odometry + IMU fusion + depth sensor integration for real-time
 //! autonomous robot navigation. Incremental pose graph with local mapping.
+//!
+//! Phase 2 (Real-time SLAM Optimization):
+//! - Loop closure detection (visual place recognition)
+//! - IMU-visual odometry fusion (EKF)
+//! - Real-time local mapping & keyframe selection
+//! - Pose graph optimization (bundle adjustment)
+
+pub mod loop_closure;   // Phase 2.1: Loop closure detection
+pub mod imu_fusion;     // Phase 2.2: IMU fusion optimization
+pub mod local_mapping;  // Phase 2.3: Local mapping & keyframe selection
+pub mod pose_optimizer; // Phase 2.4: Pose graph optimization
 
 use crate::types::{Result, Error};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
+
+// Re-export key types
+pub use loop_closure::{LoopClosureDetector, FeatureVocabulary, BoWHistogram, LoopClosureCandidate};
+pub use imu_fusion::{IMUFusion, IMUPreintegration, IMUState};
+pub use local_mapping::{LocalMapper, KeyframeSelector};
+pub use pose_optimizer::{PoseGraphOptimizer, OptimizationResult};
 
 /// IMU (Inertial Measurement Unit) reading
 #[derive(Clone, Debug, Serialize, Deserialize)]
