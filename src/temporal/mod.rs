@@ -11,12 +11,14 @@
 
 pub mod index;   // Phase 3.1: 5D temporal-spatial index
 pub mod query;   // Phase 3.1: Temporal query operators
+pub mod storage; // Phase 3.2: Multi-resolution storage tiers
 
 use crate::types::{Result, Error};
 
 // Re-export key types
 pub use index::{TemporalPoint, BoundingBox5D, TemporalSpatialIndex, IndexLeaf, IndexStatistics};
 pub use query::{TemporalQueryResult, QueryOperators, TemporalDiff};
+pub use storage::{TemporalStorageTier, TemporalStoragePyramid, StorageTier, PyramidStatistics};
 
 /// Time-based decay function type
 #[derive(Clone, Copy, Debug, PartialEq)]
