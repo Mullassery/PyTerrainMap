@@ -1,9 +1,9 @@
 [package]
 name = "pyterrain-map"
-version = "1.3.2"
+version = "2.0.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
-description = "Collaborative terrain mapping platform for multi-robot fleets"
+description = "Distributed, AI-native terrain intelligence platform for multi-robot fleets with enterprise features"
 repository = "https://github.com/Mullassery/pyterrain-map"
 
 [dependencies]
