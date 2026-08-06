@@ -79,7 +79,7 @@ impl TemporalChange {
         let mut added = Vec::new();
         let mut removed = Vec::new();
         let mut modified = Vec::new();
-        let mut total_magnitude = 0.0;
+        let mut total_change_magnitude = 0.0;
 
         // Find added and modified points
         for after_point in &after.points {
@@ -88,7 +88,7 @@ impl TemporalChange {
             }) {
                 if (before_point.z - after_point.z).abs() > 1e-5 || (before_point.quality - after_point.quality).abs() > 0.01 {
                     let delta_z = (after_point.z - before_point.z).abs();
-                    total_magnitude += delta_z;
+                    total_change_magnitude += delta_z;
                     modified.push((*before_point, *after_point));
                 }
             } else {
