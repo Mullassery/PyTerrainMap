@@ -9,10 +9,11 @@
 //! - Temporal interpolation and historical analysis
 //! - Quality-aware queries with confidence filtering
 
-pub mod index;     // Phase 3.1: 5D temporal-spatial index
-pub mod query;     // Phase 3.1: Temporal query operators
-pub mod storage;   // Phase 3.2: Multi-resolution storage tiers
-pub mod timetravel; // Phase 3.3: Time-travel queries & historical analysis
+pub mod index;          // Phase 3.1: 5D temporal-spatial index
+pub mod query;          // Phase 3.1: Temporal query operators
+pub mod storage;        // Phase 3.2: Multi-resolution storage tiers
+pub mod timetravel;     // Phase 3.3: Time-travel queries & historical analysis
+pub mod quality_gates;  // Phase 3.4: Quality gates & consistency validation
 
 use crate::types::{Result, Error};
 
@@ -21,6 +22,7 @@ pub use index::{TemporalPoint, BoundingBox5D, TemporalSpatialIndex, IndexLeaf, I
 pub use query::{TemporalQueryResult, QueryOperators, TemporalDiff};
 pub use storage::{TemporalStorageTier, TemporalStoragePyramid, StorageTier, PyramidStatistics};
 pub use timetravel::{TemporalSnapshot, TemporalChange, TemporalTimeline, TimelineStatistics, ChangeStatistics};
+pub use quality_gates::{QualityGate, TemporalConsistencyValidator, TemporalAnomaly, AnomalyType, ValidationResult};
 
 /// Time-based decay function type
 #[derive(Clone, Copy, Debug, PartialEq)]
