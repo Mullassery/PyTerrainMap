@@ -22,11 +22,12 @@ pub struct Sharding {
 impl Sharding {
     pub fn new(shard_count: u32) -> Self {
         let mut shards = HashMap::new();
-        let shard_size = 100.0 / (shard_count as f32).sqrt();
+        let grid_size = (shard_count as f32).sqrt() as u32;
+        let shard_size = 100.0 / (grid_size as f32);
 
         for i in 0..shard_count {
-            let x_idx = i % (shard_count.sqrt() as u32);
-            let y_idx = i / (shard_count.sqrt() as u32);
+            let x_idx = i % grid_size;
+            let y_idx = i / grid_size;
 
             shards.insert(
                 i,
