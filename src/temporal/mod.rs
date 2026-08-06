@@ -2,8 +2,21 @@
 //!
 //! Manages time-series data, observation freshness, and temporal decay.
 //! Observations maintain immutable original confidence; decay applied on read.
+//!
+//! Phase 3 (Temporal Normalization - 5D Space):
+//! - Temporal-spatial indexing (R*-tree with time dimension)
+//! - High-level query operators (at-time, time-range, spatio-temporal)
+//! - Temporal interpolation and historical analysis
+//! - Quality-aware queries with confidence filtering
+
+pub mod index;   // Phase 3.1: 5D temporal-spatial index
+pub mod query;   // Phase 3.1: Temporal query operators
 
 use crate::types::{Result, Error};
+
+// Re-export key types
+pub use index::{TemporalPoint, BoundingBox5D, TemporalSpatialIndex, IndexLeaf, IndexStatistics};
+pub use query::{TemporalQueryResult, QueryOperators, TemporalDiff};
 
 /// Time-based decay function type
 #[derive(Clone, Copy, Debug, PartialEq)]
