@@ -255,7 +255,7 @@ class IsaacSimPyTerrainBridge:
 # (Running in Omniverse)
 
 # Terminal 2: ROS2 Bridge
-python3 -m pyterrain_ros.bridge \
+python3 -m pyterrain_map.ros.bridge \
     --platform isaac \
     --config config/isaac_sim.yaml
 

@@ -8,7 +8,13 @@ import json
 
 @dataclass
 class StorageObservation:
-    """Normalized observation for PyTerrainMap backend."""
+    """Normalized observation for PyTerrainMap backend.
+
+    Field set mirrors `pyterrain_map.storage.base.StorageObservation` (the
+    storage-layer record this eventually becomes) so adapters can hand
+    their output straight to a `StorageBackend` without translation.
+    """
+    id: str
     robot_id: str
     timestamp: int  # microseconds since epoch
     location_lat: float
@@ -19,6 +25,7 @@ class StorageObservation:
 
     def to_dict(self):
         return {
+            "id": self.id,
             "robot_id": self.robot_id,
             "timestamp": self.timestamp,
             "location_lat": self.location_lat,
