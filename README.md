@@ -2,9 +2,8 @@
 
 > **Spatial intelligence platform for multi-robot terrain mapping.** Real-time SLAM, traversability analysis, temporal normalization, fleet learning.
 
-![Status](https://img.shields.io/badge/Status-Production--Ready-brightgreen.svg)
+[![CI](https://github.com/Mullassery/PyTerrainMap/actions/workflows/ci.yml/badge.svg)](https://github.com/Mullassery/PyTerrainMap/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![Tests](https://img.shields.io/badge/Tests-525%20Passing-brightgreen.svg)
 ![Distribution](https://img.shields.io/badge/Distribution-Wheels--Only-blue.svg)
 ![License](https://img.shields.io/badge/License-Proprietary-red.svg)
 
