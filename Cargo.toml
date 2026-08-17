@@ -1,6 +1,6 @@
 [package]
 name = "pyterrain-map"
-version = "1.4.0"
+version = "1.5.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
 description = "Collaborative terrain mapping platform for multi-robot fleets"
@@ -46,9 +46,17 @@ statrs = "0.16"  # Apache 2.0
 tracing = "0.1"  # MIT
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # MIT
 
-# HTTP server (optional, for HTTP API)
+# HTTP server (for the real HTTP/HTTPS API server in src/server.rs)
 hyper = { version = "0.14", features = ["full"] }  # MIT
 tokio-util = { version = "0.7", features = ["codec"] }  # MIT
+
+# TLS termination for the HTTPS API server (rustls, not OpenSSL -- no system dep)
+rustls = "0.21"  # Apache-2.0/MIT/ISC
+tokio-rustls = "0.24"  # MIT/Apache-2.0
+rustls-pemfile = "1.0"  # Apache-2.0/MIT/ISC
+
+# Self-signed certificate generation for local dev/test HTTPS (NOT for production certs)
+rcgen = "0.11"  # MIT/Apache-2.0
 
 # Optional: Database (OSS only)
 sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "postgres", "uuid", "chrono"], optional = true }  # MIT/Apache 2.0
@@ -69,6 +77,13 @@ criterion = "0.5"
 proptest = "1.4"
 tokio-test = "0.4"
 
+[build-dependencies]
+# Without this build.rs + pyo3-build-config combo, plain `cargo build`/`cargo
+# test`/`cargo clippy` cannot link this crate's cdylib target on macOS (and
+# similar on other platforms) -- only `maturin`, which injects the equivalent
+# linker flags itself, worked. See build.rs for details.
+pyo3-build-config = "0.22"
+
 [features]
 default = ["database"]
 database = ["sqlx", "rusqlite"]
@@ -77,7 +92,11 @@ pynoramic = ["imaging"]
 
 [lib]
 name = "pyterrain_map"
-crate-type = ["cdylib"]  # PyO3 extension module for Python
+# cdylib: PyO3 extension module for Python.
+# rlib: lets `tests/*.rs` integration tests (and any future Rust-only binaries)
+# link against the crate directly, e.g. tests/server_integration.rs which starts
+# the real HTTP/HTTPS server and makes real requests against it.
+crate-type = ["cdylib", "rlib"]
 
 [profile.release]
 opt-level = 3
