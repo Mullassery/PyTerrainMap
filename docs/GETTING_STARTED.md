@@ -245,8 +245,8 @@ pytm setup
 
 ```python
 # launch/spot_deployment.launch.py (pseudo-code, coming soon)
-from pyterrain_ros.bridge import PyTerrainROSBridge
-from pyterrain_ros.platforms import get_platform_config
+from pyterrain_map.ros.bridge import PyTerrainROSBridge
+from pyterrain_map.ros.platforms import get_platform_config
 
 # Load pre-configured Spot setup
 config = get_platform_config("spot")
@@ -553,19 +553,19 @@ from pyterrain_map.storage import (
 from pyterrain_map.storage import StorageObservation
 
 # Import transforms (ROS bridge)
-from pyterrain_ros.transforms import (
+from pyterrain_map.ros.transforms import (
     CoordinateConverter,      # ENU ↔ Geodetic
     TFListener,              # Transform cache
 )
 
 # Import adapters (ROS bridge)
-from pyterrain_ros.adapters import (
+from pyterrain_map.ros.adapters import (
     LiDARAdapter,            # LiDAR processor
     ThermalAdapter,          # Thermal camera processor
 )
 
 # Import platforms (pre-configs)
-from pyterrain_ros.platforms import get_platform_config
+from pyterrain_map.ros.platforms import get_platform_config
 ```
 
 ### Common Operations
@@ -793,8 +793,8 @@ With PyTerrainMap, you can build:
 - 🏗️ Architecture: `ROS_BRIDGE_ARCHITECTURE.md`
 - 🚀 ROS Bridge: `ROS_BRIDGE_IMPLEMENTATION_COMPLETE.md`
 - 📦 Storage backends: `python/pyterrain_map/storage/`
-- 🤖 ROS adapters: `python/pyterrain_ros/adapters/`
-- 📍 Coordinate transforms: `python/pyterrain_ros/transforms/`
+- 🤖 ROS adapters: `python/pyterrain_map/ros/adapters/`
+- 📍 Coordinate transforms: `python/pyterrain_map/ros/transforms/`
 
 ---
 

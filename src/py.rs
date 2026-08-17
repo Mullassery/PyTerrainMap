@@ -20,6 +20,11 @@ use crate::py_gaussian_splatting::{
     PyUnifiedPathCost, PyFrontier, PyGaussianFrontierScorer, PyGaussianCacheManager,
     PyBotObservationMessage, PyBotStatus, PyFleetCoordinator,
 };
+use crate::py_query_functions::{
+    analyze_terrain, assess_mobility, detect_changes, explain_field, fuse_observations,
+    is_accessible, query_by_sensor,
+};
+use crate::py_server::{start_server, PyServerHandle};
 
 /// PyTerrainMap Python module
 ///
@@ -27,7 +32,7 @@ use crate::py_gaussian_splatting::{
 /// Core classes: TerrainMap, Observation, QueryResult, GeoPoint, Region
 #[pymodule]
 fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("__version__", "1.1.0")?;
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add(
         "__doc__",
         "PyTerrainMap: Spatial Intelligence Companion for multi-robot terrain mapping",
@@ -71,6 +76,19 @@ fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyBotObservationMessage>()?;
     m.add_class::<PyBotStatus>()?;
     m.add_class::<PyFleetCoordinator>()?;
+
+    // High-level query/intelligence functions (analyze_terrain, assess_mobility, etc.)
+    m.add_function(wrap_pyfunction!(analyze_terrain, m)?)?;
+    m.add_function(wrap_pyfunction!(assess_mobility, m)?)?;
+    m.add_function(wrap_pyfunction!(detect_changes, m)?)?;
+    m.add_function(wrap_pyfunction!(fuse_observations, m)?)?;
+    m.add_function(wrap_pyfunction!(query_by_sensor, m)?)?;
+    m.add_function(wrap_pyfunction!(explain_field, m)?)?;
+    m.add_function(wrap_pyfunction!(is_accessible, m)?)?;
+
+    // Real HTTP/HTTPS API server (previously type-only, now actually bindable)
+    m.add_class::<PyServerHandle>()?;
+    m.add_function(wrap_pyfunction!(start_server, m)?)?;
 
     // Persona constants
     m.add("Persona", py_persona_dict(py))?;

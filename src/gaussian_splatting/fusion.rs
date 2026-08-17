@@ -192,7 +192,7 @@ mod tests {
     fn test_fusion_traversability_average() {
         let mut g1 = TerrainGaussian::from_point_observation([0.0, 0.0, 0.0], "bot_01", 0.8);
         g1.confidence = 0.5;
-        let g2 = TerrainGaussian::from_point_observation([0.001, 0.001, 0.05], "bot_02", 0.6);
+        let mut g2 = TerrainGaussian::from_point_observation([0.001, 0.001, 0.05], "bot_02", 0.6);
         g2.confidence = 0.5;
 
         let _result = ObservationFuser::fuse(&mut g1, &g2);

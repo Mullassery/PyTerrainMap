@@ -203,7 +203,7 @@ pyterrain-map/
 │   ├── setup_wizard.py                 # 600+ lines
 │   ├── api.py                          # 300+ lines
 │   ├── cli.py                          # Updated
-│   └── pyterrain_ros/                  # ROS bridge module (in progress)
+│   └── pyterrain_map/ros/                  # ROS bridge module (in progress)
 │       ├── __init__.py
 │       ├── bridge.py                   # Main ROS2 node
 │       ├── adapters/

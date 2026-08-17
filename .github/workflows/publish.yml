@@ -1,0 +1,92 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pypi_env:
+        description: 'PyPI environment'
+        required: true
+        default: 'testpypi'
+        type: choice
+        options:
+          - testpypi
+          - pypi
+
+jobs:
+  build:
+    name: Build wheels
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install maturin
+      run: pip install maturin
+
+    - name: Build wheels (no source distribution)
+      run: maturin build --release --no-sdist
+
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels-${{ matrix.os }}
+        path: target/wheels/
+
+  publish:
+    name: Publish wheels to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/download-artifact@v3
+      with:
+        path: dist
+
+    - name: Flatten artifacts
+      run: find dist -name "*.whl" -exec mv {} dist/ \;
+
+    - name: List wheels
+      run: ls -la dist/
+
+    - name: Publish to TestPyPI
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_env == 'testpypi'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+
+    - name: Publish to PyPI
+      if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_env == 'pypi')
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Create GitHub Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_id }}
+        release_name: Release v${{ github.run_id }}
+        body: |
+          Release artifacts:
+          - PyPI: https://pypi.org/project/pyterrainMap/
+          - TestPyPI: https://test.pypi.org/project/pyterrainMap/
+        draft: false
+        prerelease: false

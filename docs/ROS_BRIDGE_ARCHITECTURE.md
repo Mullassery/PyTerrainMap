@@ -53,10 +53,10 @@ Native integration with ROS/ROS2 ecosystems enabling PyTerrainMap to:
 
 ## Module Structure
 
-### python/pyterrain_ros/
+### python/pyterrain_map/ros/
 
 ```
-pyterrain_ros/
+pyterrain_map/ros/
 ├── __init__.py
 ├── bridge.py              # Main ROS2 node
 ├── adapters/

@@ -82,11 +82,11 @@ backend = ADLSStorageBackend({
 
 ### 2. **Coordinate Transformations** (Precision Geo-Localization)
 
-**File:** `python/pyterrain_ros/transforms/coordinate_frames.py`
+**File:** `python/pyterrain_map/ros/transforms/coordinate_frames.py`
 
 #### CoordinateConverter
 ```python
-from pyterrain_ros.transforms import CoordinateConverter, ENUPoint, GeoPoint
+from pyterrain_map.ros.transforms import CoordinateConverter, ENUPoint, GeoPoint
 
 # Initialize with origin (robot start position)
 converter = CoordinateConverter(
@@ -115,7 +115,7 @@ enu = converter.geodetic_to_enu(geo)
 
 #### QuaternionRotation
 ```python
-from pyterrain_ros.transforms import QuaternionRotation
+from pyterrain_map.ros.transforms import QuaternionRotation
 
 # Create from Euler angles
 quat = QuaternionRotation.from_euler_zyx(roll=0, pitch=0.1, yaw=0.5)
@@ -137,12 +137,12 @@ R = quat.to_rotation_matrix()
 
 ### 3. **TF (Transform) Listener** (ROS Integration)
 
-**File:** `python/pyterrain_ros/transforms/tf_listener.py`
+**File:** `python/pyterrain_map/ros/transforms/tf_listener.py`
 
 Subscribes to `/tf` and `/tf_static` topics, maintains temporal cache of transforms.
 
 ```python
-from pyterrain_ros.transforms import TFListener, Transform
+from pyterrain_map.ros.transforms import TFListener, Transform
 
 listener = TFListener()
 
@@ -178,12 +178,12 @@ point_in_map = listener.transform_point(
 
 ### 4. **LiDAR Adapter** (2D & 3D Point Clouds)
 
-**File:** `python/pyterrain_ros/adapters/lidar.py`
+**File:** `python/pyterrain_map/ros/adapters/lidar.py`
 
 Converts `sensor_msgs/LaserScan` and `sensor_msgs/PointCloud2` to observations.
 
 ```python
-from pyterrain_ros.adapters import LiDARAdapter
+from pyterrain_map.ros.adapters import LiDARAdapter
 
 adapter = LiDARAdapter(
     robot_id="spot_1",
@@ -227,12 +227,12 @@ observations = adapter.on_message(
 
 ### 5. **Thermal Adapter** (Temperature Grid)
 
-**File:** `python/pyterrain_ros/adapters/thermal.py`
+**File:** `python/pyterrain_map/ros/adapters/thermal.py`
 
 Converts thermal camera images (`sensor_msgs/Image`) to temperature observations.
 
 ```python
-from pyterrain_ros.adapters import ThermalAdapter
+from pyterrain_map.ros.adapters import ThermalAdapter
 
 adapter = ThermalAdapter(
     robot_id="m300_1",
@@ -276,13 +276,13 @@ observations = adapter.on_message(thermal_image_msg, robot_pose, converter)
 
 ### 6. **Platform Configurations** (Pre-tuned for Common Robots)
 
-**File:** `python/pyterrain_ros/platforms/__init__.py`
+**File:** `python/pyterrain_map/ros/platforms/__init__.py`
 
 Pre-configured sensor setups, TF relationships, and backends for popular robots.
 
 #### Boston Dynamics Spot
 ```python
-from pyterrain_ros.platforms import get_platform_config
+from pyterrain_map.ros.platforms import get_platform_config
 
 config = get_platform_config("spot")
 # Includes:
@@ -321,11 +321,11 @@ config = get_platform_config("generic")
 # Modify for custom robots
 
 # Save to YAML for easy sharing
-from pyterrain_ros.platforms import save_platform_config
+from pyterrain_map.ros.platforms import save_platform_config
 save_platform_config(config, "my_robot.yaml")
 
 # Load from file
-from pyterrain_ros.platforms import load_platform_config
+from pyterrain_map.ros.platforms import load_platform_config
 config = load_platform_config("my_robot.yaml")
 ```
 
@@ -377,9 +377,9 @@ config = load_platform_config("my_robot.yaml")
 ```python
 import asyncio
 from pyterrain_map.storage import S3StorageBackend
-from pyterrain_ros.platforms import get_platform_config
-from pyterrain_ros.adapters import LiDARAdapter, ThermalAdapter
-from pyterrain_ros.transforms import CoordinateConverter, TFListener
+from pyterrain_map.ros.platforms import get_platform_config
+from pyterrain_map.ros.adapters import LiDARAdapter, ThermalAdapter
+from pyterrain_map.ros.transforms import CoordinateConverter, TFListener
 
 async def main():
     # 1. Load platform configuration
@@ -438,7 +438,7 @@ asyncio.run(main())
 
 Still to implement:
 
-### Main ROS Bridge Node (`python/pyterrain_ros/bridge.py`)
+### Main ROS Bridge Node (`python/pyterrain_map/ros/bridge.py`)
 - ROS2 node initialization
 - Topic subscriptions for all sensors
 - TF listener subscription
@@ -512,7 +512,7 @@ python/pyterrain_map/storage/
 ├── gcs.py                      # Cloud Services Storage backend (300 LOC)
 └── adls.py                     # Azure Data Lake Storage backend (300 LOC)
 
-python/pyterrain_ros/
+python/pyterrain_map/ros/
 ├── adapters/
 │   ├── base.py                 # SensorAdapter interface (120 LOC)
 │   ├── lidar.py                # LiDAR adapter (250 LOC)

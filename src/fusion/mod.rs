@@ -4,10 +4,24 @@
 //! to produce fused estimates with aggregated confidence.
 
 use crate::types::{
-    FusedData, FusedDetection, ObjectDetection, Observation, Result, SensorType,
+    FusedData, FusedDetection, GridCell, ObjectDetection, Observation, Result, SensorType,
     SensorValue, TemperatureEstimate, Error, BaselineStatistics,
 };
 use std::collections::HashMap;
+use std::f32::consts::TAU;
+
+/// Default occupancy grid cell size in meters.
+const DEFAULT_GRID_CELL_SIZE_M: f32 = 0.5;
+/// LiDAR beams reporting more than this (or zero, meaning "no return") carry
+/// no obstacle evidence either way and are skipped.
+const MAX_LIDAR_RANGE_CM: u16 = 3000;
+/// Log-odds increments for a Bayesian binary occupancy grid (Thrun et al.),
+/// corresponding to p(occupied)=0.7 / p(free)=0.3 per ray-cell update.
+const LOG_ODDS_OCCUPIED: f32 = 0.847_298; // ln(0.7 / 0.3)
+const LOG_ODDS_FREE: f32 = -0.847_298; // ln(0.3 / 0.7)
+/// Clamp accumulated log-odds so a cell hammered by many observations
+/// doesn't diverge to +/-infinity; keeps probabilities within (~0.0007, ~0.9993).
+const LOG_ODDS_CLAMP: f32 = 7.0;
 
 /// Weights for different sensor types in fusion
 #[derive(Clone, Debug)]
@@ -53,6 +67,8 @@ pub struct SensorFusion {
     weights: SensorWeights,
     /// Apply temporal quality weighting (default: true)
     temporal_quality_enabled: bool,
+    /// Occupancy grid cell size in meters (default: 0.5m)
+    grid_cell_size_m: f32,
 }
 
 impl SensorFusion {
@@ -61,6 +77,7 @@ impl SensorFusion {
         SensorFusion {
             weights,
             temporal_quality_enabled: true,
+            grid_cell_size_m: DEFAULT_GRID_CELL_SIZE_M,
         }
     }
 
@@ -69,12 +86,18 @@ impl SensorFusion {
         SensorFusion {
             weights: SensorWeights::default_equal(),
             temporal_quality_enabled: true,
+            grid_cell_size_m: DEFAULT_GRID_CELL_SIZE_M,
         }
     }
 
     /// Enable/disable temporal quality weighting
     pub fn set_temporal_quality_enabled(&mut self, enabled: bool) {
         self.temporal_quality_enabled = enabled;
+    }
+
+    /// Set the occupancy grid resolution (meters per cell)
+    pub fn set_grid_cell_size_m(&mut self, cell_size_m: f32) {
+        self.grid_cell_size_m = cell_size_m;
     }
 
     /// Extract temporal quality from observation
@@ -130,12 +153,116 @@ impl SensorFusion {
         let object_detections = self.fuse_detections(observations);
         let activity_level = self.compute_activity_level(observations);
 
+        let obstacle_map = self.fuse_occupancy_grid(observations);
+
         Ok(FusedData {
             temperature,
-            obstacle_map: None, // TODO: implement occupancy grid fusion
+            obstacle_map,
             object_detections,
             activity_level,
         })
+    }
+
+    /// Fuse LiDAR and ultrasonic range readings into a local occupancy grid.
+    ///
+    /// Uses standard Bayesian binary occupancy grid mapping (log-odds
+    /// accumulation, Thrun et al.): each range reading ray-traces from the
+    /// sensor origin, marking cells it passes through as (weakly) free and
+    /// the terminal cell as occupied. Multiple observations reinforce or
+    /// contradict each other in the same cells, so noisy single readings
+    /// don't dominate.
+    ///
+    /// `distances_cm` beams are assumed evenly distributed over a full
+    /// 360-degree sweep (index 0 at angle 0, wrapping around) — the richest
+    /// assumption supportable by `SensorValue::LiDAR`, which doesn't carry
+    /// per-beam angle metadata. Ultrasonic sensors are treated as a single
+    /// forward-facing (angle 0) beam.
+    ///
+    /// Returns `None` when no observation carries usable range data (no
+    /// LiDAR/Ultrasonic present, or all beams were zero/out-of-range) —
+    /// distinct from an empty grid, which would incorrectly claim "surveyed
+    /// and found nothing."
+    fn fuse_occupancy_grid(&self, observations: &[&Observation]) -> Option<Vec<GridCell>> {
+        let mut log_odds: HashMap<(i32, i32), f32> = HashMap::new();
+        let mut have_range_data = false;
+
+        for obs in observations {
+            let sensor_weight = self.weights.for_sensor(obs.sensor_type);
+            let temporal_quality = self.extract_temporal_quality(obs);
+            let weight = self
+                .calculate_weight(sensor_weight, obs.confidence, Some(temporal_quality))
+                .max(0.0);
+            if weight == 0.0 {
+                continue;
+            }
+
+            match &obs.value {
+                SensorValue::LiDAR { distances_cm } if !distances_cm.is_empty() => {
+                    let angle_step = TAU / distances_cm.len() as f32;
+                    for (i, &distance_cm) in distances_cm.iter().enumerate() {
+                        if distance_cm == 0 || distance_cm > MAX_LIDAR_RANGE_CM {
+                            continue;
+                        }
+                        have_range_data = true;
+                        let angle = i as f32 * angle_step;
+                        self.trace_ray(&mut log_odds, angle, distance_cm as f32 / 100.0, weight);
+                    }
+                }
+                SensorValue::Ultrasonic { distance_cm } if *distance_cm > 0 => {
+                    have_range_data = true;
+                    self.trace_ray(&mut log_odds, 0.0, *distance_cm as f32 / 100.0, weight);
+                }
+                _ => {}
+            }
+        }
+
+        if !have_range_data {
+            return None;
+        }
+
+        let mut grid: Vec<GridCell> = log_odds
+            .into_iter()
+            .map(|((x, y), l)| GridCell {
+                x,
+                y,
+                occupancy: 1.0 / (1.0 + (-l).exp()),
+            })
+            .collect();
+        grid.sort_by_key(|c| (c.x, c.y));
+        Some(grid)
+    }
+
+    /// Ray-traces from the sensor origin (grid cell (0,0)) out to a hit at
+    /// `distance_m` along `angle_rad`, applying a log-odds "free" update to
+    /// every cell passed through and a log-odds "occupied" update to the
+    /// terminal cell. `weight` scales this ray's influence relative to
+    /// others (sensor weight x confidence x temporal quality).
+    fn trace_ray(
+        &self,
+        log_odds: &mut HashMap<(i32, i32), f32>,
+        angle_rad: f32,
+        distance_m: f32,
+        weight: f32,
+    ) {
+        let cell_size = self.grid_cell_size_m.max(0.01);
+        let steps = (distance_m / cell_size).floor() as i32;
+
+        for step in 0..steps {
+            let d = step as f32 * cell_size;
+            let cell = Self::to_cell(angle_rad, d, cell_size);
+            let entry = log_odds.entry(cell).or_insert(0.0);
+            *entry = (*entry + LOG_ODDS_FREE * weight).clamp(-LOG_ODDS_CLAMP, LOG_ODDS_CLAMP);
+        }
+
+        let hit_cell = Self::to_cell(angle_rad, distance_m, cell_size);
+        let entry = log_odds.entry(hit_cell).or_insert(0.0);
+        *entry = (*entry + LOG_ODDS_OCCUPIED * weight).clamp(-LOG_ODDS_CLAMP, LOG_ODDS_CLAMP);
+    }
+
+    fn to_cell(angle_rad: f32, distance_m: f32, cell_size: f32) -> (i32, i32) {
+        let x = distance_m * angle_rad.cos();
+        let y = distance_m * angle_rad.sin();
+        ((x / cell_size).round() as i32, (y / cell_size).round() as i32)
     }
 
     /// Fuse temperature observations with temporal quality weighting
@@ -684,5 +811,117 @@ mod tests {
 
         let result = fusion.baseline_statistics(&[&obs]).unwrap();
         assert!(result.is_none()); // No temperature readings
+    }
+
+    #[test]
+    fn test_occupancy_grid_absent_without_range_sensors() {
+        let fusion = SensorFusion::default();
+        let obs = create_obs(
+            "bot_1",
+            SensorType::Thermal,
+            SensorValue::Temperature { celsius: 20.0 },
+            0.9,
+        );
+        let result = fusion.fuse(&[&obs]).unwrap();
+        assert!(result.obstacle_map.is_none());
+    }
+
+    #[test]
+    fn test_occupancy_grid_marks_hit_cell_as_occupied() {
+        let fusion = SensorFusion::default();
+        // 4 beams evenly spaced around 360 degrees; only beam 0 (angle 0,
+        // pointing along +x) returns a hit, at 1.0m. The others are "no
+        // return" (0 = out of range, ignored).
+        let obs = create_obs(
+            "bot_1",
+            SensorType::LiDAR,
+            SensorValue::LiDAR {
+                distances_cm: vec![100, 0, 0, 0],
+            },
+            0.9,
+        );
+
+        let result = fusion.fuse(&[&obs]).unwrap();
+        let grid = result.obstacle_map.expect("expected an occupancy grid");
+
+        // Cell size defaults to 0.5m, so a 1.0m hit along +x lands at grid cell (2, 0).
+        let hit = grid.iter().find(|c| c.x == 2 && c.y == 0);
+        assert!(hit.is_some(), "expected a marked cell at the hit location");
+        assert!(hit.unwrap().occupancy > 0.5, "hit cell should read as occupied");
+
+        // A cell along the ray before the hit should read as free (< 0.5).
+        let along_ray = grid.iter().find(|c| c.x == 1 && c.y == 0);
+        assert!(along_ray.is_some(), "expected a marked cell along the ray");
+        assert!(along_ray.unwrap().occupancy < 0.5, "cell before the hit should read as free");
+    }
+
+    #[test]
+    fn test_occupancy_grid_reinforces_from_repeated_observations() {
+        let fusion = SensorFusion::default();
+        let single = create_obs(
+            "bot_1",
+            SensorType::LiDAR,
+            SensorValue::LiDAR { distances_cm: vec![100] },
+            0.9,
+        );
+        let single_result = fusion.fuse(&[&single]).unwrap();
+        let single_grid = single_result.obstacle_map.unwrap();
+        let single_occupancy = single_grid.iter().find(|c| c.x == 2 && c.y == 0).unwrap().occupancy;
+
+        let obs_a = create_obs(
+            "bot_1",
+            SensorType::LiDAR,
+            SensorValue::LiDAR { distances_cm: vec![100] },
+            0.9,
+        );
+        let obs_b = create_obs(
+            "bot_2",
+            SensorType::LiDAR,
+            SensorValue::LiDAR { distances_cm: vec![100] },
+            0.9,
+        );
+        let repeated_result = fusion.fuse(&[&obs_a, &obs_b]).unwrap();
+        let repeated_grid = repeated_result.obstacle_map.unwrap();
+        let repeated_occupancy = repeated_grid.iter().find(|c| c.x == 2 && c.y == 0).unwrap().occupancy;
+
+        // Two independent robots agreeing on the same obstacle should push
+        // confidence higher than a single observation.
+        assert!(repeated_occupancy > single_occupancy);
+    }
+
+    #[test]
+    fn test_occupancy_grid_ultrasonic_is_forward_facing_single_beam() {
+        let fusion = SensorFusion::default();
+        let obs = create_obs(
+            "bot_1",
+            SensorType::Ultrasonic,
+            SensorValue::Ultrasonic { distance_cm: 50 },
+            0.9,
+        );
+
+        let result = fusion.fuse(&[&obs]).unwrap();
+        let grid = result.obstacle_map.expect("expected an occupancy grid");
+
+        // 0.5m forward (+x) at 0.5m cell size lands exactly on cell (1, 0).
+        let hit = grid.iter().find(|c| c.x == 1 && c.y == 0);
+        assert!(hit.is_some());
+        assert!(hit.unwrap().occupancy > 0.5);
+    }
+
+    #[test]
+    fn test_occupancy_grid_ignores_zero_and_out_of_range_lidar_beams() {
+        let fusion = SensorFusion::default();
+        let obs = create_obs(
+            "bot_1",
+            SensorType::LiDAR,
+            // All beams are "no return" (0) or beyond MAX_LIDAR_RANGE_CM.
+            SensorValue::LiDAR {
+                distances_cm: vec![0, 0, 5000, 0],
+            },
+            0.9,
+        );
+
+        let result = fusion.fuse(&[&obs]).unwrap();
+        assert!(result.obstacle_map.is_none());
     }
 }

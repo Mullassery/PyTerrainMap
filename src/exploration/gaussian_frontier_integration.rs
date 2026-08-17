@@ -3,7 +3,7 @@
 //! Combines Gaussian uncertainty scores with frontier prioritization for
 //! intelligent exploration targeting.
 
-use crate::gaussian_splatting::GaussianSplatStore;
+use crate::gaussian_splatting::{GaussianSplatStore, TerrainGaussian};
 use super::frontier::{Frontier, CuriosityScorer, RiskEvaluator};
 
 /// Gaussian-aware frontier scorer
@@ -146,7 +146,7 @@ mod tests {
 
         let mut store = GaussianSplatStore::new();
         // Add observation to reduce uncertainty
-        store.insert_splat(40.0, -74.0, 10.0, "bot_01", 0.8, "Road");
+        store.insert(TerrainGaussian::from_point_observation([40.0, -74.0, 10.0], "bot_01", 0.8));
 
         scorer.score_frontier_with_gaussian(&mut frontier, &store);
 
