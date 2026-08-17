@@ -118,10 +118,18 @@ impl ObservationStore {
         (start_index..total).collect()
     }
 
-    /// Clear all observations (use with caution - breaks immutability guarantee)
-    pub fn clear(&self) {
-        self.observations.write().clear();
-    }
+    // NOTE: There is intentionally no `clear()` (or any other delete/mutate) method here.
+    //
+    // `ObservationStore` documents an append-only, immutable observation log
+    // (see docs/DATA_INTEGRITY.md: "even a rogue robot cannot delete/modify history").
+    // A store that promises immutability but exposes a way to wipe itself does not
+    // actually provide that guarantee. A previous version had a `clear()` escape
+    // hatch here; it was unused everywhere in the codebase (no caller, no test
+    // depended on it) and was removed rather than gated, since there was no
+    // legitimate production use case for erasing the audit trail through the
+    // normal API. If a genuine need for a full reset ever arises (e.g. wiping a
+    // local dev sandbox), prefer constructing a fresh `ObservationStore::new()`
+    // rather than mutating an existing one in place.
 }
 
 impl Default for ObservationStore {

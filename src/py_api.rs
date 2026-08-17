@@ -299,9 +299,14 @@ impl PyTerrainMap {
     ) -> PyResult<PyQueryResult> {
         let obss = self.observations.read();
 
-        // Filter by distance (simplified: use lat/lon delta as approximation)
+        // Filter by distance (simplified: use lat/lon delta as approximation).
+        // NOTE: `.cos()` needs radians. A previous version passed `location.lat`
+        // straight into `.cos()` while it was still in degrees, which for most
+        // latitudes produces a *negative* lon_delta -- making the `.abs() <
+        // lon_delta` check below false for every observation (query() would
+        // silently return zero results even for an exact-location match).
         let lat_delta = region_radius_km / 111.0;
-        let lon_delta = region_radius_km / (111.0 * location.lat.abs().cos());
+        let lon_delta = region_radius_km / (111.0 * location.lat.to_radians().cos());
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -371,11 +376,14 @@ impl PyTerrainMap {
         self.observations.read().clone()
     }
 
-    /// Clear all observations
-    pub fn clear(&self) -> PyResult<()> {
-        self.observations.write().clear();
-        Ok(())
-    }
+    // NOTE: `TerrainMap` intentionally has no `clear()` method. PyTerrainMap's
+    // documented guarantee (docs/DATA_INTEGRITY.md) is append-only, immutable
+    // observation storage -- "even a rogue robot cannot delete history". A prior
+    // version exposed `clear()` here, which directly contradicted that guarantee
+    // and was unused by any test or caller in this codebase. It was removed
+    // rather than gated behind a flag, since there was no legitimate production
+    // need for it. If you need an empty map (e.g. in a test), construct a new
+    // `TerrainMap()` instead of resetting an existing one.
 
     /// Get observation count
     pub fn __len__(&self) -> usize {
