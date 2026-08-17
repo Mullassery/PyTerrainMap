@@ -26,6 +26,19 @@ __pycache__/
 dist/
 build/
 .pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime output written by running the test suite (StatGuardian/quality
+# contract validation logs), not source
+terrain_validations/
+
+# Compiled PyO3 extension module (built locally by `maturin develop`;
+# published builds go through `maturin build` -> dist/, also ignored above)
+*.so
+*.pyd
+*.dylib
+python/pyterrain_map/*.abi3.so
 
 # Virtual environments
 venv/
