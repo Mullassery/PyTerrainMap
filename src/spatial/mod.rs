@@ -34,6 +34,7 @@ impl SpatialKey {
 }
 
 /// Spatial index using H3 cells and elevation buckets
+#[derive(Clone)]
 pub struct SpatialIndex {
     h3_resolution: i32,
     // Map from H3 cell + elevation to observation indices

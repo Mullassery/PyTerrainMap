@@ -35,7 +35,11 @@ pub mod cli;
 pub mod spatial_reasoning;
 pub mod py;  // PyO3 Python bindings
 pub mod py_api;  // Python wrapper classes (TerrainMap, Observation, QueryResult, etc.)
+pub mod py_query_functions;  // High-level PyO3 module functions (analyze_terrain, assess_mobility, etc.)
 pub mod py_gaussian_splatting;  // Python wrapper classes for Gaussian Splatting
+pub mod temporal_anomaly;  // Temporal-quality-aware anomaly detection
+pub mod server;  // Real HTTP/HTTPS server binding for the api/api_tls types
+pub mod py_server;  // Python-callable start_server()/ServerHandle
 pub mod parallel_execution;  // Multi-GPU parallel execution runtime
 pub mod caching;  // Layered caching and progressive world understanding
 pub mod security;  // Security-first and auditability-first architecture
@@ -70,6 +74,9 @@ pub use fusion::{SensorFusion, SensorWeights};
 
 // Re-export anomaly types
 pub use anomaly::{AnomalyDetector, AnomalyType, AnomalyStats};
+
+// Re-export temporal-quality-aware anomaly detection
+pub use temporal_anomaly::TemporalAnomalyDetector;
 
 // Re-export export types
 pub use export::{ExportFormat, SpatialExporter, GeoJSONExporter, KMLExporter};

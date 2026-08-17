@@ -50,6 +50,7 @@ impl DecayFunction {
 }
 
 /// Temporal index for time-based queries
+#[derive(Clone)]
 pub struct TemporalIndex {
     /// Timestamps of indexed observations (sorted)
     timestamps: Vec<i64>,
