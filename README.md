@@ -26,7 +26,8 @@ data (`TerrainMap`), indexed spatially (H3 hexagonal grid) and temporally
 - **Terrain intelligence helpers**: `analyze_terrain()`,
   `assess_mobility()`, `is_accessible()`, `explain_field()` for
   persona-aware (drone / wheeled / quadruped / humanoid) terrain
-  assessment.
+  assessment -- currently fixed/demo logic, not backed by a real
+  elevation/DEM data source (see Features table below).
 - **3D reconstruction + Gaussian-splatting probabilistic mapping** in the
   Rust core (SLAM, photogrammetry, traversability graphs) -- exposed to
   Python via PyO3 bindings.
@@ -51,7 +52,11 @@ python -c "import pyterrain_map; print(pyterrain_map.__version__)"
 
 ### Requirements
 - Python 3.10+
-- Precompiled `abi3` wheels (macOS arm64/x86_64, Linux x86_64 glibc 2.31+)
+- Precompiled wheel on PyPI: **macOS arm64 only**
+  (`cp310-abi3-macosx_11_0_arm64`), verified against the published
+  files for every release through 1.5.0. There is currently no Linux
+  or x86_64 macOS wheel, and no sdist to fall back to -- on those
+  platforms, build from source (below) instead of `pip install`.
 
 ### From source
 
@@ -146,11 +151,11 @@ curl http://127.0.0.1:8080/stats
 |---|---|
 | Append-only observation storage (H3 spatial + temporal-decay index) | Implemented, tested |
 | Real HTTP/HTTPS API server (`start_server()`) | Implemented, tested end-to-end (Rust + Python) |
-| Terrain intelligence (`analyze_terrain`, `assess_mobility`, `is_accessible`) | Implemented (heuristic, not ML-based) |
-| Anomaly detection (z-score, IQR, rogue-bot, drift, spike) + temporal quality weighting | Implemented, tested |
+| Terrain intelligence (`analyze_terrain`, `assess_mobility`, `is_accessible`) | Fixed/demo output, not real terrain analysis -- `analyze_terrain()` returns the same risk score and "retrieved from SRTM" text regardless of the coordinates passed in (no elevation/DEM source is actually queried); `assess_mobility()` is a static lookup table keyed only on robot type. Fine for exercising the API shape; don't rely on it for real terrain assessment. |
+| Anomaly detection (z-score, IQR, rogue-bot, drift, spike) + temporal quality weighting | Implemented; one Rust unit test (`test_anomaly_detection_spike`) is currently failing on `main` -- the other detectors pass. |
 | Traversability knowledge graph | Implemented, tested |
-| Gaussian-splatting probabilistic mapping (fusion, frontier detection, fleet learning) | Implemented, tested |
-| 3D reconstruction (SLAM, photogrammetry, 3D Tiles export) | Implemented, tested |
+| Gaussian-splatting probabilistic mapping (fusion, frontier detection, fleet learning) | Partially implemented -- core fusion/storage works, but frontier "strategic value" scoring and semantic terrain classification are hardcoded placeholders, and splat temporal decay (`apply_decay_to_store`) is currently a no-op. 3 related Rust unit tests are currently failing on `main` (frontier scoring, fleet learning, semantic terrain cost). |
+| 3D reconstruction (SLAM, photogrammetry, 3D Tiles export) | Mixed -- SLAM (loop closure, BoW) and 3D Tiles export are real implementations; photogrammetry's bundle adjustment, pose estimation, and point-cloud color estimation are explicitly-marked placeholders, not a real SfM solver. One SLAM unit test (`test_loop_closure_detector`) is currently failing on `main`. |
 | SQLite/PostgreSQL/BigQuery persistence backends | **Not implemented** -- config/schema types only, no live DB connection. Use the in-memory store above for real use today. |
 
 ---
