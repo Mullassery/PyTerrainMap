@@ -175,6 +175,20 @@ pytest tests/ -v
 
 ---
 
+## Cross-repo compatibility
+
+This repo is one of several independently-published robotics packages by
+the same author (`PyRoboSimulator`, `pyroboreplay`, `PyRoboFrames`,
+`PyRoboVision`). Verified by reading every `Cargo.toml`/`pyproject.toml`
+across all of them, plus grepping source in both directions: **none has a
+Cargo or pip dependency on this repo, and this repo has none on them.**
+`pyroboreplay`'s README describes a "PyTerrainMap Integration" phase, and
+this project's own `CLAUDE.md` used to describe integrations with
+`pyroboreplay`, `StatGuardian`, and `PyStreamMCP` — none of those are
+implemented in code today (verified via grep across all four repos in both
+directions); `CLAUDE.md` now marks that section as aspirational, and
+`pyroboreplay`'s README has the corresponding correction.
+
 ## Support
 
 **mullassery@gmail.com**

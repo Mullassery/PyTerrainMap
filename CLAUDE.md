@@ -305,19 +305,30 @@ for segment, safety_score, hazards in path_safety:
 
 ---
 
-## Integration Points
+## Integration Points (aspirational — none of this is implemented)
 
-### PyRoboReplay (Spatial Context for Causality)
+Verified by grepping this repo, `pyroboreplay`, `StatGuardian`, and
+`PyStreamMCP` for any cross-reference in either direction: **zero code in
+any of the four repos implements any of the integrations below.** No
+Cargo/pip dependency exists between PyTerrainMap and any of them.
+`pyroboreplay` does have a `pyterrain_bridge.rs` module referencing
+PyTerrainMap by name in comments, but it's self-contained internal
+terrain-modeling logic with a schema that doesn't match this repo's real
+`TerrainGaussian`/observation types — not real data interop (see
+`pyroboreplay`'s own README for the corrected framing). Treat everything
+below as unimplemented design intent, not a current capability:
+
+### PyRoboReplay (Spatial Context for Causality) — not implemented
 - PyTerrainMap provides spatial grounding for event analysis
 - Temporal normalization aligns out-of-order sensor events
 - Fleet learning: "Did obstacle cause this robot's failure?"
 
-### StatGuardian (Quality Scoring)
+### StatGuardian (Quality Scoring) — not implemented
 - StatGuardian flags anomalous observations
 - PyTerrainMap confidence scores: observation quality →  spatial layer quality
 - Anomalies don't pollute fleet consensus
 
-### PyStreamMCP (Orchestration)
+### PyStreamMCP (Orchestration) — not implemented
 - Selective caching of spatial queries (high-value, stable)
 - Context prioritization: "Recent obstacles > static map"
 
