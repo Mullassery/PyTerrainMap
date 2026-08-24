@@ -880,10 +880,11 @@ pub struct Lineage {
 **Rationale:** Without these, PyTerrainMap can only ingest pre-normalized data. With them, PyTerrainMap becomes the central hub for multi-robot terrain intelligence.
 
 ### P1 (After MVP, Nice to Have) — Weeks 11-18, 27+
-1. Persistent storage (SQLite/PostgreSQL)
+1. Persistent storage (SQLite/PostgreSQL) — **verified still unimplemented on the live path**: `ServerState` (`src/server.rs:52-70`) holds only in-memory `ObservationStore`/`SpatialIndex`/`TemporalIndex`, no disk I/O anywhere in `server.rs`/`py_server.rs`. A real `PostgresBackend` (`src/storage/postgres.rs`, actual `sqlx` queries) exists but is never wired into `ServerState` or the Python API — `python/pyterrain_map/api.py` has a literal `# (Implementation in actual backend factory)` stub. A reboot today loses all terrain history.
 2. Image stitching (Structure from Motion)
 3. Advanced anomaly detection (ML-based)
 4. Performance optimization (1M+ observations)
+5. Retention/compaction for append-only growth (external critique, verified real gap) — `ObservationStore` (`src/storage/mod.rs:15-133`) only grows; a code comment there explicitly says delete-through-API was deliberately removed. `TemporalGaussianManager::apply_decay_to_store` (`src/gaussian_splatting/temporal.rs:47-52`) is a literal placeholder no-op. No H3 parent-cell rollup/downsampling exists anywhere (`h3_optimization.rs` only has a full `clear()`, not a rollup). Needed before long-running edge robot deployments — configurable local compaction or rolling spatial rollup into lower-resolution H3 parent cells.
 
 ### P2 (Future Research)
 1. Real-time model retraining based on observation feedback
