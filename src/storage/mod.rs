@@ -6,6 +6,8 @@
 pub mod backends;
 pub mod postgres;
 pub mod federation;
+pub mod persistence_bridge;
+pub mod rollup;
 
 use crate::types::{Observation, Result, Error};
 use std::sync::Arc;

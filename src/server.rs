@@ -41,6 +41,8 @@ use crate::api::{
 };
 use crate::query::Query;
 use crate::spatial::SpatialIndex;
+use crate::storage::backends::StorageBackend;
+use crate::storage::persistence_bridge;
 use crate::storage::ObservationStore;
 use crate::temporal::{DecayFunction, TemporalIndex};
 
@@ -49,11 +51,21 @@ use crate::temporal::{DecayFunction, TemporalIndex};
 /// Wraps the real core: an append-only [`ObservationStore`] plus the spatial
 /// and temporal indices needed to answer queries. This is genuinely mutated
 /// as observations are submitted -- it is not a mock or fixture.
+///
+/// `persistent_backend` is optional and `None` by default (`ServerState::new`
+/// / `Default`): with no backend configured, this is exactly the previous
+/// in-memory-only behavior. When set (via [`ServerState::with_backend`]),
+/// every submitted observation is also written through to the backend
+/// (e.g. `PostgresBackend`), and [`ServerState::restore_from_backend`] can
+/// repopulate the in-memory store from it on startup -- closing the gap
+/// where a server restart lost all terrain history even though a working
+/// Postgres backend existed in this codebase.
 pub struct ServerState {
     pub store: Arc<ObservationStore>,
     spatial: RwLock<SpatialIndex>,
     temporal: RwLock<TemporalIndex>,
     started_at: Instant,
+    persistent_backend: Option<Arc<dyn StorageBackend>>,
 }
 
 impl ServerState {
@@ -65,7 +77,70 @@ impl ServerState {
                 half_life_ms: 3_600_000,
             })),
             started_at: Instant::now(),
+            persistent_backend: None,
         }
+    }
+
+    /// Same as `new()`, but every submitted observation is also written
+    /// through to `backend`, and `restore_from_backend()` can repopulate
+    /// the in-memory store from whatever `backend` already has.
+    pub fn with_backend(backend: Arc<dyn StorageBackend>) -> Self {
+        ServerState {
+            persistent_backend: Some(backend),
+            ..Self::new()
+        }
+    }
+
+    pub fn has_persistent_backend(&self) -> bool {
+        self.persistent_backend.is_some()
+    }
+
+    /// Repopulate the in-memory store (and its spatial/temporal indices)
+    /// from the configured persistent backend. Call this once at startup,
+    /// before serving traffic, to survive a restart. No-op (returns `Ok(0)`)
+    /// if no backend is configured.
+    ///
+    /// Returns the number of observations actually restored. If the backend
+    /// had more history than fits in one page, or some rows failed to
+    /// convert back into a real `Observation`, that's logged via
+    /// `tracing::warn!` rather than silently dropped or silently truncated.
+    pub async fn restore_from_backend(&self) -> Result<usize, crate::storage::backends::BackendError> {
+        let Some(backend) = &self.persistent_backend else {
+            return Ok(0);
+        };
+
+        let outcome = persistence_bridge::fetch_all_observations(backend).await?;
+
+        if outcome.truncated {
+            tracing::warn!(
+                "restore_from_backend: backend has more observations than fit in one \
+                 restore page; only the first page was loaded into memory"
+            );
+        }
+        for err in &outcome.conversion_errors {
+            tracing::warn!(observation = %err, "restore_from_backend: failed to convert a stored observation, skipping it");
+        }
+
+        let mut restored = 0usize;
+        for obs in outcome.observations {
+            let index = match self.store.add(obs.clone()) {
+                Ok(index) => index,
+                Err(e) => {
+                    tracing::warn!(error = %e, observation_id = %obs.id, "restore_from_backend: failed to re-add observation to in-memory store");
+                    continue;
+                }
+            };
+            if let Err(e) = self.spatial.write().insert(index, obs.location, obs.elevation_asl) {
+                tracing::warn!(error = %e, observation_id = %obs.id, "restore_from_backend: failed to index observation spatially");
+            }
+            if let Err(e) = self.temporal.write().insert(obs.timestamp) {
+                tracing::warn!(error = %e, observation_id = %obs.id, "restore_from_backend: failed to index observation temporally");
+            }
+            restored += 1;
+        }
+
+        tracing::info!(restored, "restore_from_backend: restored observations from persistent backend");
+        Ok(restored)
     }
 }
 
@@ -154,6 +229,19 @@ async fn handle_submit(
         .write()
         .insert(obs.timestamp)
         .map_err(|e| ApiError::internal_error(&e.to_string()))?;
+
+    // Write-through to the persistent backend, if one is configured. This is
+    // awaited (not fire-and-forget): if a caller configured persistence,
+    // failing to durably persist should surface as a real error rather than
+    // silently returning 201 for data that only exists in memory and won't
+    // survive a restart.
+    if let Some(backend) = &state.persistent_backend {
+        let storage_obs = persistence_bridge::observation_to_storage(&obs);
+        backend
+            .insert_observation(&storage_obs)
+            .await
+            .map_err(|e| ApiError::internal_error(&format!("failed to persist observation: {e}")))?;
+    }
 
     Ok(json_response(
         StatusCode::CREATED,
@@ -382,6 +470,89 @@ mod tests {
     fn test_server_state_starts_empty() {
         let state = ServerState::new();
         assert_eq!(state.store.len(), 0);
+    }
+
+    #[test]
+    fn test_server_state_new_has_no_persistent_backend() {
+        let state = ServerState::new();
+        assert!(!state.has_persistent_backend());
+    }
+
+    fn sample_submit(robot_id: &str, lat: f64, lon: f64, timestamp: i64) -> SubmitObservationRequest {
+        serde_json::from_value(serde_json::json!({
+            "robot_id": robot_id,
+            "timestamp": timestamp,
+            "latitude": lat,
+            "longitude": lon,
+            "sensor_type": "thermal",
+            "sensor_value": { "celsius": 21.0 },
+            "confidence": 0.9
+        }))
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn submitted_observations_are_written_through_to_the_configured_backend() {
+        use crate::storage::backends::InMemoryBackend;
+
+        let backend: Arc<dyn StorageBackend> = Arc::new(InMemoryBackend::new());
+        let state = Arc::new(ServerState::with_backend(backend.clone()));
+        assert!(state.has_persistent_backend());
+
+        let req = sample_submit("robot-1", 37.7749, -122.4194, 1_700_000_000_000_000);
+        let body = Body::from(serde_json::to_vec(&req).unwrap());
+        let http_req = Request::builder()
+            .method(Method::POST)
+            .uri("/observations")
+            .body(body)
+            .unwrap();
+
+        let response = handle_submit(state.clone(), http_req).await;
+        assert!(response.is_ok(), "submit should succeed when a backend is configured");
+
+        // Verify it actually landed in the backend, not just in memory.
+        let count = persistence_bridge::count_observations(&backend).await.unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(state.store.len(), 1, "should also still be in the fast in-memory path");
+    }
+
+    #[tokio::test]
+    async fn restore_from_backend_repopulates_the_in_memory_store() {
+        use crate::storage::backends::InMemoryBackend;
+
+        let backend: Arc<dyn StorageBackend> = Arc::new(InMemoryBackend::new());
+
+        // Simulate a previous server instance's history already sitting in
+        // the backend before this one starts.
+        let old_obs = crate::types::Observation::with_clock_source(
+            "robot-2".to_string(),
+            1_700_000_000_000_000,
+            crate::types::GeoPoint::new(10.0, 20.0),
+            None,
+            crate::types::SensorType::Thermal,
+            crate::types::SensorValue::Temperature { celsius: 15.0 },
+            0.7,
+            crate::types::ClockSource::UTC,
+        );
+        backend
+            .insert_observation(&persistence_bridge::observation_to_storage(&old_obs))
+            .await
+            .unwrap();
+
+        let state = ServerState::with_backend(backend);
+        assert_eq!(state.store.len(), 0, "restore hasn't run yet");
+
+        let restored = state.restore_from_backend().await.unwrap();
+
+        assert_eq!(restored, 1);
+        assert_eq!(state.store.len(), 1, "in-memory store should now have the restored observation");
+    }
+
+    #[tokio::test]
+    async fn restore_from_backend_is_a_noop_without_a_configured_backend() {
+        let state = ServerState::new();
+        let restored = state.restore_from_backend().await.unwrap();
+        assert_eq!(restored, 0);
     }
 
     #[test]

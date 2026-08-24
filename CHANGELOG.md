@@ -5,6 +5,26 @@ All notable changes to PyTerrainMap will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0]
+
+### Added
+
+- **Real persistence wiring for the live server** (`server.rs`,
+  `storage::persistence_bridge`): `ServerState::with_backend()` takes any
+  `StorageBackend` (e.g. `PostgresBackend`), `handle_submit` write-throughs
+  every observation to it, and `ServerState::restore_from_backend()`
+  repopulates the in-memory store on startup. A reboot with a configured
+  backend no longer loses terrain history -- previously `PostgresBackend`
+  was real and tested but never constructed anywhere outside its own file.
+  Currently Rust-level only; Python API wiring is a follow-up.
+- **H3 parent-cell rollup/compaction** (`storage::rollup::CompactionPolicy`):
+  reads a time window of observations and produces real per-parent-cell,
+  per-time-bucket, per-sensor-type summaries (count, mean confidence,
+  timestamp range, contributing robots) -- genuine data reduction for
+  bounding long-term storage growth. Additive only: `ObservationStore`'s
+  no-delete/no-mutate guarantee is unchanged; this doesn't evict or archive
+  anything yet, it computes the rollups a future archival flow would use.
+
 ## [1.5.0] - 2026-08-17
 
 ### Fixed
