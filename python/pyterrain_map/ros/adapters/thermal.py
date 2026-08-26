@@ -4,11 +4,13 @@ Thermal camera adapter for PyTerrainMap ROS bridge.
 Converts ROS sensor_msgs/Image (thermal) to temperature observations.
 """
 
-from typing import List, Optional, Tuple
 import json
+from typing import List, Optional, Tuple
+
 import numpy as np
-from .base import SensorAdapter, StorageObservation
+
 from ..transforms.coordinate_frames import CoordinateConverter
+from .base import SensorAdapter, StorageObservation
 
 
 class ThermalAdapter(SensorAdapter):
@@ -158,6 +160,7 @@ class ThermalAdapter(SensorAdapter):
                 # Scale from [0, 1] to temperature range
                 mean_temp = self.min_temp + mean_val * (self.max_temp - self.min_temp)
                 max_temp = self.min_temp + max_val * (self.max_temp - self.min_temp)
+                min_temp = self.min_temp + min_val * (self.max_temp - self.min_temp)
 
                 # Compute confidence
                 # More uniform cell = higher confidence
@@ -171,12 +174,21 @@ class ThermalAdapter(SensorAdapter):
                     id=self._generate_id(),
                     robot_id=self.robot_id,
                     timestamp=timestamp,
-                    # Use grid indices as location (will be transformed if converter available)
+                    # Grid indices as location. Unlike the LiDAR adapter's
+                    # range/bearing points, a thermal grid cell has no
+                    # camera projection model (FOV, focal length) in this
+                    # class to turn "row/col in the image" into a real
+                    # local-frame offset -- `converter`/`robot_pose` are
+                    # accepted for interface parity with the other adapters
+                    # but genuinely can't be used here without one, so this
+                    # stays grid-index-relative rather than pretending to
+                    # geolocate.
                     location_lat=float(row) / self.grid_size,
                     location_lon=float(col) / self.grid_size,
                     sensor_type=self.sensor_type,
                     value_json=json.dumps({
                         "temperature_c": round(mean_temp, 2),
+                        "min_temp_c": round(min_temp, 2),
                         "max_temp_c": round(max_temp, 2),
                         "std_dev": round(std_val, 4),
                         "grid_cell": f"{row}x{col}",

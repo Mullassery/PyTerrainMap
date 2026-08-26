@@ -4,11 +4,9 @@ Interactive setup, configuration, and terrain analysis.
 Accessible via: pytm <command>
 """
 
-import sys
-import json
 import argparse
+import sys
 from pathlib import Path
-from typing import Optional
 
 
 def setup_command(args):

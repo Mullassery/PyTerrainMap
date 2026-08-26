@@ -5,11 +5,11 @@ Simple, pluggable storage adapters for observations.
 Supports: Local disk, S3, GCS, ADLS
 """
 
+from .adls import ADLSStorageBackend
 from .base import StorageBackend, StorageObservation
+from .gcs import GCSStorageBackend
 from .local import LocalStorageBackend
 from .s3 import S3StorageBackend
-from .gcs import GCSStorageBackend
-from .adls import ADLSStorageBackend
 
 __all__ = [
     "StorageBackend",

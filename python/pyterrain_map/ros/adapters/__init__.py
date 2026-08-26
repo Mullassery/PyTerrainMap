@@ -2,8 +2,8 @@
 
 from .base import SensorAdapter
 from .lidar import LiDARAdapter
-from .thermal import ThermalAdapter
 from .rgb import RGBAdapter
+from .thermal import ThermalAdapter
 
 __all__ = [
     "SensorAdapter",

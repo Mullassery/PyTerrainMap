@@ -4,8 +4,9 @@ Google Cloud Storage (GCS) backend for PyTerrainMap.
 Stores observations as NDJSON in GCS buckets.
 """
 
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 from .base import StorageBackend, StorageObservation
 
 
@@ -172,7 +173,7 @@ class GCSStorageBackend(StorageBackend):
                 # Read blob from GCS
                 try:
                     body = blob.download_as_string().decode("utf-8")
-                except:
+                except Exception:
                     continue
 
                 # Process lines

@@ -6,12 +6,12 @@ Interactive configuration for data warehouse selection and credentials managemen
 Runs during first-time setup or via `pytm configure`.
 """
 
-import sys
 import json
 import os
-from pathlib import Path
-from typing import Dict, Any, Optional
+import sys
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 
 class DataWarehouse(Enum):

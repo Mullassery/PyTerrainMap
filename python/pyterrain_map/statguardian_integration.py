@@ -4,11 +4,11 @@ Deep embedding of quality validation in sensor fusion pipeline.
 Ensures every sensor reading and terrain map meets quality standards.
 """
 
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
 
 
 @dataclass

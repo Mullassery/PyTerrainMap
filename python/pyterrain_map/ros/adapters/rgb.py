@@ -16,8 +16,8 @@ upstream and feed `ObjectDetection`s in directly via the core API instead
 of relying on this adapter.
 """
 
-from typing import List, Optional, Tuple
 import json
+from typing import List, Optional, Tuple
 
 try:
     import cv2
@@ -28,8 +28,8 @@ except ImportError as e:  # pragma: no cover - exercised only without the `imagi
 
 import numpy as np
 
-from .base import SensorAdapter, StorageObservation
 from ..transforms.coordinate_frames import CoordinateConverter
+from .base import SensorAdapter, StorageObservation
 
 
 class RGBAdapter(SensorAdapter):

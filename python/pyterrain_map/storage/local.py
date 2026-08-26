@@ -5,12 +5,11 @@ Stores observations as NDJSON files organized by date/robot/grid cell.
 Useful for development, testing, and edge deployments.
 """
 
-import os
 import json
-from pathlib import Path
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-import asyncio
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from .base import StorageBackend, StorageObservation
 
 
@@ -208,7 +207,7 @@ class LocalStorageBackend(StorageBackend):
                 try:
                     with open(ndjson_file) as f:
                         obs_count += sum(1 for line in f if line.strip())
-                except:
+                except Exception:
                     pass
 
             return {

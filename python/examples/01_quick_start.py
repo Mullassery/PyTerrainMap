@@ -8,12 +8,18 @@ This example demonstrates basic usage of PyTerrainMap:
 - Assessing robot mobility
 """
 
-from pyterrain_map import (
-    TerrainMap, Observation, GeoPoint, Region, Persona,
-    analyze_terrain, assess_mobility, is_accessible,
-)
 import json
 from datetime import datetime
+
+from pyterrain_map import (
+    GeoPoint,
+    Observation,
+    Region,
+    TerrainMap,
+    analyze_terrain,
+    assess_mobility,
+    is_accessible,
+)
 
 
 def main():
@@ -106,7 +112,7 @@ def main():
         west=-74.0100,
     )
     stats = terrain_map.region_stats(region)
-    print(f"  ✓ Region statistics:")
+    print("  ✓ Region statistics:")
     for key, value in stats.items():
         print(f"    {key}: {value}")
 

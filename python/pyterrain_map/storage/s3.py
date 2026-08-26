@@ -4,8 +4,9 @@ AWS S3 storage backend for PyTerrainMap.
 Stores observations as NDJSON in S3 buckets with partitioning by date/robot/grid cell.
 """
 
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 from .base import StorageBackend, StorageObservation
 
 
@@ -224,7 +225,6 @@ class S3StorageBackend(StorageBackend):
 
             total_size = 0
             object_count = 0
-            obs_count = 0
 
             paginator = self.client.get_paginator("list_objects_v2")
             for page in paginator.paginate(Bucket=self.bucket, Prefix=f"{self.prefix}/"):

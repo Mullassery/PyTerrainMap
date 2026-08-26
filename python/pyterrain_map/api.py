@@ -4,10 +4,11 @@ PyTerrainMap Python API
 Programmatic interface for PyTerrainMap setup and configuration.
 """
 
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from .setup_wizard import SetupWizard, DataWarehouse
 import json
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from .setup_wizard import DataWarehouse, SetupWizard
 
 
 class PyTerrainMapSetup:

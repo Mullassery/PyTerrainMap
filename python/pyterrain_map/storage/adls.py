@@ -4,8 +4,9 @@ Azure Data Lake Storage (ADLS) backend for PyTerrainMap.
 Stores observations as NDJSON in ADLS containers.
 """
 
-from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
 from .base import StorageBackend, StorageObservation
 
 
@@ -145,7 +146,7 @@ class ADLSStorageBackend(StorageBackend):
                 try:
                     props = file_client.get_file_properties()
                     offset = props.size
-                except:
+                except Exception:
                     offset = 0
 
                 # Append data
@@ -214,7 +215,7 @@ class ADLSStorageBackend(StorageBackend):
                 try:
                     file_client = self.file_client.get_file_client(file_path)
                     body = file_client.download_file().readall().decode("utf-8")
-                except:
+                except Exception:
                     continue
 
                 # Process lines

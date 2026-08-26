@@ -4,11 +4,11 @@ Base storage backend interface for PyTerrainMap.
 Storage is append-only, immutable observations stored as NDJSON (newline-delimited JSON).
 """
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
-from typing import List, Dict, Any, Optional
 import json
+from abc import ABC, abstractmethod
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -246,10 +246,10 @@ class StorageFactory:
 # Auto-register built-in backends
 def _register_backends():
     """Register all built-in backends."""
+    from .adls import ADLSStorageBackend
+    from .gcs import GCSStorageBackend
     from .local import LocalStorageBackend
     from .s3 import S3StorageBackend
-    from .gcs import GCSStorageBackend
-    from .adls import ADLSStorageBackend
 
     StorageFactory.register("local", LocalStorageBackend)
     StorageFactory.register("s3", S3StorageBackend)

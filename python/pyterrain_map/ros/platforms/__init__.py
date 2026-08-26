@@ -4,9 +4,9 @@ Platform-specific configurations for PyTerrainMap ROS bridge.
 Pre-configured sensor and TF setup for common robot platforms.
 """
 
-from typing import Dict, Any
-import yaml
+from typing import Any, Dict
 
+import yaml
 
 # Boston Dynamics Spot
 SPOT_CONFIG = {

@@ -4,11 +4,12 @@ LiDAR sensor adapter for PyTerrainMap ROS bridge.
 Converts ROS sensor_msgs (LaserScan, PointCloud2) to observations.
 """
 
-from typing import List, Optional, Tuple
 import json
 import math
+from typing import List, Optional, Tuple
+
+from ..transforms.coordinate_frames import CoordinateConverter, ENUPoint
 from .base import SensorAdapter, StorageObservation
-from ..transforms.coordinate_frames import CoordinateConverter
 
 
 class LiDARAdapter(SensorAdapter):
@@ -106,7 +107,7 @@ class LiDARAdapter(SensorAdapter):
             # Convert to Cartesian in sensor frame
             x_sensor = range_val * math.cos(bearing_rad)
             y_sensor = range_val * math.sin(bearing_rad)
-            z_sensor = 0.0  # 2D scan, no height
+            # No z_sensor: 2D scan, no height dimension.
 
             # Transform to robot frame if we have pose
             if robot_pose:
@@ -135,9 +136,12 @@ class LiDARAdapter(SensorAdapter):
         if converter:
             # Convert to geodetic coordinates
             for (grid_x, grid_y), ranges in grid_cells.items():
-                # Cell center in local coords
+                # Cell center in local coords, converted to real lat/lon via
+                # the supplied converter -- this branch is only reached when
+                # `converter` is truthy (see the `if converter:` above).
                 local_x = (grid_x + 0.5) * self.voxel_size
                 local_y = (grid_y + 0.5) * self.voxel_size
+                geo = converter.enu_to_geodetic(ENUPoint(east=local_x, north=local_y, up=0.0))
 
                 # Statistics
                 intensity = sum(ranges) / len(ranges)  # Average range
@@ -148,8 +152,8 @@ class LiDARAdapter(SensorAdapter):
                     id=self._generate_id(),
                     robot_id=self.robot_id,
                     timestamp=timestamp,
-                    location_lat=0.0,  # Will be set if converter available
-                    location_lon=0.0,
+                    location_lat=geo.lat,
+                    location_lon=geo.lon,
                     sensor_type=self.sensor_type,
                     value_json=json.dumps({
                         "intensity": round(intensity, 2),
@@ -195,18 +199,10 @@ class LiDARAdapter(SensorAdapter):
 
         Voxelizes into grid cells and creates observations.
         """
-        observations = []
-        timestamp = self._ros_time_to_us(msg.header.stamp)
-
-        # Grid cell accumulator: (grid_x, grid_y, grid_z) -> count
-        grid_cells = {}
-
-        # Parse point cloud (simplified - assumes x, y, z fields)
-        # In production, would use open3d or PCL bindings
-        # For now, just create a placeholder
-        # This would require proper PointCloud2 parsing
-
-        return observations
+        # Not implemented: PointCloud2 binary parsing (would need open3d or
+        # PCL bindings to decode the x/y/z point fields) -- honestly
+        # returns no observations rather than fabricating any.
+        return []
 
     @staticmethod
     def _quat_to_yaw(qx: float, qy: float, qz: float, qw: float) -> float:

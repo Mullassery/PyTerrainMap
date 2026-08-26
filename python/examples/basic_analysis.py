@@ -3,6 +3,7 @@
 
 from pyterrain_map import Persona
 
+
 def main():
     """Analyze location for mobile robot."""
 
