@@ -5,7 +5,7 @@
 [![CI](https://github.com/Mullassery/PyTerrainMap/actions/workflows/ci.yml/badge.svg)](https://github.com/Mullassery/PyTerrainMap/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![Distribution](https://img.shields.io/badge/Distribution-Wheels--Only-blue.svg)
-![License](https://img.shields.io/badge/License-Proprietary-red.svg)
+This project is licensed under the [Apache License 2.0](LICENSE).
 
 ---
 
