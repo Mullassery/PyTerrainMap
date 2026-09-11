@@ -127,9 +127,13 @@ class TestTemporalCoordinateContract:
         self.contract = TemporalCoordinateContract()
 
     def test_valid_coordinates(self):
+        # Timestamps 10s apart, well within max_temporal_gap_seconds (60) --
+        # this test is for the no-warnings case; a 1000s gap (the previous
+        # values here) correctly trips the gap-warning check below, which
+        # is real, intentional logic, not a bug.
         coordinates = [
             {"x": 0, "y": 0, "z": 0, "timestamp": 1000, "quality_score": 0.9},
-            {"x": 1, "y": 1, "z": 1, "timestamp": 2000, "quality_score": 0.95},
+            {"x": 1, "y": 1, "z": 1, "timestamp": 1010, "quality_score": 0.95},
         ]
         result = self.contract.validate_coordinates(coordinates)
         assert result["is_valid"] is True

@@ -38,6 +38,22 @@ that (yet). This README describes what's implemented and testable today.
 
 ---
 
+## Use cases
+
+- **Fusing terrain observations from multiple robots into one spatial/
+  temporal index** — H3-indexed, confidence decaying with age, queryable
+  by location and time window.
+- **Standing up a real HTTP API over that store** for other services to
+  query, without building your own server layer.
+- **3D Tiles export for real SLAM/photogrammetry output** — the SLAM and
+  export paths are real implementations, not placeholders.
+- **Not yet a good fit for:** real terrain/mobility analysis (currently
+  fixed/demo output, no real elevation source), production persistence
+  beyond in-memory (SQLite/PostgreSQL/BigQuery backends are config-only,
+  not implemented), or real photogrammetry (bundle adjustment/pose
+  estimation are explicit placeholders) — see [Features](#features) below
+  for the full per-feature breakdown.
+
 ## Installation
 
 ```bash
@@ -174,6 +190,41 @@ pytest tests/ -v
 ```
 
 ---
+
+## Known Issues
+
+CI (the badge above) has been red on every push for weeks — checked directly rather
+than guessed at:
+
+- **`cargo clippy` fails with 227 errors**, almost all `non_snake_case` field-naming
+  lint violations (e.g. `geometricError`, `POINTS_LENGTH`, `BATCH_ID`) in
+  `src/tiles_3d/mod.rs` and related export code. These are **not naming mistakes** —
+  the fields match the real [Cesium 3D Tiles](https://github.com/CesiumGS/3d-tiles)
+  JSON spec's field names exactly, since this code serializes/deserializes that
+  format. The correct fix is `#[allow(non_snake_case)]` on the affected structs (or
+  `#[serde(rename = "...")]` with snake_case Rust field names) — renaming the fields
+  outright would break the actual Cesium format contract. Not fixed in this pass:
+  227 individual annotations is a large mechanical change better done as its own
+  reviewed pass, not blind inside an audit.
+- **`cargo audit` reports 9 vulnerabilities** in transitive dependencies. Not
+  enumerated/fixed in this pass — see the same category of finding disclosed in
+  StatGuardian's `docs/SECURITY_AUDIT.md` for the kind of detail a follow-up pass
+  should produce here.
+- **`black --check` fails on 30 of 42 Python files** (verified directly with the
+  current black release; CI's own log shows 18 — the discrepancy is almost certainly
+  a black-version difference between CI's install and this check, the same pattern
+  found and fixed in `PyAirflowTester` during this audit). Not reformatted in this
+  pass — a 30-file mechanical change should be verified against a full test run
+  afterward, which needs the Rust extension built first.
+- **Fixed in this pass**: `tests/test_statguardian_integration.py::test_valid_coordinates`
+  used timestamps 1000s apart as "valid" test data, which correctly tripped
+  `TemporalCoordinateContract`'s real `max_temporal_gap_seconds=60` warning check —
+  a test-data bug, not a logic bug in the validator (a genuine >60s gap between
+  observations *should* warn). Adjusted the test's timestamps to 10s apart.
+- **3 workflow steps use `actions-rs/toolchain@v1`**, an action whose maintaining org
+  archived its repos years ago — still technically functional (not the cause of any
+  of the above), but a maintenance risk worth planning a `dtolnay/rust-toolchain`
+  migration for.
 
 ## Cross-repo compatibility
 
