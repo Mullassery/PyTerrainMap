@@ -195,4 +195,4 @@ directions); `CLAUDE.md` now marks that section as aspirational, and
 
 ---
 
-**License**: Proprietary -- free to use with explicit attribution. See [LICENSE](LICENSE) for full terms.
+**License**: Apache License 2.0. See [LICENSE](LICENSE) for full terms.
