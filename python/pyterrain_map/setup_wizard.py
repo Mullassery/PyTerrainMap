@@ -16,6 +16,7 @@ from typing import Any, Dict, Optional
 
 class DataWarehouse(Enum):
     """Supported data warehouses."""
+
     POSTGRESQL = "postgresql"
     BIGQUERY = "bigquery"
     SNOWFLAKE = "snowflake"
@@ -202,7 +203,9 @@ class SetupWizard:
         for key, (wh, desc) in warehouses.items():
             print(f"{key}. {desc}")
 
-        print("\nEnter warehouse numbers separated by commas (e.g., '1,2,4' for PostgreSQL+BigQuery+S3):")
+        print(
+            "\nEnter warehouse numbers separated by commas (e.g., '1,2,4' for PostgreSQL+BigQuery+S3):"
+        )
         print("Recommendation: '1,2,4' for production multi-tier setup\n")
 
         while True:

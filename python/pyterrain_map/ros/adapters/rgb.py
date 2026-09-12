@@ -21,6 +21,7 @@ from typing import List, Optional, Tuple
 
 try:
     import cv2
+
     _CV2_IMPORT_ERROR = None
 except ImportError as e:  # pragma: no cover - exercised only without the `imaging` extra
     cv2 = None
@@ -168,11 +169,16 @@ class RGBAdapter(SensorAdapter):
             # Larger blobs relative to frame size => higher confidence, capped
             # well below 1.0 since this is unclassified motion, not identity.
             confidence = min(0.85, 0.3 + (area / frame_area) * 5.0)
-            candidates.append((area, {
-                "class_label": "object",
-                "confidence": round(confidence, 3),
-                "bbox": [float(x), float(y), float(w), float(h)],
-            }))
+            candidates.append(
+                (
+                    area,
+                    {
+                        "class_label": "object",
+                        "confidence": round(confidence, 3),
+                        "bbox": [float(x), float(y), float(w), float(h)],
+                    },
+                )
+            )
 
         candidates.sort(key=lambda c: c[0], reverse=True)
         return [detection for _, detection in candidates[: self.max_detections]]
@@ -198,6 +204,7 @@ class RGBAdapter(SensorAdapter):
             return x, y
 
         from ..transforms.coordinate_frames import ENUPoint
+
         geo = converter.enu_to_geodetic(ENUPoint(east=x, north=y, up=0.0))
         return geo.lat, geo.lon
 
@@ -212,4 +219,5 @@ class RGBAdapter(SensorAdapter):
     def _generate_id() -> str:
         """Generate unique observation ID."""
         import uuid
+
         return str(uuid.uuid4())

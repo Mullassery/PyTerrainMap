@@ -396,12 +396,11 @@ pub async fn run_https(
 pub fn generate_dev_certificate(
     subject_alt_names: Vec<String>,
 ) -> Result<(Vec<u8>, Vec<u8>), String> {
-    let cert = rcgen::generate_simple_self_signed(subject_alt_names)
-        .map_err(|e| format!("Failed to generate self-signed certificate: {e}"))?;
-    let cert_pem = cert
-        .serialize_pem()
-        .map_err(|e| format!("Failed to serialize certificate: {e}"))?;
-    let key_pem = cert.serialize_private_key_pem();
+    let rcgen::CertifiedKey { cert, signing_key } =
+        rcgen::generate_simple_self_signed(subject_alt_names)
+            .map_err(|e| format!("Failed to generate self-signed certificate: {e}"))?;
+    let cert_pem = cert.pem();
+    let key_pem = signing_key.serialize_pem();
     Ok((cert_pem.into_bytes(), key_pem.into_bytes()))
 }
 
@@ -411,29 +410,30 @@ pub fn tls_acceptor_from_pem(
     key_pem: &[u8],
 ) -> Result<tokio_rustls::TlsAcceptor, String> {
     let certs = rustls_pemfile::certs(&mut &*cert_pem)
-        .map_err(|e| format!("Failed to parse certificate PEM: {e}"))?
-        .into_iter()
-        .map(rustls::Certificate)
-        .collect::<Vec<_>>();
+        .collect::<std::io::Result<Vec<_>>>()
+        .map_err(|e| format!("Failed to parse certificate PEM: {e}"))?;
     if certs.is_empty() {
         return Err("No certificates found in PEM input".to_string());
     }
 
     let mut keys = rustls_pemfile::pkcs8_private_keys(&mut &*key_pem)
+        .collect::<std::io::Result<Vec<_>>>()
         .map_err(|e| format!("Failed to parse PKCS8 private key PEM: {e}"))?;
-    if keys.is_empty() {
+    let key = if let Some(key) = keys.pop() {
+        rustls::pki_types::PrivateKeyDer::Pkcs8(key)
+    } else {
         // rcgen emits PKCS8 keys; fall back to RSA (PKCS1) just in case a
         // user supplies a non-rcgen key in that format.
-        keys = rustls_pemfile::rsa_private_keys(&mut &*key_pem)
+        let mut rsa_keys = rustls_pemfile::rsa_private_keys(&mut &*key_pem)
+            .collect::<std::io::Result<Vec<_>>>()
             .map_err(|e| format!("Failed to parse RSA private key PEM: {e}"))?;
-    }
-    if keys.is_empty() {
-        return Err("No private key found in PEM input".to_string());
-    }
-    let key = rustls::PrivateKey(keys.remove(0));
+        let Some(key) = rsa_keys.pop() else {
+            return Err("No private key found in PEM input".to_string());
+        };
+        rustls::pki_types::PrivateKeyDer::Pkcs1(key)
+    };
 
     let config = rustls::ServerConfig::builder()
-        .with_safe_defaults()
         .with_no_client_auth()
         .with_single_cert(certs, key)
         .map_err(|e| format!("Invalid certificate/key pair: {e}"))?;

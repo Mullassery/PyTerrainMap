@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Tuple
 @dataclass
 class Transform:
     """Represents a TF transformation between two frames."""
+
     parent_frame: str
     child_frame: str
     timestamp: int  # nanoseconds since epoch
@@ -159,8 +160,14 @@ class TransformCache:
 
         # Interpolate rotation (SLERP - spherical linear interpolation)
         qx, qy, qz, qw = self._slerp(
-            t1.qx, t1.qy, t1.qz, t1.qw,
-            t2.qx, t2.qy, t2.qz, t2.qw,
+            t1.qx,
+            t1.qy,
+            t1.qz,
+            t1.qw,
+            t2.qx,
+            t2.qy,
+            t2.qz,
+            t2.qw,
             alpha,
         )
 
@@ -179,8 +186,14 @@ class TransformCache:
 
     @staticmethod
     def _slerp(
-        qx1: float, qy1: float, qz1: float, qw1: float,
-        qx2: float, qy2: float, qz2: float, qw2: float,
+        qx1: float,
+        qy1: float,
+        qz1: float,
+        qw1: float,
+        qx2: float,
+        qy2: float,
+        qz2: float,
+        qw2: float,
         alpha: float,
     ) -> Tuple[float, float, float, float]:
         """Spherical linear interpolation between two quaternions."""
@@ -222,7 +235,7 @@ class TransformCache:
     def get_all_frames(self) -> list:
         """Get list of all frames in the tree."""
         frames = set()
-        for (parent, child) in self._transforms.keys():
+        for parent, child in self._transforms.keys():
             frames.add(parent)
             frames.add(child)
         return sorted(frames)

@@ -32,11 +32,10 @@ futures = "0.3"  # MIT/Apache 2.0
 
 # Geospatial
 xs_h3 = "0.2"  # Apache 2.0 (Uber H3 geospatial indexing)
-geo = "0.27"  # Apache 2.0
+geo = "0.28"  # Apache 2.0
 
 # Math/Stats
 ndarray = "0.15"  # MIT/Apache 2.0
-statrs = "0.16"  # Apache 2.0
 
 # Concurrency (use parking_lot, not crossbeam, for smaller deps)
 # crossbeam = "0.8"  # REMOVED: Use parking_lot instead
@@ -51,19 +50,22 @@ hyper = { version = "0.14", features = ["full"] }  # MIT
 tokio-util = { version = "0.7", features = ["codec"] }  # MIT
 
 # TLS termination for the HTTPS API server (rustls, not OpenSSL -- no system dep)
-rustls = "0.21"  # Apache-2.0/MIT/ISC
-tokio-rustls = "0.24"  # MIT/Apache-2.0
-rustls-pemfile = "1.0"  # Apache-2.0/MIT/ISC
+rustls = "0.23"  # Apache-2.0/MIT/ISC
+tokio-rustls = "0.26"  # MIT/Apache-2.0
+rustls-pemfile = "2.2"  # Apache-2.0/MIT/ISC
 
 # Self-signed certificate generation for local dev/test HTTPS (NOT for production certs)
-rcgen = "0.11"  # MIT/Apache-2.0
+rcgen = { version = "0.14", features = ["ring"] }  # MIT/Apache-2.0
 
 # Optional: Database (OSS only)
-sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "postgres", "uuid", "chrono"], optional = true }  # MIT/Apache 2.0
-rusqlite = { version = "0.30", features = ["bundled"], optional = true }  # MIT
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-native-tls", "sqlite", "postgres", "uuid", "chrono", "any", "macros", "migrate", "json"], optional = true }  # MIT/Apache 2.0
+rusqlite = { version = "0.37", features = ["bundled"], optional = true }  # MIT
 
 # Optional: Image processing for PyNoramic (OSS only)
-image = { version = "0.24", optional = true }  # MIT/Apache 2.0
+# image = { version = "0.24", optional = true }  # REMOVED 2026-09-13: zero usage anywhere in
+#   this crate (verified via grep across src/tests/examples) - the `imaging` feature it backed
+#   was already dead; real imaging support is the Python opencv-python wrapper (see below).
+#   Removing it also drops the last path pulling in the unmaintained `paste` crate.
 # opencv = { version = "0.77", optional = true }  # REMOVED: Use Python's opencv-python instead
 
 # DO NOT ADD:
@@ -87,7 +89,7 @@ pyo3-build-config = "0.22"
 [features]
 default = ["database"]
 database = ["sqlx", "rusqlite"]
-imaging = ["image"]  # opencv-python used via Python wrapper instead
+imaging = []  # kept for downstream Cargo.toml compatibility; opencv-python used via Python wrapper instead (see `image` dependency comment above)
 pynoramic = ["imaging"]
 
 [lib]

@@ -8,6 +8,7 @@ Persona: Dict[str, str]
 
 class PyGeoPoint:
     """Geographic point (latitude, longitude)."""
+
     lat: float
     lon: float
 
@@ -18,6 +19,7 @@ class PyGeoPoint:
 
 class PyRegion:
     """Geographic region (bounding box)."""
+
     north: float
     south: float
     east: float
@@ -32,6 +34,7 @@ class PyRegion:
 
 class PyObservation:
     """Single sensor observation."""
+
     robot_id: str
     timestamp: int
     sensor_type: str
@@ -53,6 +56,7 @@ class PyObservation:
 
 class PyQueryResult:
     """Results from spatial-temporal query."""
+
     count: int
     observations: List[PyObservation]
     avg_confidence: float
@@ -71,6 +75,7 @@ class PyTerrainMap:
     observation store; construct a new `TerrainMap()` if you need an
     empty one instead of resetting an existing one.
     """
+
     def __init__(self) -> None: ...
     def __repr__(self) -> str: ...
     def __len__(self) -> int: ...
@@ -87,6 +92,7 @@ class PyTerrainMap:
 
 class PyTerrainAnalysis:
     """Terrain intelligence analysis for a location."""
+
     location: Tuple[float, float]
     summary: str
     observations: List[str]
@@ -102,6 +108,7 @@ class PyTerrainAnalysis:
 
 class PyRisk:
     """Risk assessment for terrain analysis."""
+
     risk_type: str
     severity: float
     description: str
@@ -116,6 +123,7 @@ class PyRisk:
 
 class PyMobilityAssessment:
     """Robot mobility assessment for terrain."""
+
     traversable: bool
     difficulty: float
     hazards: List[str]
@@ -130,6 +138,7 @@ class PyMobilityAssessment:
 
 class PyEnvironmentalConditions:
     """Environmental conditions (weather + soil)."""
+
     location: Tuple[float, float]
     mission_suitability: float
 
@@ -139,6 +148,7 @@ class PyEnvironmentalConditions:
 
 class PyDataExplanation:
     """Explanation of a data field for agent introspection."""
+
     field: str
     description: str
     applications: List[str]
@@ -158,16 +168,12 @@ class PyDataExplanation:
     ) -> None: ...
     def __repr__(self) -> str: ...
     def add_application(self, app: str) -> None: ...
-
     @staticmethod
     def soil_moisture() -> PyDataExplanation: ...
-
     @staticmethod
     def temperature() -> PyDataExplanation: ...
-
     @staticmethod
     def visibility() -> PyDataExplanation: ...
-
     @staticmethod
     def slope() -> PyDataExplanation: ...
 
@@ -206,6 +212,7 @@ def is_accessible(lat: float, lon: float, robot_type: str) -> Dict[str, object]:
 
 class PyServerHandle:
     """Handle to a running PyTerrainMap API server started via start_server()."""
+
     host: str
     port: int
     tls: bool

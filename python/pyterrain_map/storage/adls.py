@@ -70,6 +70,7 @@ class ADLSStorageBackend(StorageBackend):
         # Import azure storage
         try:
             from azure.storage.filedatalake import DataLakeServiceClient
+
             self.DataLakeServiceClient = DataLakeServiceClient
         except ImportError:
             raise ImportError(
@@ -114,7 +115,9 @@ class ADLSStorageBackend(StorageBackend):
 
             # Append to file
             body = obs.to_json() + "\n"
-            file_client.append_data(body.encode("utf-8"), offset=file_client.get_file_properties().size)
+            file_client.append_data(
+                body.encode("utf-8"), offset=file_client.get_file_properties().size
+            )
             file_client.flush_data(file_client.get_file_properties().size)
 
             self.stats["observations_written"] += 1
@@ -275,7 +278,7 @@ class ADLSStorageBackend(StorageBackend):
                 "container": self.container_name,
                 "prefix": self.prefix,
                 "total_size_bytes": total_size,
-                "total_size_gb": total_size / (1024 ** 3),
+                "total_size_gb": total_size / (1024**3),
                 "file_count": file_count,
                 "observations_written": self.stats["observations_written"],
                 "observations_read": self.stats["observations_read"],

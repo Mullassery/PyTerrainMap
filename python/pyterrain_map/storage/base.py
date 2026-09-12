@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class StorageObservation:
     """Single observation from a sensor."""
+
     id: str
     robot_id: str
     timestamp: int  # microseconds since epoch

@@ -44,18 +44,25 @@ class SensorCalibrationContract:
         # Check calibration age
         age_hours = calibration.get("age_hours", 0)
         if age_hours > self.rules["max_calibration_age_hours"]:
-            issues.append(f"Calibration age {age_hours}h exceeds max {self.rules['max_calibration_age_hours']}h")
+            issues.append(
+                f"Calibration age {age_hours}h exceeds max {self.rules['max_calibration_age_hours']}h"
+            )
             severity = "warning"
 
         # Check drift rate
         drift = calibration.get("drift_rate_mm_per_hour", 0)
         if drift > self.rules["max_drift_rate_mm_per_hour"]:
-            issues.append(f"Drift rate {drift}mm/h exceeds max {self.rules['max_drift_rate_mm_per_hour']}mm/h")
+            issues.append(
+                f"Drift rate {drift}mm/h exceeds max {self.rules['max_drift_rate_mm_per_hour']}mm/h"
+            )
             severity = "critical"
 
         # Check accuracy
         accuracy = calibration.get("accuracy_meters", 0)
-        if accuracy < self.rules["min_accuracy_meters"] or accuracy > self.rules["max_accuracy_meters"]:
+        if (
+            accuracy < self.rules["min_accuracy_meters"]
+            or accuracy > self.rules["max_accuracy_meters"]
+        ):
             issues.append(f"Accuracy {accuracy}m outside range")
             severity = "warning"
 
@@ -65,7 +72,12 @@ class SensorCalibrationContract:
             issues.append(f"Confidence {confidence}% < {self.rules['min_confidence_pct']}%")
             severity = "warning"
 
-        return {"sensor_id": sensor_id, "is_valid": severity != "critical", "severity": severity, "issues": issues}
+        return {
+            "sensor_id": sensor_id,
+            "is_valid": severity != "critical",
+            "severity": severity,
+            "issues": issues,
+        }
 
 
 class MultiSensorConsistencyContract:
@@ -92,7 +104,9 @@ class MultiSensorConsistencyContract:
         timestamps = [s.get("timestamp_ms", 0) for s in sensors_data]
         timestamp_diff = max(timestamps) - min(timestamps)
         if timestamp_diff > self.rules["max_timestamp_sync_ms"]:
-            issues.append(f"Timestamp sync {timestamp_diff}ms exceeds max {self.rules['max_timestamp_sync_ms']}ms")
+            issues.append(
+                f"Timestamp sync {timestamp_diff}ms exceeds max {self.rules['max_timestamp_sync_ms']}ms"
+            )
             severity = "warning"
 
         # Check reading variance
@@ -100,7 +114,9 @@ class MultiSensorConsistencyContract:
         if readings and max(readings) > 0:
             variance = (max(readings) - min(readings)) / max(readings) * 100
             if variance > self.rules["max_variance_pct"]:
-                issues.append(f"Reading variance {variance:.1f}% exceeds max {self.rules['max_variance_pct']}%")
+                issues.append(
+                    f"Reading variance {variance:.1f}% exceeds max {self.rules['max_variance_pct']}%"
+                )
                 severity = "warning"
 
         # Check outlier rate
@@ -108,7 +124,9 @@ class MultiSensorConsistencyContract:
         outliers = sum(1 for r in readings if abs(r - mean_reading) > mean_reading * 0.2)
         outlier_rate = outliers / len(readings) if readings else 0
         if outlier_rate > self.rules["max_outlier_rate"]:
-            issues.append(f"Outlier rate {outlier_rate:.1%} exceeds max {self.rules['max_outlier_rate']:.0%}")
+            issues.append(
+                f"Outlier rate {outlier_rate:.1%} exceeds max {self.rules['max_outlier_rate']:.0%}"
+            )
             severity = "warning"
 
         return {"is_valid": severity != "critical", "severity": severity, "issues": issues}
@@ -137,8 +155,13 @@ class TemporalCoordinateContract:
         for coord in coordinates:
             x, y, z = coord.get("x", 0), coord.get("y", 0), coord.get("z", 0)
             for val in [x, y, z]:
-                if val < self.rules["coordinate_bounds"][0] or val > self.rules["coordinate_bounds"][1]:
-                    issues.append(f"Coordinate {val} outside bounds {self.rules['coordinate_bounds']}")
+                if (
+                    val < self.rules["coordinate_bounds"][0]
+                    or val > self.rules["coordinate_bounds"][1]
+                ):
+                    issues.append(
+                        f"Coordinate {val} outside bounds {self.rules['coordinate_bounds']}"
+                    )
                     severity = "critical"
                     break
 
@@ -154,13 +177,17 @@ class TemporalCoordinateContract:
                 # Check temporal gaps
                 gap = timestamps[i] - timestamps[i - 1]
                 if gap > self.rules["max_temporal_gap_seconds"]:
-                    issues.append(f"Temporal gap {gap}s exceeds max {self.rules['max_temporal_gap_seconds']}s")
+                    issues.append(
+                        f"Temporal gap {gap}s exceeds max {self.rules['max_temporal_gap_seconds']}s"
+                    )
                     severity = "warning"
 
         # Check quality score
         for coord in coordinates:
             if coord.get("quality_score", 1.0) < self.rules["min_quality_score"]:
-                issues.append(f"Quality score {coord.get('quality_score', 1.0):.2f} below threshold")
+                issues.append(
+                    f"Quality score {coord.get('quality_score', 1.0):.2f} below threshold"
+                )
                 severity = "warning"
 
         return {"is_valid": severity != "critical", "severity": severity, "issues": issues}
@@ -185,7 +212,9 @@ class TerrainMappingAnomalyContract:
 
         # Check elevation gradient
         if terrain_data.get("max_elevation_gradient", 0) > self.rules["max_elevation_gradient"]:
-            issues.append(f"Impossible slope detected (gradient > {self.rules['max_elevation_gradient']}°)")
+            issues.append(
+                f"Impossible slope detected (gradient > {self.rules['max_elevation_gradient']}°)"
+            )
             severity = "critical"
 
         # Check point density
@@ -229,7 +258,12 @@ class StatGuardianTerrainMapper:
         if cal_validation["severity"] == "critical":
             self.rejected_sensors.add(sensor_id)
             self._log_validation(
-                {"timestamp": datetime.now().isoformat(), "sensor_id": sensor_id, "event": "rejected", "reason": cal_validation["issues"]}
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "sensor_id": sensor_id,
+                    "event": "rejected",
+                    "reason": cal_validation["issues"],
+                }
             )
             return {"accepted": False, "validation": cal_validation}
 
@@ -239,7 +273,9 @@ class StatGuardianTerrainMapper:
         # Validate consistency across all current sensors
         if self.mapper.sensor_count() > 1:
             current_readings = self.mapper.get_current_readings()
-            consistency_validation = self.consistency_contract.validate_consistency(current_readings)
+            consistency_validation = self.consistency_contract.validate_consistency(
+                current_readings
+            )
             if consistency_validation["severity"] == "critical":
                 # Log issue but still accept (downgrade to warnings instead of critical)
                 self._log_validation(

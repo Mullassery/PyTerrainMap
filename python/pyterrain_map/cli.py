@@ -26,9 +26,9 @@ def configure_command(args):
     config_dir = Path(args.config_dir) if args.config_dir else None
     wizard = SetupWizard(config_dir=config_dir)
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("  PyTerrainMap Configuration Update")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     if wizard.current_config:
         print("Current configuration found:")
@@ -43,6 +43,7 @@ def version_command(args):
     """Print version information."""
     try:
         from . import __version__
+
         print(f"PyTerrainMap {__version__}")
     except ImportError:
         print("PyTerrainMap v0.1.0")

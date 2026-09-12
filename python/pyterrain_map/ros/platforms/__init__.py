@@ -150,7 +150,12 @@ WARTHOG_CONFIG = {
     "tfs": {
         "static": [
             {"parent": "base_link", "child": "lidar_link", "xyz": [0, 0, 0.5], "rpy": [0, 0, 0]},
-            {"parent": "base_link", "child": "camera_link", "xyz": [0.3, 0, 0.3], "rpy": [0, 0.3, 0]},
+            {
+                "parent": "base_link",
+                "child": "camera_link",
+                "xyz": [0.3, 0, 0.3],
+                "rpy": [0, 0.3, 0],
+            },
             {"parent": "base_link", "child": "imu_link", "xyz": [0, 0, 0], "rpy": [0, 0, 0]},
         ]
     },

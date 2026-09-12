@@ -49,6 +49,7 @@ class GCSStorageBackend(StorageBackend):
         # Import google cloud
         try:
             from google.cloud import storage
+
             self.storage = storage
         except ImportError:
             raise ImportError(
@@ -231,7 +232,7 @@ class GCSStorageBackend(StorageBackend):
                 "bucket": self.bucket_name,
                 "prefix": self.prefix,
                 "total_size_bytes": total_size,
-                "total_size_gb": total_size / (1024 ** 3),
+                "total_size_gb": total_size / (1024**3),
                 "blob_count": blob_count,
                 "observations_written": self.stats["observations_written"],
                 "observations_read": self.stats["observations_read"],

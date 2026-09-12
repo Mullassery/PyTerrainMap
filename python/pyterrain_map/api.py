@@ -234,9 +234,7 @@ class PyTerrainMapClient:
         self.creds_file = self.config_dir / "credentials.json"
 
         if not self.config_file.exists():
-            raise RuntimeError(
-                "PyTerrainMap not configured. Run 'pytm setup' first."
-            )
+            raise RuntimeError("PyTerrainMap not configured. Run 'pytm setup' first.")
 
         self._load_config()
 

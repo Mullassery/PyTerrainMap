@@ -13,6 +13,7 @@ class StorageObservation:
     storage-layer record this eventually becomes) so adapters can hand
     their output straight to a `StorageBackend` without translation.
     """
+
     id: str
     robot_id: str
     timestamp: int  # microseconds since epoch
@@ -54,7 +55,7 @@ class SensorAdapter(ABC):
         self,
         msg,
         robot_pose: Optional[tuple] = None,
-        converter = None,
+        converter=None,
     ) -> List[StorageObservation]:
         """
         Convert a ROS message to observations.

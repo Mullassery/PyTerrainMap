@@ -15,6 +15,7 @@ from typing import Tuple
 @dataclass
 class GeoPoint:
     """Geodetic coordinate (latitude, longitude, altitude)."""
+
     lat: float  # degrees
     lon: float  # degrees
     alt: float  # meters MSL
@@ -23,6 +24,7 @@ class GeoPoint:
 @dataclass
 class ENUPoint:
     """Local ENU coordinate (East, North, Up)."""
+
     east: float  # meters
     north: float  # meters
     up: float  # meters

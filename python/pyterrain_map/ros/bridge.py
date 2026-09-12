@@ -52,7 +52,8 @@ class PyTerrainROSBridge:
                 logger.warning(
                     "Sensor '%s' requests unknown adapter '%s' — skipping "
                     "(its topic(s) will produce no observations)",
-                    sensor_name, adapter_key,
+                    sensor_name,
+                    adapter_key,
                 )
                 continue
 

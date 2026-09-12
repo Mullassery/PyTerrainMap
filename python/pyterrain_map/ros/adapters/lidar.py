@@ -155,13 +155,15 @@ class LiDARAdapter(SensorAdapter):
                     location_lat=geo.lat,
                     location_lon=geo.lon,
                     sensor_type=self.sensor_type,
-                    value_json=json.dumps({
-                        "intensity": round(intensity, 2),
-                        "range_m": round(intensity, 2),
-                        "points": count,
-                        "grid_x": grid_x,
-                        "grid_y": grid_y,
-                    }),
+                    value_json=json.dumps(
+                        {
+                            "intensity": round(intensity, 2),
+                            "range_m": round(intensity, 2),
+                            "points": count,
+                            "grid_x": grid_x,
+                            "grid_y": grid_y,
+                        }
+                    ),
                     confidence=min(0.95, count / 10),  # More points = higher confidence
                 )
                 observations.append(obs)
@@ -178,10 +180,12 @@ class LiDARAdapter(SensorAdapter):
                     location_lat=float(grid_x) * self.voxel_size,  # Use local x as lat
                     location_lon=float(grid_y) * self.voxel_size,  # Use local y as lon
                     sensor_type=self.sensor_type,
-                    value_json=json.dumps({
-                        "intensity": round(intensity, 2),
-                        "points": count,
-                    }),
+                    value_json=json.dumps(
+                        {
+                            "intensity": round(intensity, 2),
+                            "points": count,
+                        }
+                    ),
                     confidence=min(0.95, count / 10),
                 )
                 observations.append(obs)
@@ -223,4 +227,5 @@ class LiDARAdapter(SensorAdapter):
     def _generate_id() -> str:
         """Generate unique observation ID."""
         import uuid
+
         return str(uuid.uuid4())

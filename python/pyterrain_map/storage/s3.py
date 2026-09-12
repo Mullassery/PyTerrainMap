@@ -51,6 +51,7 @@ class S3StorageBackend(StorageBackend):
         # Import boto3
         try:
             import boto3
+
             self.boto3 = boto3
         except ImportError:
             raise ImportError("boto3 required for S3 backend. Install: pip install boto3")
@@ -241,7 +242,7 @@ class S3StorageBackend(StorageBackend):
                 "prefix": self.prefix,
                 "region": self.region,
                 "total_size_bytes": total_size,
-                "total_size_gb": total_size / (1024 ** 3),
+                "total_size_gb": total_size / (1024**3),
                 "object_count": object_count,
                 "observations_written": self.stats["observations_written"],
                 "observations_read": self.stats["observations_read"],

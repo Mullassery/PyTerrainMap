@@ -43,7 +43,6 @@ This ensures:
 **Math/Stats:**
 | Crate | Version | License | Purpose |
 |-------|---------|---------|---------|
-| statrs | 0.16+ | Apache 2.0 | Statistical functions |
 | ndarray | 0.15+ | MIT/Apache 2.0 | N-dimensional arrays |
 | nalgebra | 0.33+ | MIT/Apache 2.0 | Linear algebra (optional) |
 

@@ -102,9 +102,11 @@ is_accessible = _core.is_accessible
 start_server = _core.start_server
 ServerHandle = _core.PyServerHandle
 
+
 # Personas
 class Persona:
     """Analysis persona/context."""
+
     MobileRobot = "mobile_robot"
     Drone = "drone"
     Farmer = "farmer"
@@ -112,6 +114,7 @@ class Persona:
     Vehicle = "vehicle"
     Analyst = "analyst"
     MissionPlanner = "mission_planner"
+
 
 # CLI
 from . import cli  # noqa: F401, E402

@@ -74,9 +74,7 @@ class ThermalAdapter(SensorAdapter):
                 return []
 
             # Downsample and grid
-            observations = self._process_thermal_grid(
-                image, timestamp, robot_pose, converter
-            )
+            observations = self._process_thermal_grid(image, timestamp, robot_pose, converter)
 
             return observations
 
@@ -186,13 +184,15 @@ class ThermalAdapter(SensorAdapter):
                     location_lat=float(row) / self.grid_size,
                     location_lon=float(col) / self.grid_size,
                     sensor_type=self.sensor_type,
-                    value_json=json.dumps({
-                        "temperature_c": round(mean_temp, 2),
-                        "min_temp_c": round(min_temp, 2),
-                        "max_temp_c": round(max_temp, 2),
-                        "std_dev": round(std_val, 4),
-                        "grid_cell": f"{row}x{col}",
-                    }),
+                    value_json=json.dumps(
+                        {
+                            "temperature_c": round(mean_temp, 2),
+                            "min_temp_c": round(min_temp, 2),
+                            "max_temp_c": round(max_temp, 2),
+                            "std_dev": round(std_val, 4),
+                            "grid_cell": f"{row}x{col}",
+                        }
+                    ),
                     confidence=min(0.99, confidence),
                 )
                 observations.append(obs)
@@ -210,4 +210,5 @@ class ThermalAdapter(SensorAdapter):
     def _generate_id() -> str:
         """Generate unique observation ID."""
         import uuid
+
         return str(uuid.uuid4())
