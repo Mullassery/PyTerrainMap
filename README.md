@@ -193,11 +193,9 @@ pytest tests/ -v
 
 ## Known Issues
 
-CI (the badge above) has been red on every push for weeks — checked directly rather
-than guessed at:
-
-- **`cargo clippy` fails with 227 errors**, almost all `non_snake_case` field-naming
-  lint violations (e.g. `geometricError`, `POINTS_LENGTH`, `BATCH_ID`) in
+- **`cargo clippy` reports 227 errors** (`continue-on-error: true` in CI, so this
+  doesn't block the pipeline), almost all `non_snake_case` field-naming lint
+  violations (e.g. `geometricError`, `POINTS_LENGTH`, `BATCH_ID`) in
   `src/tiles_3d/mod.rs` and related export code. These are **not naming mistakes** —
   the fields match the real [Cesium 3D Tiles](https://github.com/CesiumGS/3d-tiles)
   JSON spec's field names exactly, since this code serializes/deserializes that
@@ -206,17 +204,31 @@ than guessed at:
   outright would break the actual Cesium format contract. Not fixed in this pass:
   227 individual annotations is a large mechanical change better done as its own
   reviewed pass, not blind inside an audit.
-- **`cargo audit` reports 9 vulnerabilities** in transitive dependencies. Not
-  enumerated/fixed in this pass — see the same category of finding disclosed in
-  StatGuardian's `docs/SECURITY_AUDIT.md` for the kind of detail a follow-up pass
-  should produce here.
-- **`black --check` fails on 30 of 42 Python files** (verified directly with the
-  current black release; CI's own log shows 18 — the discrepancy is almost certainly
-  a black-version difference between CI's install and this check, the same pattern
-  found and fixed in `PyAirflowTester` during this audit). Not reformatted in this
-  pass — a 30-file mechanical change should be verified against a full test run
-  afterward, which needs the Rust extension built first.
-- **Fixed in this pass**: `tests/test_statguardian_integration.py::test_valid_coordinates`
+- **2026-09-13: `cargo audit` — 6 of 9 vulnerabilities and 3 of 4 warnings fixed.**
+  `rcgen` 0.11→0.14 (drops old unmaintained `ring` 0.16, fixing its AES-overflow-panic
+  advisory too), `rustls`/`tokio-rustls`/`rustls-pemfile` bumped (pulls a patched
+  `rustls-webpki` 0.103.15, fixing all 3 of its advisories), `sqlx` 0.7→0.9 (fixes its
+  own advisory and eliminates the vulnerable `rsa` crate — Marvin Attack timing
+  side-channel, no fixed upgrade ever existed for it directly), `geo` 0.27→0.28 (fixes
+  the `atomic-polyfill` unmaintained warning), and removed the entirely-unused `image`/
+  `statrs` dependencies (verified zero usage anywhere in this repo — eliminates the
+  unmaintained `paste` crate). API migrations this required in `src/server.rs`
+  (`rcgen`'s `CertifiedKey` destructuring, `rustls`'s `CertificateDer`/`PrivateKeyDer`
+  types replacing removed `Certificate`/`PrivateKey` tuple structs, removed
+  `.with_safe_defaults()` builder method) are done and verified: `cargo check --release`
+  clean, `maturin develop --release` + full 205-test `pytest` suite passing.
+  **Remaining, not fixed**: `pyo3` (2 advisories, needs ≥0.29 — attempted, hit 88 real
+  compile errors from pyo3's own API evolution, independent of any polars dependency
+  since this crate has none; reverted rather than rush a mass `#[pyclass]`/`#[pymethods]`
+  migration) and a newly-surfaced `h2` advisory via `hyper` 0.14, whose classic
+  `Server`/`Body`/`make_service_fn` API was entirely removed in hyper 1.x — a genuine
+  server-rewrite, not a version bump. `rustls-pemfile` stays flagged "unmaintained"
+  regardless of version (the whole project is archived) — no upstream fix exists to
+  adopt.
+- **`black --check` failure (18 files) — fixed in this pass.** Reformatted with the
+  same black release CI installs; also fixed a `pyproject.toml` deprecation warning
+  (`[tool.ruff]`'s `select`/`ignore` keys needed to move under `[tool.ruff.lint]`).
+- **Fixed in a prior pass**: `tests/test_statguardian_integration.py::test_valid_coordinates`
   used timestamps 1000s apart as "valid" test data, which correctly tripped
   `TemporalCoordinateContract`'s real `max_temporal_gap_seconds=60` warning check —
   a test-data bug, not a logic bug in the validator (a genuine >60s gap between
