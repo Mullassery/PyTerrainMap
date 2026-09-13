@@ -204,27 +204,34 @@ pytest tests/ -v
   outright would break the actual Cesium format contract. Not fixed in this pass:
   227 individual annotations is a large mechanical change better done as its own
   reviewed pass, not blind inside an audit.
-- **2026-09-13: `cargo audit` — 6 of 9 vulnerabilities and 3 of 4 warnings fixed.**
-  `rcgen` 0.11→0.14 (drops old unmaintained `ring` 0.16, fixing its AES-overflow-panic
-  advisory too), `rustls`/`tokio-rustls`/`rustls-pemfile` bumped (pulls a patched
-  `rustls-webpki` 0.103.15, fixing all 3 of its advisories), `sqlx` 0.7→0.9 (fixes its
-  own advisory and eliminates the vulnerable `rsa` crate — Marvin Attack timing
-  side-channel, no fixed upgrade ever existed for it directly), `geo` 0.27→0.28 (fixes
-  the `atomic-polyfill` unmaintained warning), and removed the entirely-unused `image`/
-  `statrs` dependencies (verified zero usage anywhere in this repo — eliminates the
-  unmaintained `paste` crate). API migrations this required in `src/server.rs`
-  (`rcgen`'s `CertifiedKey` destructuring, `rustls`'s `CertificateDer`/`PrivateKeyDer`
-  types replacing removed `Certificate`/`PrivateKey` tuple structs, removed
-  `.with_safe_defaults()` builder method) are done and verified: `cargo check --release`
-  clean, `maturin develop --release` + full 205-test `pytest` suite passing.
-  **Remaining, not fixed**: `pyo3` (2 advisories, needs ≥0.29 — attempted, hit 88 real
-  compile errors from pyo3's own API evolution, independent of any polars dependency
-  since this crate has none; reverted rather than rush a mass `#[pyclass]`/`#[pymethods]`
-  migration) and a newly-surfaced `h2` advisory via `hyper` 0.14, whose classic
-  `Server`/`Body`/`make_service_fn` API was entirely removed in hyper 1.x — a genuine
-  server-rewrite, not a version bump. `rustls-pemfile` stays flagged "unmaintained"
-  regardless of version (the whole project is archived) — no upstream fix exists to
-  adopt.
+- **2026-09-13: `cargo audit` is now fully clean — 0 vulnerabilities** (was 9 at the
+  start of this pass). Fixed across two passes the same day:
+  - `rcgen` 0.11→0.14, `rustls`/`tokio-rustls`/`rustls-pemfile` bumped, `sqlx` 0.7→0.9,
+    `geo` 0.27→0.28, and removed the entirely-unused `image`/`statrs` dependencies
+    (verified zero usage anywhere in this repo) — see git history for the full
+    per-crate rationale.
+  - `pyo3` 0.22→0.29 (its 2 remaining advisories): `PyObject` was removed as a type
+    alias (→ `Py<PyAny>` everywhere), `IntoPy` was removed in favor of the fallible
+    `IntoPyObject`/`IntoPyObjectExt` (`.into_py(py)` → `.into_py_any(py).expect(...)`,
+    since these are all primitive conversions that cannot fail in practice),
+    `Python::with_gil` → `Python::attach`, `PyDict`/`PyList::new_bound` → plain `::new`.
+  - `hyper` 0.14→1.x (a new `h2` advisory that only surfaced *after* the pyo3 fix):
+    the old all-in-one `hyper::Server`/`AddrIncoming`/`make_service_fn` was replaced
+    with a transport-agnostic `serve_connection` API — `run_http_from_listener` is now
+    a manual accept loop (mirroring the pattern `run_https_from_listener` already used
+    for TLS termination), using `hyper-util`'s `TokioIo` adapter and
+    `http-body-util`'s `Full<Bytes>`/`BodyExt::collect`.
+  - Verified: `cargo check`/`build --release` clean, `maturin develop --release` + the
+    full 205-test `pytest` suite passing, including `tests/test_server.py`'s 7 real
+    end-to-end tests (a genuine TLS handshake among them) against the actual compiled
+    extension. `tests/server_integration.rs` (the Rust-side equivalent) compiles
+    cleanly but can't run standalone via plain `cargo test` on macOS specifically —
+    this crate's PyO3 extension-module build defers Python C-API symbol resolution to
+    a real embedding Python process, so a bare test executable started outside Python
+    has nothing to resolve those symbols against. Confirmed pre-existing (present on a
+    clean checkout before any of this pass's changes too) and CI runs on Linux.
+  - `rustls-pemfile` still shows as "unmaintained" regardless of version (the whole
+    project is archived) — no upstream fix exists to adopt; this is not a vulnerability.
 - **`black --check` failure (18 files) — fixed in this pass.** Reformatted with the
   same black release CI installs; also fixed a `pyproject.toml` deprecation warning
   (`[tool.ruff]`'s `select`/`ignore` keys needed to move under `[tool.ruff.lint]`).
