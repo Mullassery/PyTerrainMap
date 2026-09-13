@@ -9,6 +9,7 @@
 
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
+use pyo3::IntoPyObjectExt;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use crate::types::GeoPoint;
@@ -246,13 +247,22 @@ impl PyQueryResult {
         self.avg_confidence
     }
 
-    pub fn to_dict(&self, py: Python<'_>) -> PyObject {
+    pub fn to_dict(&self, py: Python<'_>) -> Py<PyAny> {
         let mut dict_items = vec![
-            ("count", self.total_count.into_py(py)),
-            ("avg_confidence", self.avg_confidence.into_py(py)),
-            ("observations", self.observations.len().into_py(py)),
+            ("count", self.total_count.into_py_any(py).expect("infallible")),
+            (
+                "avg_confidence",
+                self.avg_confidence.into_py_any(py).expect("infallible"),
+            ),
+            (
+                "observations",
+                self.observations.len().into_py_any(py).expect("infallible"),
+            ),
         ];
-        dict_items.into_py_dict_bound(py).into()
+        dict_items
+            .into_py_dict(py)
+            .expect("dict of already-converted Py<PyAny> should not fail")
+            .into()
     }
 }
 
@@ -340,7 +350,7 @@ impl PyTerrainMap {
     }
 
     /// Get statistics for a region
-    pub fn region_stats(&self, py: Python, region: &PyRegion) -> PyResult<PyObject> {
+    pub fn region_stats(&self, py: Python, region: &PyRegion) -> PyResult<Py<PyAny>> {
         let obss = self.observations.read();
 
         let in_region: Vec<_> = obss
@@ -348,15 +358,19 @@ impl PyTerrainMap {
             .filter(|o| region.contains(&PyGeoPoint { lat: o.location_lat, lon: o.location_lon }))
             .collect();
 
-        let stats_vec: Vec<(&str, PyObject)> = vec![
-            ("total_observations", in_region.len().into_py(py)),
+        let stats_vec: Vec<(&str, Py<PyAny>)> = vec![
+            (
+                "total_observations",
+                in_region.len().into_py_any(py).expect("infallible"),
+            ),
             (
                 "avg_confidence",
                 if in_region.is_empty() {
-                    0.0.into_py(py)
+                    0.0f32.into_py_any(py).expect("infallible")
                 } else {
                     (in_region.iter().map(|o| o.confidence).sum::<f32>() / in_region.len() as f32)
-                        .into_py(py)
+                        .into_py_any(py)
+                        .expect("infallible")
                 },
             ),
             ("unique_robots", {
@@ -364,11 +378,14 @@ impl PyTerrainMap {
                 for obs in &in_region {
                     robots.insert(&obs.robot_id);
                 }
-                robots.len().into_py(py)
+                robots.len().into_py_any(py).expect("infallible")
             }),
         ];
 
-        Ok(stats_vec.into_py_dict_bound(py).into())
+        Ok(stats_vec
+            .into_py_dict(py)
+            .expect("dict of already-converted Py<PyAny> should not fail")
+            .into())
     }
 
     /// Get all observations

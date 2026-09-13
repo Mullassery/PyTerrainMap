@@ -14,7 +14,7 @@ repository = "https://github.com/Mullassery/pyterrain-map"
 tokio = { version = "1.35", features = ["full"] }  # MIT
 
 # Python interop (PyO3 bindings) - newer version for Python 3.13 support
-pyo3 = { version = "0.22", features = ["extension-module", "abi3-py310"] }  # Apache 2.0
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py310"] }  # Apache 2.0
 # pyo3-asyncio = { version = "0.22", features = ["tokio-runtime"] }  # Apache 2.0 - used for async API
 
 # Serialization
@@ -46,7 +46,10 @@ tracing = "0.1"  # MIT
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # MIT
 
 # HTTP server (for the real HTTP/HTTPS API server in src/server.rs)
-hyper = { version = "0.14", features = ["full"] }  # MIT
+hyper = { version = "1", features = ["full"] }  # MIT
+hyper-util = { version = "0.1", features = ["tokio"] }  # MIT
+http-body-util = "0.1"  # MIT
+bytes = "1"  # MIT
 tokio-util = { version = "0.7", features = ["codec"] }  # MIT
 
 # TLS termination for the HTTPS API server (rustls, not OpenSSL -- no system dep)
@@ -84,7 +87,7 @@ tokio-test = "0.4"
 # test`/`cargo clippy` cannot link this crate's cdylib target on macOS (and
 # similar on other platforms) -- only `maturin`, which injects the equivalent
 # linker flags itself, worked. See build.rs for details.
-pyo3-build-config = "0.22"
+pyo3-build-config = "0.29"
 
 [features]
 default = ["database"]

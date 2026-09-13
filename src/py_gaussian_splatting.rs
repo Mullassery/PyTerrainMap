@@ -82,11 +82,11 @@ impl PyGaussianCovariance {
     }
 
     /// Convert to dictionary representation
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("determinant", self.determinant().to_string());
         d.insert("uncertainty_volume", self.uncertainty_volume().to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -189,7 +189,7 @@ impl PyTerrainGaussian {
         self.source_bots.clone()
     }
 
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("id", self.id.clone());
         d.insert("position", format!("({:.4}, {:.4}, {:.1})",
@@ -198,7 +198,7 @@ impl PyTerrainGaussian {
         d.insert("traversability", self.traversability.to_string());
         d.insert("confidence", self.confidence.to_string());
         d.insert("observation_count", self.observation_count.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -295,14 +295,14 @@ impl PyDynamicObjectSplat {
         (self.confidence * decay).max(0.0)
     }
 
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("id", self.id.clone());
         d.insert("class", self.object_class.clone());
         d.insert("position", format!("({:.4}, {:.4}, {:.1})",
             self.position_lat, self.position_lon, self.position_elev));
         d.insert("confidence", self.confidence.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -347,14 +347,14 @@ impl PyChangeEvent {
         self.detected_by.clone()
     }
 
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("id", self.id.clone());
         d.insert("event_type", self.event_type.clone());
         d.insert("detected_by", self.detected_by.join(","));
         d.insert("timestamp", self.timestamp.to_string());
         d.insert("confidence", self.confidence.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -414,7 +414,7 @@ impl PyPathCost {
         self.uncertainty_cost
     }
 
-    pub fn breakdown(&self, py: Python) -> PyObject {
+    pub fn breakdown(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("distance", self.distance_cost);
         d.insert("terrain", self.terrain_cost);
@@ -422,7 +422,7 @@ impl PyPathCost {
         d.insert("passage", self.passage_cost);
         d.insert("uncertainty", self.uncertainty_cost);
         d.insert("total", self.total);
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -538,7 +538,7 @@ impl PyObjectState {
         self.object_class.clone()
     }
 
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("id", self.id.clone());
         d.insert("class", self.object_class.clone());
@@ -546,7 +546,7 @@ impl PyObjectState {
             self.position_lat, self.position_lon, self.position_elev));
         d.insert("confidence", self.position_confidence.to_string());
         d.insert("out_of_sight", self.is_out_of_sight.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -711,14 +711,14 @@ impl PyGaussianSplatStore {
     }
 
     /// Get statistics
-    pub fn stats(&self, py: Python) -> PyObject {
+    pub fn stats(&self, py: Python) -> Py<PyAny> {
         let store = self.inner.read();
         let stats = store.stats();
         let mut d = HashMap::new();
         d.insert("total_splats", stats.total_splats.to_string());
         d.insert("terrain_splats", stats.terrain_splats.to_string());
         d.insert("object_splats", stats.object_splats.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -779,14 +779,14 @@ impl PyUnifiedPathCost {
         self.confidence
     }
 
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("graph_cost", self.graph_cost.to_string());
         d.insert("gaussian_cost", self.gaussian_cost.to_string());
         d.insert("passage_cost", self.passage_cost.to_string());
         d.insert("total_cost", self.total_cost.to_string());
         d.insert("confidence", self.confidence.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -881,7 +881,7 @@ impl PyFrontier {
         self.risk_estimate
     }
 
-    pub fn to_dict(&self, py: Python) -> PyObject {
+    pub fn to_dict(&self, py: Python) -> Py<PyAny> {
         let mut d = HashMap::new();
         d.insert("id", self.id.clone());
         d.insert("location", format!("({:.4}, {:.4}, {:.1})",
@@ -889,7 +889,7 @@ impl PyFrontier {
         d.insert("priority", self.priority.to_string());
         d.insert("confidence", self.confidence.to_string());
         d.insert("info_gain", self.expected_information_gain.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 }
 
@@ -1017,49 +1017,49 @@ impl PyGaussianCacheManager {
     }
 
     /// Get terrain summary (Layer 0 - fast, summaries only)
-    pub fn get_summary(&self, region_key: &str, store: &PyGaussianSplatStore) -> PyObject {
+    pub fn get_summary(&self, region_key: &str, store: &PyGaussianSplatStore) -> Py<PyAny> {
         let py_store_read = store.inner.read();
         let (summary, confidence) = self.inner.get_summary(region_key, &py_store_read);
         drop(py_store_read);
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let mut d = HashMap::new();
             d.insert("avg_traversability", summary.avg_traversability.to_string());
             d.insert("avg_uncertainty", summary.avg_uncertainty.to_string());
             d.insert("splat_count", summary.splat_count.to_string());
             d.insert("confidence", confidence.to_string());
-            d.into_py_dict_bound(py).into()
+            d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
         })
     }
 
     /// Get observation facts (Layer 1 - details on observations)
-    pub fn get_facts(&self, region_key: &str, store: &PyGaussianSplatStore) -> PyObject {
+    pub fn get_facts(&self, region_key: &str, store: &PyGaussianSplatStore) -> Py<PyAny> {
         let py_store_read = store.inner.read();
         let (facts, confidence) = self.inner.get_facts(region_key, &py_store_read);
         drop(py_store_read);
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let mut d = HashMap::new();
             d.insert("anomalies", facts.anomalies.len().to_string());
             d.insert("recent_splats", facts.recent_splats.to_string());
             d.insert("confidence", confidence.to_string());
-            d.into_py_dict_bound(py).into()
+            d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
         })
     }
 
     /// Get detailed context (Layer 2 - full query results)
-    pub fn get_context(&self, region_key: &str, store: &PyGaussianSplatStore) -> PyObject {
+    pub fn get_context(&self, region_key: &str, store: &PyGaussianSplatStore) -> Py<PyAny> {
         let py_store_read = store.inner.read();
         let (context, confidence) = self.inner.get_context(region_key, &py_store_read);
         drop(py_store_read);
 
-        Python::with_gil(|py| {
+        Python::attach(|py| {
             let mut d = HashMap::new();
             d.insert("coverage_pct", context.coverage_percentage.to_string());
             d.insert("splat_count", context.splat_count.to_string());
             d.insert("freshness", context.freshness_score.to_string());
             d.insert("confidence", confidence.to_string());
-            d.into_py_dict_bound(py).into()
+            d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
         })
     }
 
@@ -1069,14 +1069,14 @@ impl PyGaussianCacheManager {
     }
 
     /// Get cache statistics
-    pub fn stats(&self, py: Python) -> PyObject {
+    pub fn stats(&self, py: Python) -> Py<PyAny> {
         let stats = self.inner.stats();
         let mut d = HashMap::new();
         d.insert("cache_hits", stats.cache_hits.to_string());
         d.insert("cache_misses", stats.cache_misses.to_string());
         d.insert("invalidations", stats.invalidations.to_string());
         d.insert("splats_cached", stats.splats_cached.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 
     pub fn __repr__(&self) -> String {
@@ -1244,42 +1244,45 @@ impl PyFleetCoordinator {
     }
 
     /// Get fleet synchronization state
-    pub fn fleet_state(&self, py: Python) -> PyObject {
+    pub fn fleet_state(&self, py: Python) -> Py<PyAny> {
         let state = self.inner.read().fleet_state();
         let mut d = HashMap::new();
         d.insert("active_bots", state.active_bots.len().to_string());
         d.insert("pending_observations", state.pending_observations.to_string());
         d.insert("conflicts_resolved", state.conflicts_resolved.to_string());
         d.insert("total_fused", state.total_fused.to_string());
-        d.into_py_dict_bound(py).into()
+        d.into_py_dict(py).expect("dict of strings should never fail to convert").into()
     }
 
     /// Get bot status
-    pub fn get_bot_status(&self, bot_id: &str, py: Python) -> Option<PyObject> {
+    pub fn get_bot_status(&self, bot_id: &str, py: Python) -> Option<Py<PyAny>> {
         let status = self.inner.read().get_bot_status(bot_id)?;
         let mut d = HashMap::new();
         d.insert("bot_id", status.bot_id.clone());
         d.insert("is_active", status.is_active.to_string());
         d.insert("observations", status.observations_contributed.to_string());
-        Some(d.into_py_dict_bound(py).into())
+        Some(d.into_py_dict(py).expect("dict of strings should never fail to convert").into())
     }
 
     /// Get all bot statuses
-    pub fn all_bot_statuses(&self, py: Python) -> PyObject {
+    pub fn all_bot_statuses(&self, py: Python) -> Py<PyAny> {
         let statuses = self.inner.read().all_bot_statuses();
-        let list: Vec<PyObject> = statuses
+        let list: Vec<Py<PyAny>> = statuses
             .into_iter()
             .map(|status| {
                 let mut d = HashMap::new();
                 d.insert("bot_id", status.bot_id.clone());
                 d.insert("is_active", status.is_active.to_string());
                 d.insert("observations", status.observations_contributed.to_string());
-                d.into_py_dict_bound(py).into()
+                d.into_py_dict(py)
+                    .expect("dict of strings should never fail to convert")
+                    .into()
             })
             .collect();
 
-        Python::with_gil(|py| {
-            let py_list = PyList::new_bound(py, list);
+        Python::attach(|py| {
+            let py_list =
+                PyList::new(py, list).expect("list of already-converted Py<PyAny> should not fail");
             py_list.into()
         })
     }

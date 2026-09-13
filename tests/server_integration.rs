@@ -156,17 +156,16 @@ async fn test_https_real_tls_handshake_and_request_end_to_end() {
 
     // Build a rustls client that trusts exactly the cert we just generated.
     let mut root_store = rustls::RootCertStore::empty();
-    root_store
-        .add(&rustls::Certificate(
-            rustls_pemfile::certs(&mut &*cert_pem).unwrap().remove(0),
-        ))
-        .unwrap();
+    let first_cert = rustls_pemfile::certs(&mut &*cert_pem)
+        .next()
+        .expect("cert PEM should contain at least one certificate")
+        .expect("cert PEM should parse");
+    root_store.add(first_cert).unwrap();
     let client_config = rustls::ClientConfig::builder()
-        .with_safe_defaults()
         .with_root_certificates(root_store)
         .with_no_client_auth();
     let connector = tokio_rustls::TlsConnector::from(Arc::new(client_config));
-    let server_name = rustls::ServerName::try_from("localhost").unwrap();
+    let server_name = rustls::pki_types::ServerName::try_from("localhost".to_string()).unwrap();
 
     let tcp = TcpStream::connect(addr).await.unwrap();
     let mut tls_stream = connector.connect(server_name, tcp).await.unwrap();

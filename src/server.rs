@@ -29,11 +29,20 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 
-use hyper::server::conn::{AddrIncoming, AddrStream, Http};
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, StatusCode};
+use bytes::Bytes;
+use http_body_util::{BodyExt, Full};
+use hyper::body::Incoming;
+use hyper::server::conn::http1;
+use hyper::service::service_fn;
+use hyper::{Method, Request, Response, StatusCode};
+use hyper_util::rt::TokioIo;
 use parking_lot::RwLock;
 use tokio::sync::oneshot;
+
+/// The response body type for every handler in this module: all responses
+/// are complete, in-memory JSON, so there's no need for a streaming body -
+/// `Full<Bytes>` is hyper 1.x's equivalent of hyper 0.14's `Body::from(bytes)`.
+type ResBody = Full<Bytes>;
 
 use crate::api::{
     ApiError, HealthResponse, QueryObservationResponse, SpatialQueryRequest,
@@ -104,7 +113,9 @@ impl ServerState {
     /// had more history than fits in one page, or some rows failed to
     /// convert back into a real `Observation`, that's logged via
     /// `tracing::warn!` rather than silently dropped or silently truncated.
-    pub async fn restore_from_backend(&self) -> Result<usize, crate::storage::backends::BackendError> {
+    pub async fn restore_from_backend(
+        &self,
+    ) -> Result<usize, crate::storage::backends::BackendError> {
         let Some(backend) = &self.persistent_backend else {
             return Ok(0);
         };
@@ -130,7 +141,11 @@ impl ServerState {
                     continue;
                 }
             };
-            if let Err(e) = self.spatial.write().insert(index, obs.location, obs.elevation_asl) {
+            if let Err(e) = self
+                .spatial
+                .write()
+                .insert(index, obs.location, obs.elevation_asl)
+            {
                 tracing::warn!(error = %e, observation_id = %obs.id, "restore_from_backend: failed to index observation spatially");
             }
             if let Err(e) = self.temporal.write().insert(obs.timestamp) {
@@ -139,7 +154,10 @@ impl ServerState {
             restored += 1;
         }
 
-        tracing::info!(restored, "restore_from_backend: restored observations from persistent backend");
+        tracing::info!(
+            restored,
+            "restore_from_backend: restored observations from persistent backend"
+        );
         Ok(restored)
     }
 }
@@ -150,31 +168,49 @@ impl Default for ServerState {
     }
 }
 
-fn json_response<T: serde::Serialize>(status: StatusCode, body: &T) -> Response<Body> {
+fn json_response<T: serde::Serialize>(status: StatusCode, body: &T) -> Response<ResBody> {
     let bytes = serde_json::to_vec(body).unwrap_or_else(|_| b"{}".to_vec());
     Response::builder()
         .status(status)
         .header("content-type", "application/json")
-        .body(Body::from(bytes))
-        .unwrap_or_else(|_| Response::new(Body::empty()))
+        .body(Full::new(Bytes::from(bytes)))
+        .unwrap_or_else(|_| Response::new(Full::new(Bytes::new())))
 }
 
-fn error_response(err: ApiError) -> Response<Body> {
+fn error_response(err: ApiError) -> Response<ResBody> {
     let status = StatusCode::from_u16(err.code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     json_response(status, &err)
 }
 
-async fn read_body_json<T: serde::de::DeserializeOwned>(req: Request<Body>) -> Result<T, ApiError> {
-    let bytes = hyper::body::to_bytes(req.into_body())
+/// Generic over the request body type so tests can pass a plain in-memory
+/// body (e.g. `Full<Bytes>`) without needing a real hyper connection, while
+/// production passes the real `Incoming` body hyper delivers.
+async fn read_body_json<T, B>(req: Request<B>) -> Result<T, ApiError>
+where
+    T: serde::de::DeserializeOwned,
+    B: hyper::body::Body,
+    B::Error: std::fmt::Display,
+{
+    let bytes = req
+        .into_body()
+        .collect()
         .await
-        .map_err(|e| ApiError::invalid_request(&format!("Failed to read request body: {e}")))?;
+        .map_err(|e| ApiError::invalid_request(&format!("Failed to read request body: {e}")))?
+        .to_bytes();
     serde_json::from_slice(&bytes)
         .map_err(|e| ApiError::invalid_request(&format!("Invalid JSON body: {e}")))
 }
 
 /// Route + dispatch a single request. This is the single source of truth for
 /// what the server does, shared by both the plain-HTTP and TLS code paths.
-async fn handle(state: Arc<ServerState>, req: Request<Body>) -> Result<Response<Body>, Infallible> {
+async fn handle<B>(
+    state: Arc<ServerState>,
+    req: Request<B>,
+) -> Result<Response<ResBody>, Infallible>
+where
+    B: hyper::body::Body,
+    B::Error: std::fmt::Display,
+{
     let method = req.method().clone();
     let path = req.uri().path().to_string();
 
@@ -207,10 +243,14 @@ async fn handle(state: Arc<ServerState>, req: Request<Body>) -> Result<Response<
     Ok(result.unwrap_or_else(error_response))
 }
 
-async fn handle_submit(
+async fn handle_submit<B>(
     state: Arc<ServerState>,
-    req: Request<Body>,
-) -> Result<Response<Body>, ApiError> {
+    req: Request<B>,
+) -> Result<Response<ResBody>, ApiError>
+where
+    B: hyper::body::Body,
+    B::Error: std::fmt::Display,
+{
     let submit: SubmitObservationRequest = read_body_json(req).await?;
     let obs = submit.to_observation()?;
 
@@ -240,7 +280,9 @@ async fn handle_submit(
         backend
             .insert_observation(&storage_obs)
             .await
-            .map_err(|e| ApiError::internal_error(&format!("failed to persist observation: {e}")))?;
+            .map_err(|e| {
+                ApiError::internal_error(&format!("failed to persist observation: {e}"))
+            })?;
     }
 
     Ok(json_response(
@@ -253,10 +295,14 @@ async fn handle_submit(
     ))
 }
 
-async fn handle_spatial_query(
+async fn handle_spatial_query<B>(
     state: Arc<ServerState>,
-    req: Request<Body>,
-) -> Result<Response<Body>, ApiError> {
+    req: Request<B>,
+) -> Result<Response<ResBody>, ApiError>
+where
+    B: hyper::body::Body,
+    B::Error: std::fmt::Display,
+{
     let q: SpatialQueryRequest = read_body_json(req).await?;
 
     // Query::new takes ownership of the indices, so we snapshot (clone) the
@@ -304,29 +350,38 @@ async fn handle_spatial_query(
 /// Binding synchronously (via `std::net::TcpListener::bind`) before calling
 /// this function means the caller can know for certain the port is listening
 /// as soon as bind succeeds -- no readiness race, no guessing sleep.
+///
+/// hyper 1.x removed the old all-in-one `hyper::Server` (and the
+/// `AddrIncoming`/`AddrStream`/`make_service_fn` types it used) in favor of a
+/// transport-agnostic, per-connection `serve_connection` API -- the caller
+/// now owns the accept loop. This mirrors the manual loop
+/// `run_https_from_listener` (below) already needed even under hyper 0.14,
+/// since TLS termination always required accepting the raw `TcpStream`
+/// itself before handing it to hyper.
 pub async fn run_http_from_listener(
     listener: std::net::TcpListener,
     state: Arc<ServerState>,
-    shutdown: oneshot::Receiver<()>,
-) -> hyper::Result<()> {
-    listener
-        .set_nonblocking(true)
-        .expect("failed to set listener non-blocking");
-    let incoming = AddrIncoming::from_listener(
-        tokio::net::TcpListener::from_std(listener).expect("failed to adopt std listener"),
-    )?;
+    mut shutdown: oneshot::Receiver<()>,
+) -> std::io::Result<()> {
+    listener.set_nonblocking(true)?;
+    let listener = tokio::net::TcpListener::from_std(listener)?;
 
-    let make_svc = make_service_fn(move |_conn: &AddrStream| {
-        let state = state.clone();
-        async move { Ok::<_, Infallible>(service_fn(move |req| handle(state.clone(), req))) }
-    });
-
-    hyper::Server::builder(incoming)
-        .serve(make_svc)
-        .with_graceful_shutdown(async {
-            let _ = shutdown.await;
-        })
-        .await
+    loop {
+        tokio::select! {
+            _ = &mut shutdown => return Ok(()),
+            accepted = listener.accept() => {
+                let (stream, _peer) = accepted?;
+                let state = state.clone();
+                let io = TokioIo::new(stream);
+                tokio::spawn(async move {
+                    let svc = service_fn(move |req| handle(state.clone(), req));
+                    if let Err(e) = http1::Builder::new().serve_connection(io, svc).await {
+                        tracing::warn!("HTTP connection error: {e}");
+                    }
+                });
+            }
+        }
+    }
 }
 
 /// Convenience wrapper: bind `addr` and serve plain HTTP until `shutdown`.
@@ -336,9 +391,7 @@ pub async fn run_http(
     shutdown: oneshot::Receiver<()>,
 ) -> std::io::Result<()> {
     let listener = std::net::TcpListener::bind(addr)?;
-    run_http_from_listener(listener, state, shutdown)
-        .await
-        .map_err(std::io::Error::other)
+    run_http_from_listener(listener, state, shutdown).await
 }
 
 /// Run an HTTPS server on an already-bound listener, terminating TLS with
@@ -362,8 +415,9 @@ pub async fn run_https_from_listener(
                 tokio::spawn(async move {
                     match acceptor.accept(stream).await {
                         Ok(tls_stream) => {
+                            let io = TokioIo::new(tls_stream);
                             let svc = service_fn(move |req| handle(state.clone(), req));
-                            if let Err(e) = Http::new().serve_connection(tls_stream, svc).await {
+                            if let Err(e) = http1::Builder::new().serve_connection(io, svc).await {
                                 tracing::warn!("HTTPS connection error: {e}");
                             }
                         }
@@ -478,7 +532,12 @@ mod tests {
         assert!(!state.has_persistent_backend());
     }
 
-    fn sample_submit(robot_id: &str, lat: f64, lon: f64, timestamp: i64) -> SubmitObservationRequest {
+    fn sample_submit(
+        robot_id: &str,
+        lat: f64,
+        lon: f64,
+        timestamp: i64,
+    ) -> SubmitObservationRequest {
         serde_json::from_value(serde_json::json!({
             "robot_id": robot_id,
             "timestamp": timestamp,
@@ -500,7 +559,7 @@ mod tests {
         assert!(state.has_persistent_backend());
 
         let req = sample_submit("robot-1", 37.7749, -122.4194, 1_700_000_000_000_000);
-        let body = Body::from(serde_json::to_vec(&req).unwrap());
+        let body = Full::new(Bytes::from(serde_json::to_vec(&req).unwrap()));
         let http_req = Request::builder()
             .method(Method::POST)
             .uri("/observations")
@@ -508,12 +567,21 @@ mod tests {
             .unwrap();
 
         let response = handle_submit(state.clone(), http_req).await;
-        assert!(response.is_ok(), "submit should succeed when a backend is configured");
+        assert!(
+            response.is_ok(),
+            "submit should succeed when a backend is configured"
+        );
 
         // Verify it actually landed in the backend, not just in memory.
-        let count = persistence_bridge::count_observations(&backend).await.unwrap();
+        let count = persistence_bridge::count_observations(&backend)
+            .await
+            .unwrap();
         assert_eq!(count, 1);
-        assert_eq!(state.store.len(), 1, "should also still be in the fast in-memory path");
+        assert_eq!(
+            state.store.len(),
+            1,
+            "should also still be in the fast in-memory path"
+        );
     }
 
     #[tokio::test]
@@ -545,7 +613,11 @@ mod tests {
         let restored = state.restore_from_backend().await.unwrap();
 
         assert_eq!(restored, 1);
-        assert_eq!(state.store.len(), 1, "in-memory store should now have the restored observation");
+        assert_eq!(
+            state.store.len(),
+            1,
+            "in-memory store should now have the restored observation"
+        );
     }
 
     #[tokio::test]

@@ -97,7 +97,7 @@ fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 /// Create Persona enum as Python dict
-fn py_persona_dict(py: Python<'_>) -> PyObject {
+fn py_persona_dict(py: Python<'_>) -> Py<PyAny> {
     [
         ("MobileRobot", "mobile_robot"),
         ("Drone", "drone"),
@@ -110,6 +110,7 @@ fn py_persona_dict(py: Python<'_>) -> PyObject {
     .into_iter()
     .map(|(k, v)| (k, v))
     .collect::<std::collections::BTreeMap<_, _>>()
-    .into_py_dict_bound(py)
+    .into_py_dict(py)
+    .expect("dict of strings should never fail to convert")
     .into()
 }

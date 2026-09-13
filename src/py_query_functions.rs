@@ -156,7 +156,7 @@ pub fn detect_changes(
     time_start_seconds: i64,
     time_end_seconds: i64,
     py: Python,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     let mut results = HashMap::new();
     results.insert(
         "region",
@@ -171,7 +171,7 @@ pub fn detect_changes(
     results.insert("change_rate_per_day", "0.0".to_string());
 
     // Convert to Python dict
-    let py_dict = pyo3::types::PyDict::new_bound(py);
+    let py_dict = pyo3::types::PyDict::new(py);
     for (k, v) in results {
         py_dict.set_item(k, v)?;
     }
@@ -190,7 +190,7 @@ pub fn detect_changes(
 /// # Returns
 /// Dict with fused result: confidence, consensus_value, contributing_robots
 #[pyfunction]
-pub fn fuse_observations(observations: Vec<PyObservation>, py: Python) -> PyResult<PyObject> {
+pub fn fuse_observations(observations: Vec<PyObservation>, py: Python) -> PyResult<Py<PyAny>> {
     if observations.is_empty() {
         return Err(pyo3::exceptions::PyValueError::new_err(
             "Observation list cannot be empty",
@@ -228,7 +228,7 @@ pub fn fuse_observations(observations: Vec<PyObservation>, py: Python) -> PyResu
     );
     results.insert("unique_robots", robot_set.len().to_string());
 
-    let py_dict = pyo3::types::PyDict::new_bound(py);
+    let py_dict = pyo3::types::PyDict::new(py);
     for (k, v) in results {
         py_dict.set_item(k, v)?;
     }
@@ -330,7 +330,7 @@ pub fn explain_field(field_name: &str) -> PyResult<PyDataExplanation> {
 /// # Returns
 /// Dict with accessible: bool, difficulty: float, recommendations: [str]
 #[pyfunction]
-pub fn is_accessible(lat: f64, lon: f64, robot_type: &str, py: Python) -> PyResult<PyObject> {
+pub fn is_accessible(lat: f64, lon: f64, robot_type: &str, py: Python) -> PyResult<Py<PyAny>> {
     // Quick terrain check
     let terrain = analyze_terrain(lat, lon, 1.0)?;
     let mobility = assess_mobility(&terrain, robot_type)?;
@@ -345,7 +345,7 @@ pub fn is_accessible(lat: f64, lon: f64, robot_type: &str, py: Python) -> PyResu
     );
     results.insert("battery_impact", format!("{:.2}x", mobility.battery_impact));
 
-    let py_dict = pyo3::types::PyDict::new_bound(py);
+    let py_dict = pyo3::types::PyDict::new(py);
     for (k, v) in results {
         py_dict.set_item(k, v)?;
     }
