@@ -120,14 +120,14 @@ Core Concepts
 Support & Contributing
 ----------------------
 
-- **GitHub**: https://github.com/Mullassery/pyterrain-map
-- **Issues**: https://github.com/Mullassery/pyterrain-map/issues
+- **GitHub**: https://github.com/Mullassery/PyTerrainMap
+- **Issues**: https://github.com/Mullassery/PyTerrainMap/issues
 - **Email**: mullassery@gmail.com
 
 License
 -------
 
-Proprietary License -- free to use with explicit attribution.
+Apache License 2.0.
 Copyright © 2026 Georgi Mammen Mullassery. See `LICENSE
 <https://github.com/Mullassery/PyTerrainMap/blob/main/LICENSE>`_ for the
 full terms.

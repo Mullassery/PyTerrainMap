@@ -48,9 +48,11 @@ that (yet). This README describes what's implemented and testable today.
 - **3D Tiles export for real SLAM/photogrammetry output** — the SLAM and
   export paths are real implementations, not placeholders.
 - **Not yet a good fit for:** real terrain/mobility analysis (currently
-  fixed/demo output, no real elevation source), production persistence
-  beyond in-memory (SQLite/PostgreSQL/BigQuery backends are config-only,
-  not implemented), or real photogrammetry (bundle adjustment/pose
+  fixed/demo output, no real elevation source), persistence from Python
+  (the Postgres backend is real at the Rust level but not yet wired into
+  the Python API -- `pip install pyterrainMap` users still get in-memory-only
+  behavior today; SQLite/BigQuery remain config/schema types with no live
+  connection either way), or real photogrammetry (bundle adjustment/pose
   estimation are explicit placeholders) — see [Features](#features) below
   for the full per-feature breakdown.
 
@@ -172,7 +174,7 @@ curl http://127.0.0.1:8080/stats
 | Traversability knowledge graph | Implemented, tested |
 | Gaussian-splatting probabilistic mapping (fusion, frontier detection, fleet learning) | Partially implemented -- core fusion/storage works, but frontier "strategic value" scoring and semantic terrain classification are hardcoded placeholders, and splat temporal decay (`apply_decay_to_store`) is currently a no-op. 3 related Rust unit tests are currently failing on `main` (frontier scoring, fleet learning, semantic terrain cost). |
 | 3D reconstruction (SLAM, photogrammetry, 3D Tiles export) | Mixed -- SLAM (loop closure, BoW) and 3D Tiles export are real implementations; photogrammetry's bundle adjustment, pose estimation, and point-cloud color estimation are explicitly-marked placeholders, not a real SfM solver. One SLAM unit test (`test_loop_closure_detector`) is currently failing on `main`. |
-| SQLite/PostgreSQL/BigQuery persistence backends | **Not implemented** -- config/schema types only, no live DB connection. Use the in-memory store above for real use today. |
+| Persistent storage backends (SQLite/PostgreSQL/BigQuery) | **Mixed, Rust-level only.** Postgres write-through + restore-on-startup (`ServerState::with_backend()`, `src/storage/postgres.rs`) is a real, working implementation as of commit `64e119e` (2026-08-24) -- but it is **not exposed through the Python API**, so `pip install pyterrainMap` users still get in-memory-only behavior regardless. SQLite and BigQuery remain config/schema types only, with no live DB connection. Use the in-memory store above for real use from Python today. |
 
 ---
 

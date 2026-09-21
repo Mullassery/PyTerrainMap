@@ -1,6 +1,6 @@
 # PyTerrainMap: Spatial Intelligence Companion for Multi-Robot Autonomous Systems
 
-**Version:** 1.0.4 | **Status:** Production-Ready | **Tests:** 120/120 ✅ | **License:** Proprietary
+**Version:** 1.0.4 | **Status:** Production-Ready | **Tests:** 120/120 ✅ | **License:** Apache License 2.0
 
 ---
 
@@ -584,7 +584,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-Proprietary License. See [LICENSE](LICENSE) for details.
+Apache License 2.0. See [LICENSE](LICENSE) for details.
 
 ---
 

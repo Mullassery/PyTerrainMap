@@ -16,7 +16,7 @@ uv pip install pyterrainMap
 
 **From source:**
 ```bash
-git clone https://github.com/Mullassery/pyterrain-map.git
+git clone https://github.com/Mullassery/PyTerrainMap.git
 cd pyterrain-map
 pip install -e .
 ```
@@ -383,6 +383,6 @@ pytm server --port 8081
 
 ## Support
 
-- Documentation: https://github.com/Mullassery/pyterrain-map
-- Issues: https://github.com/Mullassery/pyterrain-map/issues
+- Documentation: https://github.com/Mullassery/PyTerrainMap
+- Issues: https://github.com/Mullassery/PyTerrainMap/issues
 - Email: mullassery@gmail.com

@@ -303,7 +303,7 @@ Compiler:      0 errors, minimal warnings
 ## GitHub Status
 
 ✅ **All code pushed to GitHub**
-- Repository: https://github.com/Mullassery/pyterrain-map
+- Repository: https://github.com/Mullassery/PyTerrainMap
 - Latest commit: `b1fe68a` (Layered caching foundation)
 - Branch: main
 - All 5 architecture documents committed

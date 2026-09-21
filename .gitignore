@@ -47,7 +47,9 @@ env/
 
 # Rust
 target/
-Cargo.lock
+# Cargo.lock is intentionally committed (this crate builds a PyO3
+# extension/application artifact via maturin, not a library consumed by
+# other Rust crates) -- do not re-add it here.
 
 # Temp files
 *.tmp

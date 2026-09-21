@@ -116,7 +116,7 @@ For development or custom builds:
 
 .. code-block:: bash
 
-   git clone https://github.com/Mullassery/pyterrain-map.git
+   git clone https://github.com/Mullassery/PyTerrainMap.git
    cd pyterrain-map
    pip install maturin
    maturin develop
@@ -163,6 +163,6 @@ Need at least glibc 2.31. For older systems, build from source.
 Getting Help
 ------------
 
-- **Documentation**: https://github.com/Mullassery/pyterrain-map
-- **Issues**: https://github.com/Mullassery/pyterrain-map/issues
+- **Documentation**: https://github.com/Mullassery/PyTerrainMap
+- **Issues**: https://github.com/Mullassery/PyTerrainMap/issues
 - **Email**: mullassery@gmail.com

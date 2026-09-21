@@ -39,15 +39,15 @@ Core Classes:
     - ServerHandle: Handle to a running HTTP(S) API server (see start_server())
 
 Documentation:
-    https://github.com/Mullassery/pyterrain-map/blob/main/PYTHON_BINDINGS.md
+    https://github.com/Mullassery/PyTerrainMap/blob/main/PYTHON_BINDINGS.md
 
 License:
-    Proprietary -- free to use with explicit attribution. See LICENSE.
+    Apache License 2.0. See LICENSE.
 """
 
 __author__ = "Georgi Mammen Mullassery"
 __email__ = "mullassery@gmail.com"
-__license__ = "Proprietary"
+__license__ = "Apache-2.0"
 
 # Import Rust extension
 try:

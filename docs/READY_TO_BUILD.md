@@ -70,7 +70,7 @@ No proprietary libraries, cloud SDKs, or closed-source components.
 - ✅ Examples and use cases
 
 ### Repositories (Private, GitHub)
-- ✅ PyTerrainMap: github.com/Mullassery/pyterrain-map
+- ✅ PyTerrainMap: github.com/Mullassery/PyTerrainMap
 - ✅ PyTerrainAI: github.com/Mullassery/pyterrain-ai
 
 ### Specifications

@@ -229,6 +229,6 @@ Next Steps
 Getting Help
 ------------
 
-- **Documentation**: https://github.com/Mullassery/pyterrain-map
-- **Issues**: https://github.com/Mullassery/pyterrain-map/issues
+- **Documentation**: https://github.com/Mullassery/PyTerrainMap
+- **Issues**: https://github.com/Mullassery/PyTerrainMap/issues
 - **Email**: mullassery@gmail.com

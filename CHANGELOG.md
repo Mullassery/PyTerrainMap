@@ -5,6 +5,40 @@ All notable changes to PyTerrainMap will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP_HONEST.md`.
+- `.github/dependabot.yml` (cargo, pip, github-actions ecosystems).
+- `.github/ISSUE_TEMPLATE/bug_report.yml`, `feature_request.yml`, `.github/pull_request_template.md`.
+- `pip-audit` step in CI's `lint` job (`continue-on-error: true`; advisory only, no historical baseline yet).
+
+### Fixed
+
+- Stale `License: Proprietary` metadata left over from before the Apache-2.0
+  relicense: `python/pyterrain_map/__init__.py`'s `__license__` string
+  (was actually shipped in package metadata), plus doc references in
+  `CLAUDE.md`, `docs/PRODUCT_VISION.md`, `docs/PYTHON_BINDINGS.md`,
+  `docs/ROS_BRIDGE_DELIVERY.md`, `docs/ARCHITECTURE_BOUNDARIES.md`,
+  `docs/index.rst`.
+- `Cargo.lock` was gitignored and had never been committed in this repo's
+  history -- removed from `.gitignore` and committed, since this crate
+  builds a distributable extension/application artifact via maturin, not a
+  library meant to float its dependency versions for downstream consumers.
+- Repo URL casing (`Mullassery/pyterrain-map` -> `Mullassery/PyTerrainMap`)
+  across `Cargo.toml`, `pyproject.toml`, `CHANGELOG.md`, and several `docs/`
+  files.
+- `pyproject.toml` trove classifiers were missing Python 3.13, even though
+  CI has tested it since it was added to the test matrix.
+- CI: replaced several actions that GitHub now refuses to run (archived
+  `actions-rs/toolchain@v1`; `actions/setup-python@v4`;
+  `codecov/codecov-action@v3`; `actions/upload-artifact@v3` /
+  `download-artifact@v3` in `publish.yml`; `actions/create-release@v1`) --
+  confirmed via `actionlint`, which reported all of these as
+  no-longer-runnable before the fix and clean after. `publish.yml` was
+  effectively broken (would fail on any real run) until this fix.
+
 ## [1.6.0]
 
 ### Added
@@ -279,13 +313,13 @@ Special thanks to:
 pip install pyterrainMap
 ```
 
-See [Quick Start Guide](https://github.com/Mullassery/pyterrain-map#quick-start) for usage examples.
+See [Quick Start Guide](https://github.com/Mullassery/PyTerrainMap#quick-start) for usage examples.
 
 ### Links
 
-- **GitHub**: https://github.com/Mullassery/pyterrain-map
-- **Issues**: https://github.com/Mullassery/pyterrain-map/issues
-- **Documentation**: https://github.com/Mullassery/pyterrain-map/blob/main/PYTHON_BINDINGS.md
+- **GitHub**: https://github.com/Mullassery/PyTerrainMap
+- **Issues**: https://github.com/Mullassery/PyTerrainMap/issues
+- **Documentation**: https://github.com/Mullassery/PyTerrainMap/blob/main/PYTHON_BINDINGS.md
 - **PyPI**: https://pypi.org/project/pyterrainMap/
 
 ---
