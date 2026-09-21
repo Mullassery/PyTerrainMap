@@ -35,7 +35,7 @@ xs_h3 = "0.2"  # Apache 2.0 (Uber H3 geospatial indexing)
 geo = "0.28"  # Apache 2.0
 
 # Math/Stats
-ndarray = "0.15"  # MIT/Apache 2.0
+ndarray = "0.17"  # MIT/Apache 2.0
 
 # Concurrency (use parking_lot, not crossbeam, for smaller deps)
 # crossbeam = "0.8"  # REMOVED: Use parking_lot instead
