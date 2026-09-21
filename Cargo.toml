@@ -78,7 +78,7 @@ rusqlite = { version = "0.37", features = ["bundled"], optional = true }  # MIT
 # - Anything without permissive license
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 proptest = "1.4"
 tokio-test = "0.4"
 
