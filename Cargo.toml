@@ -66,7 +66,7 @@ rcgen = { version = "0.14", features = ["ring"] }  # MIT/Apache-2.0
 
 # Optional: Database (OSS only)
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-native-tls", "sqlite", "postgres", "uuid", "chrono", "any", "macros", "migrate", "json"], optional = true }  # MIT/Apache 2.0
-rusqlite = { version = "0.37", features = ["bundled"], optional = true }  # MIT
+rusqlite = { version = "0.39", features = ["bundled"], optional = true }  # MIT
 
 # Optional: Image processing for PyNoramic (OSS only)
 # image = { version = "0.24", optional = true }  # REMOVED 2026-09-13: zero usage anywhere in
