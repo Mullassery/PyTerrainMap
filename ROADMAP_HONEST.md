@@ -1,9 +1,11 @@
 # PyTerrainMap: Honest Roadmap and Technical Debt
 
-Last verified: 2026-09-20, against a clean local checkout of `main`
-(`af55465`). Every number below was re-run in this pass; where the
+Last verified: 2026-09-22, against a clean local checkout of `main`
+(`081c6ee`). Every number below was re-run in this pass; where the
 sandbox couldn't run something (network-gated), that's stated explicitly
 rather than repeating an old number as if it were re-verified today.
+This pass had network access, so `cargo audit` was re-run for real (see
+below) instead of citing the 2026-09-13 result second-hand.
 
 This document exists so nobody has to reverse-engineer project status from
 commit messages. See also the README's "Features" table (day-to-day source
@@ -18,29 +20,44 @@ concrete technical debt with file:line references.
 | Check | Command | Result |
 |---|---|---|
 | `cargo fmt --check` | `cargo fmt --check` | **FAILS.** 814 diff hunks across 109 of 123 `.rs` files under `src/`. **Not run in CI at all** -- `.github/workflows/ci.yml` has no `cargo fmt --check` step in any job, so this drift is invisible to CI and has apparently been accumulating unnoticed. This is a *new* finding this pass (not previously documented anywhere in this repo). |
-| `cargo clippy --release -- -D warnings` | same | **FAILS: 231 errors** (`grep -c '^error:'` on the run output, minus the summary line). Previously documented as "227" -- the real, current count is 231, a small drift upward since that note was written, not the same number. Overwhelmingly `non_snake_case` on fields that mirror the real Cesium 3D Tiles JSON field names (`src/tiles_3d/mod.rs`, e.g. `QUANTIZED_VOLUME_OFFSET` line 238, `QUANTIZED_VOLUME_SCALE` line 240) -- these are spec-mandated names, not naming mistakes; the correct fix is `#[allow(non_snake_case)]` per struct, not a rename. A few are real: e.g. `src/caching/mod.rs:344` `if start_layer <= 0 && end_layer >= 0` is flagged `unused_comparisons` (likely `<= 0`/`>= 0` on an unsigned type -- worth a look, it's a logic smell not just a style lint), and `src/adapters/pyrobovision_adapter.rs:106` (`let mAP = ...`) is a real non-snake-case variable, not a spec-mirroring field. CI runs this with `continue-on-error: true`, so it doesn't block merges. **Not fixed in this pass** -- 231 individual annotations/renames is a large, mechanical change that deserves its own reviewed PR, not a drive-by inside a docs pass. |
-| `cargo test --workspace --release` | plain invocation | **Cannot be exercised locally on macOS at all, re-confirmed in this pass.** Plain `cargo test --workspace --release` fails to *link* with "symbol(s) not found for architecture arm64" (`_Py_IsInitialized`, `_Py_NoneStruct`, etc.). Retrying with `RUSTFLAGS="-C link-args=-undefined -C link-args=dynamic_lookup"` (the documented workaround) gets past linking (1m35s release build, 134 lib warnings + 153 test-target warnings from clippy-adjacent rustc lints) but the resulting test binary then **crashes at runtime** on launch: `dyld[...]: symbol not found in flat namespace '_PyBaseObject_Type'`, `SIGABRT`. So the RUSTFLAGS workaround is necessary but not sufficient on this platform -- no per-test pass/fail results could be obtained in this sandbox by any means. This matches the repo's own pre-existing explanation (PyO3 extension-module builds defer Python C-API symbol resolution to a real embedding Python process; a standalone test binary run outside Python has nothing to resolve those symbols against) and is consistent with CI only ever running this on Linux. The known-failing-test list below is therefore still sourced from `docs/KNOWN_ISSUES.md`/README, not independently re-run this pass. |
-| `cargo audit` | `cargo audit` | **Could not run at all in this sandbox** -- `cargo-audit` is installed, but fetching the RustSec advisory database (`https://github.com/RustSec/advisory-db.git`) fails outright (no network egress in this environment: `error sending request for url ...`). The "0 vulnerabilities" figure from the 2026-09-13 pass (commit `af55465`) is **not re-verified here** -- it reflects that pass's real, network-connected run, not a claim re-checked today. Treat it as "last known good as of 2026-09-13," not "currently confirmed clean." Run `cargo audit` on a machine with network access before relying on it. |
+| `cargo clippy --release -- -D warnings` | same | **FAILS: 232 errors** (`grep -c '^error:'` on the run output, minus the summary line), re-verified 2026-09-22 after the pyo3 feature-gating fix below (default-feature build, so equivalent to prior runs). Was 231 as of 2026-09-20 (227 before that) -- another 1-error drift, not the same number, direction consistent with slow accumulation rather than anything this pass introduced. Overwhelmingly `non_snake_case` on fields that mirror the real Cesium 3D Tiles JSON field names (`src/tiles_3d/mod.rs`, e.g. `QUANTIZED_VOLUME_OFFSET` line 238, `QUANTIZED_VOLUME_SCALE` line 240) -- these are spec-mandated names, not naming mistakes; the correct fix is `#[allow(non_snake_case)]` per struct, not a rename. A few are real: e.g. `src/caching/mod.rs:344` `if start_layer <= 0 && end_layer >= 0` is flagged `unused_comparisons` (likely `<= 0`/`>= 0` on an unsigned type -- worth a look, it's a logic smell not just a style lint), and `src/adapters/pyrobovision_adapter.rs:106` (`let mAP = ...`) is a real non-snake-case variable, not a spec-mirroring field. CI runs this with `continue-on-error: true`, so it doesn't block merges. **Still not fixed** -- 232 individual annotations/renames is a large, mechanical change that deserves its own reviewed PR, not a drive-by inside a quick-fix pass. |
+| `cargo test --workspace --release` | plain invocation, then feature-gated | **FIXED in this pass.** Root cause confirmed: `pyo3`'s `extension-module` feature was hardcoded always-on in `Cargo.toml`'s `[dependencies]`, so even a standalone `cargo test` binary (never loaded by a real Python process) was built expecting Python C-API symbols to resolve via `dlopen` at import time -- which never happens outside `maturin`/an embedding Python process, hence the `dyld` `SIGABRT` (`_PyBaseObject_Type not found in flat namespace`) previously documented here. Fixed the same way the org's `ClusterAudienceKit` fixed the identical issue: moved `extension-module` out of the hardcoded `pyo3` features list and into a new Cargo `[features]` flag (`extension-module = ["pyo3/extension-module"]`), kept `default = ["database", "extension-module"]` so `cargo build`/`cargo bench`/`cargo clippy`/`maturin develop`/`maturin build` are all unaffected (re-verified: `cargo build --release` and `maturin build --release` both still succeed, `pytest tests/` still 205/205 against the maturin-built wheel). Run `cargo test --workspace --no-default-features --features database` (plus `PYO3_PYTHON=<a python>=3.10, e.g. python3.11>` if the system default `python3` resolves to something older than the `abi3-py310` floor) to get a real, standalone test binary that links normally against libpython. **Result: it now actually runs on macOS for the first time** -- 918-919 passed, 9-10 failed (one intermittent), 1 ignored, across repeated runs. 7 of the failures match the previously-documented known-failing list (`adapters::pyroboframes_adapter::tests::test_temporal_metadata_preservation`, `adapters::pyrobovision_adapter::tests::test_select_best_model_rocky_night`, `exploration::gaussian_frontier_integration::tests::test_score_frontier_with_high_uncertainty`, `gaussian_splatting::fleet_learning::tests::test_fleet_learning_objects_near`, `gaussian_splatting::semantic::tests::test_mission_terrain_cost_delivery`, `slam::loop_closure::tests::test_loop_closure_detector`, `temporal::quality_gates::tests::test_anomaly_detection_spike`). **3 are newly discovered by this fix, not previously documented anywhere** (2 deterministic, 1 intermittent) -- see the full list and root causes below; these simply couldn't be seen before because the suite never got past the runtime crash. Not triaged/fixed in this pass (out of scope -- this was a build/tooling fix, not a test-content audit); flagged as a follow-up. |
+| `cargo audit` | `cargo audit` | **Ran successfully this pass** (network was available) -- **0 vulnerabilities**, 1 pre-existing advisory warning (`rustls-pemfile` 2.2.0 flagged "unmaintained", `RUSTSEC-2025-0134`; already documented elsewhere in this file and in `docs/KNOWN_ISSUES.md`, no fix available upstream). Exit code 0. This supersedes the 2026-09-20 pass's "could not run, no network" note and the 2026-09-13 last-known-good figure -- this is a live, re-confirmed result as of 2026-09-22. |
 | `black --check python/` | same | **Passes** -- re-run in this pass in a fresh Python 3.11 venv (25 files, "would be left unchanged"). |
 | `ruff check python/` | same | **Passes** -- re-run in this pass, "All checks passed!". |
-| `pytest tests/` | `pytest tests/ -q --no-cov` | **Passes: 205/205**, 8.93s -- re-run for real in this pass. Required building the extension first: `python3.11 -m venv`, `pip install maturin pytest pytest-cov pytest-asyncio numpy opencv-python`, then `RUSTFLAGS="-C link-args=-undefined -C link-args=dynamic_lookup" maturin develop --release` (the RUSTFLAGS *are* needed and sufficient for the real `maturin`-built cdylib extension module -- unlike bare `cargo test` above, this is the actual, supported way to run this project locally on macOS, and it works). Confirms the README's "Implemented, tested" claims for the observation store, HTTP/HTTPS server, and traversability graph are not just asserted -- they have a real, currently-passing automated suite behind them. |
-| `actionlint .github/workflows/*.yml` | `actionlint` | **Failed before this pass** (10 findings: `actions-rs/toolchain@v1`, `actions/setup-python@v4`, `codecov/codecov-action@v3`, `actions/upload-artifact@v3`, `actions/download-artifact@v3` all flagged as actions GitHub will refuse to run). **Fixed in this pass** -- see CHANGELOG `[Unreleased]`. `actionlint` now exits clean. `publish.yml` specifically was broken enough (deprecated `upload-artifact@v3`/`download-artifact@v3`, archived `actions/create-release@v1`) that any real release-workflow run before this fix likely would have failed outright; this was never exercised because no release has been cut recently enough to hit it. |
+| `pytest tests/` | `pytest tests/ -q --no-cov` | **Passes: 205/205**, 1.35s -- re-run for real in this pass against a `maturin build --release` wheel built from the post-fix `Cargo.toml` (Python 3.11 venv, `pip install maturin pytest pytest-cov pytest-asyncio numpy opencv-python`, then the built wheel force-installed). Confirms the pyo3 feature-gating fix above didn't regress the actual Python-facing extension module. |
+| `actionlint .github/workflows/*.yml` | `actionlint` | **Already fixed as of commit `081c6ee`** (the prior pass) -- re-verified clean in this pass too, exit 0, no findings on either `ci.yml` or `publish.yml`. Both files already use current, non-deprecated actions (`actions/checkout@v4`, `dtolnay/rust-toolchain@stable`, `actions/setup-python@v5`, `actions/upload-artifact@v4`/`download-artifact@v4`, `codecov/codecov-action@v4`, `pypa/gh-action-pypi-publish@release/v1`, `softprops/action-gh-release@v2`). No changes needed this pass. |
 
 ### Known-failing Rust unit tests
 
-`docs/KNOWN_ISSUES.md` already tracks this in more detail (two overlapping
-but not identical lists from CI vs. the README) -- not re-litigated here.
-Net: at least 7 distinct named failing tests as of the last time someone
-actually ran and reconciled the full suite. This pass **could not** re-run
-and reconcile them -- as established above, `cargo test` cannot be executed
-at all on macOS in this sandbox (or apparently on any macOS machine, RUSTFLAGS
-workaround included; the failure is a runtime `dyld` symbol-resolution crash,
-not a link-time or environment-config problem). **Action item for a
-follow-up session**: run `cargo test --workspace --release -- --nocapture`
-end to end **on Linux** (matching what CI actually does) and produce one
-authoritative failing-test list; macOS-native `cargo test` for this crate may
-simply not be viable given the extension-module architecture, which is worth
-confirming/documenting explicitly rather than re-discovering each time.
+**Updated 2026-09-22: now independently re-run and reconciled on macOS**,
+which was not previously possible (see the pyo3 `extension-module`
+feature-gating fix above). Authoritative result from
+`cargo test --workspace --no-default-features --features database --release`:
+typically **918-919 passed, 9-10 failed, 1 ignored** (one of the failures,
+`advanced::streaming::tests::test_streaming_statistics`, is intermittent --
+see item 10 below). The failures seen across repeated runs:
+
+1. `adapters::pyroboframes_adapter::tests::test_temporal_metadata_preservation` -- previously known.
+2. `adapters::pyrobovision_adapter::tests::test_select_best_model_rocky_night` -- previously known.
+3. `exploration::gaussian_frontier_integration::tests::test_score_frontier_with_high_uncertainty` -- previously known.
+4. `gaussian_splatting::fleet_learning::tests::test_fleet_learning_objects_near` -- previously known.
+5. `gaussian_splatting::semantic::tests::test_mission_terrain_cost_delivery` -- previously known.
+6. `slam::loop_closure::tests::test_loop_closure_detector` -- previously known (`test_loop_closure_detector` in README/VISION.md).
+7. `temporal::quality_gates::tests::test_anomaly_detection_spike` -- previously known (README/VISION.md).
+8. `fleet::consensus::tests::test_consensus_engine_majority` (`src/fleet/consensus.rs:397`, `assertion failed: consensus.is_some()`) -- **newly discovered this pass**, not previously documented anywhere, reproduces deterministically across repeated runs.
+9. `fleet::learning::tests::test_learned_pattern` (`src/fleet/learning.rs:268`, `assertion failed: pattern.confidence > 0.5`) -- **newly discovered this pass**, not previously documented anywhere, reproduces deterministically across repeated runs.
+10. `advanced::streaming::tests::test_streaming_statistics` (`src/advanced/streaming.rs:315`, `assert!(stats.throughput_points_per_sec > 0.0)`) -- **newly discovered this pass, and genuinely flaky/timing-dependent**, not previously documented anywhere. Root cause identified: `StreamingPipeline::calculate_throughput()` (`src/advanced/streaming.rs:232-237`) returns a hardcoded `0.0` whenever `self.current_batch.latency_us() == 0` -- on fast/optimized `--release` hardware, adding one point and immediately reading statistics back can complete in under 1 microsecond, hitting that guard and failing the `> 0.0` assertion. Reproduced 0/1 times in an initial multi-threaded run, then 1/1 times in two subsequent single-threaded reruns on the same machine -- timing-sensitive, not deterministic either way. Not fixed in this pass (would mean changing production throughput-calculation behavior, not just test/doc hygiene -- out of scope for a quick-fix pass); flagged for whoever next touches `src/advanced/streaming.rs`.
+
+Not triaged or fixed in this pass beyond identifying root causes -- this was
+primarily a tooling/build fix (making `cargo test` runnable on macOS at all),
+not a full test-content audit. **Action item for a follow-up session**:
+root-cause and fix (or intentionally skip/mark) the two newly-discovered
+deterministic `fleet::` failures, decide whether `test_streaming_statistics`
+should use a coarser clock/epsilon instead of a hard `> 0.0` assertion, and
+reconcile this list against `docs/KNOWN_ISSUES.md`'s Linux/CI-sourced list
+(they should now substantially match, since both are running the same
+underlying suite, just on different platforms).
 
 ---
 
@@ -104,16 +121,21 @@ Examples: `docs/PRODUCT_VISION.md`, `docs/READY_TO_BUILD.md`,
 `docs/TASKS.md`, and most of the `*_ARCHITECTURE.md`/`*_DESIGN.md` files
 (bandwidth optimization, predictive caching, layered caching, production
 storage, parallel inference, autonomous exploration, security auditability,
-universal robot interoperability). **Confirmed directly, not just inferred
-from dating**: `docs/ARCHITECTURE.md` (the file a stranger would open first
-for "how is this built") still describes a "Layer 3: Optional PyNoramic
-(Image stitching, SfM)" in its top-of-file architecture diagram -- the exact
-fictional component `docs/VISION.md` already disclaims elsewhere in the same
-`docs/` directory. This wasn't rewritten in this pass (fixing one sentence
-here would still leave the rest of that 14KB doc unaudited, and per this
-project's own past practice a `docs/architecture/README.md` rewrite deserves
-its own dedicated pass, not a docs-hygiene-pass drive-by) -- flagged here so
-it's not mistaken for already handled. These were not individually re-verified
+universal robot interoperability).
+
+**`docs/ARCHITECTURE.md`'s PyNoramic contradiction: fixed 2026-09-22.** It
+previously described a "Layer 3: Optional PyNoramic (Image stitching, SfM)"
+in its top-of-file architecture diagram -- the exact fictional component
+`docs/VISION.md` already disclaims elsewhere in the same `docs/` directory.
+The diagram now shows the real 3-layer stack (Python API / Rust Core /
+Persistent Storage) with a note pointing to `VISION.md`'s "Honest status"
+section and to this file's photogrammetry/SfM entry for what does and
+doesn't exist. The rest of that doc (data model, fusion algorithms,
+concurrency model code samples) was not re-audited line-by-line in this
+pass -- only the top-of-file contradiction was in scope. The broader
+40+-file `docs/` sprawl below is still flagged, not fixed:
+
+These were not individually re-verified
 line-by-line in this pass (that would be its own multi-hour audit), but the
 volume and dating pattern strongly suggest most describe unbuilt, aspirational
 designs rather than the current codebase -- `docs/VISION.md` and the README
@@ -135,8 +157,13 @@ namespace next to `VISION.md`/`KNOWN_ISSUES.md` risks a reader treating a
   Not triaged file-by-file this pass; worth a dedicated audit for which ones
   sit on request-handling paths (`src/server.rs`, `src/api/mod.rs`) versus
   internal invariants that are genuinely infallible.
-- **`src/lib.rs:256`**: `// TODO: Implement in future weeks` -- vague,
-  undated TODO with no tracking issue.
+- ~~**`src/lib.rs:256`**: `// TODO: Implement in future weeks` -- vague,
+  undated TODO with no tracking issue.~~ **Fixed 2026-09-22**: removed. All
+  five modules the comment listed as not-yet-implemented (`storage`,
+  `fusion`, `anomaly`, `query`, PyO3 `python` bindings) are already real,
+  implemented modules declared earlier in the same file (`pub mod storage`,
+  `pub mod fusion`, `pub mod anomaly`, `pub mod query`, `pub mod py`) -- the
+  TODO was stale dead commentary, not an actual gap.
 - **`src/api/mod.rs:144`**: `Ok(SensorValue::Camera { detections: vec![] }) // TODO: parse detections` --
   camera sensor detections are silently dropped/ignored rather than parsed.
 - **`rustls-pemfile`**: flagged "unmaintained" by `cargo audit` regardless of

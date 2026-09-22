@@ -38,6 +38,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   confirmed via `actionlint`, which reported all of these as
   no-longer-runnable before the fix and clean after. `publish.yml` was
   effectively broken (would fail on any real run) until this fix.
+- `docs/ARCHITECTURE.md` described a fictional "Layer 3: Optional PyNoramic
+  (Image stitching, SfM)" in its top-of-file architecture diagram --
+  contradicting `docs/VISION.md`'s own "Honest status" section, which
+  already explicitly disclaims PyNoramic as never having existed as a
+  repository. Removed the layer from the diagram and added a note pointing
+  to `VISION.md` and `ROADMAP_HONEST.md` for the real status of
+  photogrammetry/SfM code that does exist (`src/photogrammetry/`,
+  `src/reconstruction_3d/`, both explicit placeholders, not a working
+  solver).
+- **`cargo test --workspace` could not run at all on macOS** (crashed at
+  runtime with a `dyld` symbol-resolution `SIGABRT`,
+  `_PyBaseObject_Type not found in flat namespace`) because PyO3's
+  `extension-module` feature was hardcoded as always-on in `Cargo.toml`,
+  so even a standalone `cargo test` binary (never loaded by a real Python
+  process) was built expecting Python C-API symbols to resolve via dlopen at
+  import time, which never happens outside `maturin`/Python. Feature-gated
+  `extension-module` behind a new `[features]` flag (same pattern already
+  used in the org's `ClusterAudienceKit`), on by default so `cargo build`,
+  `cargo bench`, `cargo clippy`, `maturin develop`, and `maturin build` are
+  all unaffected. Run `cargo test --workspace --no-default-features
+  --features database` to build a test binary that links normally against
+  libpython instead. Verified: this now actually runs on macOS for the
+  first time -- 918-919 passed, 9-10 failed, 1 ignored across repeated runs
+  (previously 0 could even be collected). 7 failures were already
+  known/documented (`adapters::pyroboframes_adapter`,
+  `adapters::pyrobovision_adapter`, `exploration::gaussian_frontier_integration`,
+  `gaussian_splatting::fleet_learning`, `gaussian_splatting::semantic`,
+  `slam::loop_closure::test_loop_closure_detector`,
+  `temporal::quality_gates::test_anomaly_detection_spike`); 3 are newly
+  discovered by this fix, not previously documented anywhere -- 2
+  deterministic (`fleet::consensus::tests::test_consensus_engine_majority`,
+  `fleet::learning::tests::test_learned_pattern`) and 1 intermittent/timing-dependent
+  (`advanced::streaming::tests::test_streaming_statistics`, root-caused to
+  `calculate_throughput()` returning `0.0` when a batch completes in under
+  1 microsecond on fast release-mode hardware) -- see `ROADMAP_HONEST.md`
+  for the updated failing-test list and root causes. `maturin build
+  --release` and `pytest tests/` (205/205) re-verified unaffected by this
+  change.
+- Dead TODO block in `src/lib.rs` (previously around line 256): commented-out
+  `// TODO: Implement in future weeks` listing `storage`, `fusion`,
+  `anomaly`, `query`, and PyO3 `python` bindings as not-yet-implemented --
+  all five are already real, implemented modules declared earlier in the
+  same file (`pub mod storage`, `pub mod fusion`, `pub mod anomaly`,
+  `pub mod query`, `pub mod py`). Removed the stale comment block outright.
 
 ## [1.6.0]
 

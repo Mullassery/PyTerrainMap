@@ -9,10 +9,17 @@ Layer 1: Python API (PyO3 bindings)
          ↓
 Layer 2: Rust Core (Spatial engine, fusion, storage)
          ↓
-Layer 3: Optional PyNoramic (Image stitching, SfM)
-         ↓
-Layer 4: Persistent Storage (SQLite, PostgreSQL, or in-memory)
+Layer 3: Persistent Storage (SQLite, PostgreSQL, or in-memory)
 ```
+
+Note: earlier drafts of this document described an additional "Optional
+PyNoramic (Image stitching, SfM)" layer. That component was never built and
+has no corresponding repository -- see `docs/VISION.md`'s "Honest status"
+section for the full correction. It has been removed from the diagram above
+to avoid contradicting `VISION.md` elsewhere in this same `docs/` tree.
+Photogrammetry/structure-from-motion code that does exist in this repo
+(`src/photogrammetry/`, `src/reconstruction_3d/`) is explicitly placeholder
+logic, not a working SfM solver -- see `ROADMAP_HONEST.md` section 2.
 
 ## Core Data Model
 

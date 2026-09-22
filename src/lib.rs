@@ -253,13 +253,6 @@ pub use gaussian_splatting::{
     ObsContext, GaussianMetrics, ObsEvent, GaussianSplattingTracer,
 };
 
-// TODO: Implement in future weeks
-// pub mod storage;     // Week 3-4: In-memory storage
-// pub mod fusion;      // Week 4-5: Sensor fusion
-// pub mod anomaly;     // Week 7-8: Anomaly detection
-// pub mod query;       // Week 4-5: Query API
-// pub mod python;      // Week 5-6: PyO3 bindings
-
 #[cfg(test)]
 mod tests {
     #[test]

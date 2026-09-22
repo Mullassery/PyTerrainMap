@@ -14,7 +14,11 @@ repository = "https://github.com/Mullassery/PyTerrainMap"
 tokio = { version = "1.35", features = ["full"] }  # MIT
 
 # Python interop (PyO3 bindings) - newer version for Python 3.13 support
-pyo3 = { version = "0.29", features = ["extension-module", "abi3-py310"] }  # Apache 2.0
+# NOTE: `extension-module` is NOT listed here -- it's feature-gated below
+# (see [features]) so that `cargo test` can build a standalone test binary
+# that links against libpython, instead of always building an extension
+# module that leaves those symbols unresolved. See the [features] section.
+pyo3 = { version = "0.29", features = ["abi3-py310"] }  # Apache 2.0
 # pyo3-asyncio = { version = "0.22", features = ["tokio-runtime"] }  # Apache 2.0 - used for async API
 
 # Serialization
@@ -90,7 +94,18 @@ tokio-test = "0.4"
 pyo3-build-config = "0.29"
 
 [features]
-default = ["database"]
+# `extension-module` is on by default so `cargo build`/`cargo bench`/`cargo
+# clippy`/`maturin develop`/`maturin build` all behave exactly as before this
+# feature-gating was introduced. It deliberately omits linking against
+# libpython (a real Python interpreter provides those symbols via dlopen at
+# import time), which is fine for the real extension module but means a
+# standalone `cargo test` binary (never loaded by a Python process) SIGABRTs
+# on macOS with "symbol not found in flat namespace '_PyBaseObject_Type'" --
+# run `cargo test --workspace --no-default-features --features database` to
+# build tests without it, which links normally against libpython instead.
+# Same pattern as ClusterAudienceKit's Cargo.toml. See ROADMAP_HONEST.md.
+default = ["database", "extension-module"]
+extension-module = ["pyo3/extension-module"]
 database = ["sqlx", "rusqlite"]
 imaging = []  # kept for downstream Cargo.toml compatibility; opencv-python used via Python wrapper instead (see `image` dependency comment above)
 pynoramic = ["imaging"]
