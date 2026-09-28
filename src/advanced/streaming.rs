@@ -230,10 +230,15 @@ impl StreamingPipeline {
 
     /// Calculate throughput
     fn calculate_throughput(&self) -> f32 {
-        if self.current_batch.latency_us() == 0 {
-            return 0.0;
-        }
-        (self.points_processed as f32 * 1_000_000.0) / self.current_batch.latency_us() as f32
+        // `latency_us()` is wall-clock elapsed time since batch creation and can
+        // legitimately read 0 (or, under clock skew, negative) for small/fast
+        // batches -- that means "processed too fast to measure", not "zero
+        // throughput". Treating 0 as a sentinel for "no throughput" previously
+        // caused this to silently misreport near-instantaneous processing as
+        // 0.0 points/sec. Floor at 1us so we report a (very high, but finite
+        // and honest) throughput instead.
+        let latency_us = self.current_batch.latency_us().max(1);
+        (self.points_processed as f32 * 1_000_000.0) / latency_us as f32
     }
 }
 

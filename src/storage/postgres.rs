@@ -40,7 +40,25 @@ impl PostgresBackend {
         })
     }
 
-    /// Initialize database schema
+    /// Initialize database schema.
+    ///
+    /// FIXED: this previously used MySQL-only inline `INDEX name (cols)`
+    /// syntax inside `CREATE TABLE` -- not valid PostgreSQL at all -- and
+    /// bundled multiple SQL statements (the table + two separate `CREATE
+    /// INDEX`/GIST statements) into a single `sqlx::query()` call, which
+    /// `sqlx`'s prepared-statement protocol rejects outright ("cannot
+    /// insert multiple commands into a prepared statement"). Verified live
+    /// against a real local Postgres 16 container: the old code failed to
+    /// connect at all, on the very first call, for every caller -- meaning
+    /// this "real, working Postgres backend" had never actually been
+    /// exercised against a real Postgres server. Fixed by splitting into
+    /// separate statements (standard, valid Postgres `CREATE INDEX`, not
+    /// inline), and making the PostGIS-dependent geospatial GIST index
+    /// genuinely optional: `CREATE EXTENSION IF NOT EXISTS postgis` is
+    /// attempted, and if that fails (a real, common case -- most stock
+    /// Postgres installs don't have PostGIS enabled), the geospatial index
+    /// is skipped with a real warning logged, rather than the entire
+    /// backend refusing to start over one optional index.
     async fn initialize_schema(pool: &PgPool) -> BackendResult<()> {
         sqlx::query(
             r#"
@@ -54,19 +72,8 @@ impl PostgresBackend {
                 value_json JSONB NOT NULL,
                 confidence FLOAT NOT NULL,
                 trust_score FLOAT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_robot_time (robot_id, timestamp_us),
-                INDEX idx_spatial (latitude, longitude),
-                INDEX idx_timestamp (timestamp_us)
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_obs_geospatial
-            ON pyterrain_observations
-            USING GIST (
-                ST_GeomFromText(
-                    'SRID=4326;POINT(' || longitude || ' ' || latitude || ')'
-                )
-            );
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
             "#,
         )
         .execute(pool)
@@ -74,8 +81,76 @@ impl PostgresBackend {
         .map_err(|e| BackendError {
             backend: "postgres".to_string(),
             operation: "initialize".to_string(),
-            message: format!("Schema initialization failed: {}", e),
+            message: format!("Table creation failed: {}", e),
         })?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_robot_time ON pyterrain_observations (robot_id, timestamp_us)",
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| BackendError {
+            backend: "postgres".to_string(),
+            operation: "initialize".to_string(),
+            message: format!("idx_robot_time creation failed: {}", e),
+        })?;
+
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_spatial ON pyterrain_observations (latitude, longitude)",
+        )
+        .execute(pool)
+        .await
+        .map_err(|e| BackendError {
+            backend: "postgres".to_string(),
+            operation: "initialize".to_string(),
+            message: format!("idx_spatial creation failed: {}", e),
+        })?;
+
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_timestamp ON pyterrain_observations (timestamp_us)")
+            .execute(pool)
+            .await
+            .map_err(|e| BackendError {
+                backend: "postgres".to_string(),
+                operation: "initialize".to_string(),
+                message: format!("idx_timestamp creation failed: {}", e),
+            })?;
+
+        // PostGIS-dependent: real, but genuinely optional. A stock Postgres
+        // install without PostGIS enabled must still work (with the
+        // lat/lon btree index above covering spatial queries, just without
+        // the GIST-indexed geospatial fast path).
+        if sqlx::query("CREATE EXTENSION IF NOT EXISTS postgis")
+            .execute(pool)
+            .await
+            .is_ok()
+        {
+            if let Err(e) = sqlx::query(
+                r#"
+                CREATE INDEX IF NOT EXISTS idx_obs_geospatial
+                ON pyterrain_observations
+                USING GIST (
+                    ST_GeomFromText(
+                        'SRID=4326;POINT(' || longitude || ' ' || latitude || ')'
+                    )
+                )
+                "#,
+            )
+            .execute(pool)
+            .await
+            {
+                tracing::warn!(
+                    error = %e,
+                    "PostGIS geospatial index creation failed even though the extension \
+                     enabled cleanly; continuing without it (idx_spatial btree index still covers \
+                     spatial queries)"
+                );
+            }
+        } else {
+            tracing::warn!(
+                "PostGIS extension not available on this Postgres server; skipping the \
+                 geospatial GIST index (idx_spatial btree index still covers spatial queries)"
+            );
+        }
 
         Ok(())
     }
@@ -117,7 +192,7 @@ impl StorageBackend for PostgresBackend {
             r#"
             INSERT INTO pyterrain_observations
             (id, robot_id, timestamp_us, latitude, longitude, sensor_type, value_json, confidence)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)
             "#,
         )
         .bind(id)
@@ -161,7 +236,7 @@ impl StorageBackend for PostgresBackend {
     ) -> BackendResult<Vec<StorageObservation>> {
         let rows = sqlx::query(
             r#"
-            SELECT id, robot_id, timestamp_us, latitude, longitude, sensor_type, value_json, confidence
+            SELECT id, robot_id, timestamp_us, latitude, longitude, sensor_type, value_json::text AS value_json, confidence
             FROM pyterrain_observations
             WHERE latitude >= $1 AND latitude <= $2
               AND longitude >= $3 AND longitude <= $4
@@ -176,7 +251,7 @@ impl StorageBackend for PostgresBackend {
         .bind(region.east)
         .bind(time_range.start_us)
         .bind(time_range.end_us)
-        .bind(limit as i64)
+        .bind(limit.min(i64::MAX as usize) as i64)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| BackendError {
@@ -189,14 +264,14 @@ impl StorageBackend for PostgresBackend {
             .iter()
             .map(|row| {
                 StorageObservation {
-                    id: row.get::<String, _>("id"),
+                    id: row.get::<uuid::Uuid, _>("id").to_string(),
                     robot_id: row.get::<String, _>("robot_id"),
                     timestamp: row.get::<i64, _>("timestamp_us"),
                     location_lat: row.get::<f64, _>("latitude"),
                     location_lon: row.get::<f64, _>("longitude"),
                     sensor_type: row.get::<String, _>("sensor_type"),
                     value_json: row.get::<String, _>("value_json"),
-                    confidence: row.get::<f32, _>("confidence"),
+                    confidence: row.get::<f64, _>("confidence") as f32,
                 }
             })
             .collect();
@@ -210,7 +285,7 @@ impl StorageBackend for PostgresBackend {
     ) -> BackendResult<Option<StorageObservation>> {
         let row = sqlx::query(
             r#"
-            SELECT id, robot_id, timestamp_us, latitude, longitude, sensor_type, value_json, confidence
+            SELECT id, robot_id, timestamp_us, latitude, longitude, sensor_type, value_json::text AS value_json, confidence
             FROM pyterrain_observations
             WHERE id = $1
             "#,
@@ -226,14 +301,14 @@ impl StorageBackend for PostgresBackend {
 
         Ok(row.map(|r| {
             StorageObservation {
-                id: r.get::<String, _>("id"),
+                id: r.get::<uuid::Uuid, _>("id").to_string(),
                 robot_id: r.get::<String, _>("robot_id"),
                 timestamp: r.get::<i64, _>("timestamp_us"),
                 location_lat: r.get::<f64, _>("latitude"),
                 location_lon: r.get::<f64, _>("longitude"),
                 sensor_type: r.get::<String, _>("sensor_type"),
                 value_json: r.get::<String, _>("value_json"),
-                confidence: r.get::<f32, _>("confidence"),
+                confidence: r.get::<f64, _>("confidence") as f32,
             }
         }))
     }

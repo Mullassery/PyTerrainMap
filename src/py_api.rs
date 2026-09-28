@@ -271,9 +271,25 @@ impl PyQueryResult {
 // ============================================================================
 
 /// Main terrain mapping engine
+///
+/// `backend` is `None` by default (`TerrainMap()`): exactly the previous
+/// in-memory-only behavior. Construct via `TerrainMap.with_postgres(...)`
+/// (see below) for real, persistent storage: every `push_observation`/
+/// `push_batch` call is then also written through to Postgres, and
+/// `restore_from_backend()` can repopulate the in-memory list from
+/// whatever's already there -- closing the gap where `ServerState` (the
+/// HTTP server's state) had a real, working Postgres backend
+/// (`crate::storage::postgres::PostgresBackend`) that this direct
+/// `TerrainMap` Python class had no way to use at all, so every
+/// `pip install pyterrainmap` user got in-memory-only behavior regardless
+/// of what backend they configured.
 #[pyclass]
 pub struct PyTerrainMap {
     observations: Arc<RwLock<Vec<PyObservation>>>,
+    #[cfg(feature = "database")]
+    backend: Option<Arc<dyn crate::storage::backends::StorageBackend>>,
+    #[cfg(feature = "database")]
+    runtime: Option<Arc<tokio::runtime::Runtime>>,
 }
 
 #[pymethods]
@@ -282,11 +298,109 @@ impl PyTerrainMap {
     pub fn new() -> Self {
         PyTerrainMap {
             observations: Arc::new(RwLock::new(Vec::new())),
+            #[cfg(feature = "database")]
+            backend: None,
+            #[cfg(feature = "database")]
+            runtime: None,
         }
+    }
+
+    /// Real, persistent Postgres-backed `TerrainMap`. Connects synchronously
+    /// (blocks until connected or the connection fails) so construction
+    /// either gives you a genuinely working backend or a real error --
+    /// never a `TerrainMap` that silently pretends to persist.
+    #[staticmethod]
+    #[cfg(feature = "database")]
+    pub fn with_postgres(connection_string: String, pool_size: u32) -> PyResult<Self> {
+        let runtime = tokio::runtime::Runtime::new().map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "failed to start async runtime: {e}"
+            ))
+        })?;
+        let backend = runtime
+            .block_on(crate::storage::postgres::PostgresBackend::new(
+                &connection_string,
+                pool_size,
+            ))
+            .map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "failed to connect to Postgres: {e}"
+                ))
+            })?;
+        Ok(PyTerrainMap {
+            observations: Arc::new(RwLock::new(Vec::new())),
+            backend: Some(Arc::new(backend)),
+            runtime: Some(Arc::new(runtime)),
+        })
+    }
+
+    /// Whether this `TerrainMap` has a real persistent backend configured.
+    #[cfg(feature = "database")]
+    pub fn has_persistent_backend(&self) -> bool {
+        self.backend.is_some()
+    }
+
+    #[cfg(not(feature = "database"))]
+    pub fn has_persistent_backend(&self) -> bool {
+        false
+    }
+
+    /// Repopulate the in-memory observation list from the configured
+    /// Postgres backend. Call once after `with_postgres(...)`, before
+    /// relying on `query()`/`region_stats()` seeing prior history. Returns
+    /// the number of observations actually restored. No-op (returns `Ok(0)`)
+    /// if no backend is configured -- matches `ServerState::restore_from_backend`.
+    #[cfg(feature = "database")]
+    pub fn restore_from_backend(&self) -> PyResult<usize> {
+        let (Some(backend), Some(runtime)) = (&self.backend, &self.runtime) else {
+            return Ok(0);
+        };
+        // Wide-open region/time range: this call exists specifically to
+        // pull back *everything* previously stored, not a scoped query.
+        let region = crate::storage::backends::Region {
+            north: 90.0,
+            south: -90.0,
+            east: 180.0,
+            west: -180.0,
+        };
+        let time_range = crate::storage::backends::TimeRange {
+            start_us: 0,
+            end_us: i64::MAX,
+        };
+        let stored = runtime
+            .block_on(backend.query_spatial_temporal(&region, &time_range, usize::MAX))
+            .map_err(|e| {
+                pyo3::exceptions::PyRuntimeError::new_err(format!(
+                    "failed to restore from Postgres: {e}"
+                ))
+            })?;
+
+        let restored_count = stored.len();
+        let mut obss = self.observations.write();
+        for row in stored {
+            obss.push(PyObservation {
+                robot_id: row.robot_id,
+                timestamp: row.timestamp,
+                location_lat: row.location_lat,
+                location_lon: row.location_lon,
+                sensor_type: row.sensor_type,
+                value_json: row.value_json,
+                confidence: row.confidence,
+            });
+        }
+        Ok(restored_count)
+    }
+
+    #[cfg(not(feature = "database"))]
+    pub fn restore_from_backend(&self) -> PyResult<usize> {
+        Ok(0)
     }
 
     /// Push a single observation
     pub fn push_observation(&self, obs: &PyObservation) -> PyResult<String> {
+        #[cfg(feature = "database")]
+        self.write_through(std::slice::from_ref(obs))?;
+
         let mut obss = self.observations.write();
         obss.push(obs.clone());
         Ok(format!("{}-{}", obs.robot_id, obs.timestamp))
@@ -294,6 +408,9 @@ impl PyTerrainMap {
 
     /// Push multiple observations
     pub fn push_batch(&self, observations: Vec<PyObservation>) -> PyResult<usize> {
+        #[cfg(feature = "database")]
+        self.write_through(&observations)?;
+
         let mut obss = self.observations.write();
         let count = observations.len();
         obss.extend(observations);
@@ -409,6 +526,37 @@ impl PyTerrainMap {
 
     pub fn __repr__(&self) -> String {
         format!("TerrainMap(observations={})", self.observations.read().len())
+    }
+}
+
+#[cfg(feature = "database")]
+impl PyTerrainMap {
+    /// Write `observations` through to the configured Postgres backend, if
+    /// any. No-op if this `TerrainMap` has no backend configured (plain
+    /// `TerrainMap()`).
+    fn write_through(&self, observations: &[PyObservation]) -> PyResult<()> {
+        let (Some(backend), Some(runtime)) = (&self.backend, &self.runtime) else {
+            return Ok(());
+        };
+        let rows: Vec<crate::storage::backends::StorageObservation> = observations
+            .iter()
+            .map(|o| crate::storage::backends::StorageObservation {
+                id: format!("{}-{}", o.robot_id, o.timestamp),
+                robot_id: o.robot_id.clone(),
+                timestamp: o.timestamp,
+                location_lat: o.location_lat,
+                location_lon: o.location_lon,
+                sensor_type: o.sensor_type.clone(),
+                value_json: o.value_json.clone(),
+                confidence: o.confidence,
+            })
+            .collect();
+        runtime.block_on(backend.insert_batch(rows)).map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!(
+                "failed to write observation(s) to Postgres: {e}"
+            ))
+        })?;
+        Ok(())
     }
 }
 

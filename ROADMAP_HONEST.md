@@ -30,11 +30,13 @@ concrete technical debt with file:line references.
 
 ### Known-failing Rust unit tests
 
-**Updated 2026-09-28: 8 of the 9 deterministic failures below are now
-FIXED**, root-caused and verified individually
+**Updated 2026-09-28: 9 of the 10 known failures below are now FIXED**
+(a 10th, the streaming-throughput flake, was found and fixed later the
+same day while re-running the suite for unrelated Postgres work — see
+item 10), root-caused and verified individually
 (`cargo test --no-default-features --features database <module>::`, then a
 full `--release` run: **927 passed, 1 failed, 1 ignored** — down from
-918-919 passed / 9-10 failed). Of the 8 fixes, **4 were real production
+918-919 passed / 9-10 failed). Of the 9 fixes, **5 were real production
 logic bugs** and **4 were bad test data/fixtures** (the real code they
 tested was already correct) — both kinds are called out explicitly below,
 since conflating them would hide which ones need a human to double-check
@@ -139,13 +141,29 @@ the *design* intent, not just the arithmetic:
    couldn't be reached from a 1-1 split. Fixed the test to use z=3.002,
    genuinely within the documented tolerance, which is what "two robots
    agree" is supposed to look like.
-10. `advanced::streaming::tests::test_streaming_statistics` (`src/advanced/streaming.rs:315`, `assert!(stats.throughput_points_per_sec > 0.0)`) -- genuinely flaky/timing-dependent, not touched this pass. Root cause identified previously: `StreamingPipeline::calculate_throughput()` (`src/advanced/streaming.rs:232-237`) returns a hardcoded `0.0` whenever `self.current_batch.latency_us() == 0` -- on fast/optimized `--release` hardware, adding one point and immediately reading statistics back can complete in under 1 microsecond, hitting that guard. Not fixed (would mean changing production throughput-calculation behavior, e.g. a coarser clock or a minimum-elapsed-time floor, not just test/doc hygiene); flagged for whoever next touches `src/advanced/streaming.rs`.
+10. **FIXED (2026-09-28) — real production bug.**
+    `advanced::streaming::tests::test_streaming_statistics`
+    (`src/advanced/streaming.rs:315`, `assert!(stats.throughput_points_per_sec
+    > 0.0)`). Surfaced as a flake while re-running the full suite for the
+    Postgres wiring work below (926 passed / 2 failed on that run, vs. the
+    927/1 baseline above). `StreamingPipeline::calculate_throughput()`
+    (`src/advanced/streaming.rs:232-237`) returned a hardcoded `0.0`
+    whenever `self.current_batch.latency_us() == 0` -- on fast/optimized
+    `--release` hardware, adding one point and immediately reading
+    statistics back can genuinely complete in under 1 microsecond, and that
+    guard silently reported "0 points/sec" for what was actually
+    near-instantaneous (very high) throughput -- a real correctness bug in
+    the statistic itself, not just a test timing issue. Fixed by flooring
+    `latency_us()` at 1 (also guards against negative values from clock
+    skew) instead of special-casing it to a false zero. Verified stable
+    across 5 isolated reruns before and after; full suite back to 927
+    passed / 1 failed / 1 ignored.
 
 **Still open, for a follow-up session**: item 3 above (wire real
 traversability data into `score_frontier_with_gaussian`'s
-`terrain_difficulty` argument) and item 10 (the flaky throughput
-calculation). Reconcile this list against `docs/KNOWN_ISSUES.md`'s
-Linux/CI-sourced list, which predates this pass's fixes.
+`terrain_difficulty` argument) is the only remaining known-failing test.
+Reconcile this list against `docs/KNOWN_ISSUES.md`'s Linux/CI-sourced
+list, which predates this pass's fixes.
 
 ---
 
@@ -182,15 +200,18 @@ Linux/CI-sourced list, which predates this pass's fixes.
 - **Neural-network prediction mode**: `src/analytics/prediction.rs:17`
   lists `NeuralNetwork` as a prediction-method variant with the comment
   "(placeholder)" -- no NN model exists behind it.
-- **Persistent storage from Python**: Postgres persistence is real at the
-  Rust level (`src/storage/postgres.rs`, wired via
-  `ServerState::with_backend()`/`restore_from_backend()` in commit
-  `64e119e`, 2026-08-24) but **not exposed through the Python API** --
-  `pip install pyterrainMap` gives you in-memory-only behavior regardless of
-  what the Rust core can do. SQLite and BigQuery backends are schema/config
-  types only, with no live DB connection at either layer. The README's
-  Features table previously called all three "not implemented," which was
-  stale against the Postgres work; corrected in this pass.
+- **Persistent storage from Python**: **FIXED (2026-09-28)** -- Postgres
+  persistence is now exposed through the Python API:
+  `TerrainMap.with_postgres(connection_string, pool_size)`,
+  `push_observation`/`push_batch` write-through, and
+  `restore_from_backend()`. See CHANGELOG.md for the six real Postgres
+  backend bugs (schema init, JSONB cast, LIMIT overflow, UUID/JSONB/FLOAT8
+  decode panics) found and fixed while wiring this up and verifying it
+  against a real local Postgres 16 instance -- none of which were
+  previously caught, because the "real, working Postgres backend" had
+  never actually been exercised against a live Postgres server before this
+  pass. SQLite and BigQuery backends remain schema/config types only, with
+  no live DB connection.
 - **`cargo audit`'s "0 vulnerabilities"** (2026-09-13): last verified with
   network access on that date, not re-verified today (see table above).
 

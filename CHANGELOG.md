@@ -7,8 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-09-28
+
 ### Added
 
+- **PostgreSQL persistence exposed through the Python API.**
+  `TerrainMap.with_postgres(connection_string, pool_size)` connects to a
+  real Postgres instance and initializes schema; `push_observation`/
+  `push_batch` now write through to it; `restore_from_backend()` reloads
+  prior observations back into memory (e.g. after a process restart).
+  Previously this persistence existed only at the Rust level
+  (`ServerState::with_backend()`) and was unreachable from
+  `pip install pyterrainMap`. Verified against a real local Postgres 16
+  container, which surfaced 6 real, previously-undiscovered bugs in the
+  Postgres backend itself -- see Fixed, below.
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP_HONEST.md`.
 - `.github/dependabot.yml` (cargo, pip, github-actions ecosystems).
 - `.github/ISSUE_TEMPLATE/bug_report.yml`, `feature_request.yml`, `.github/pull_request_template.md`.
@@ -16,6 +28,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Six real bugs in the PostgreSQL storage backend (`src/storage/postgres.rs`),
+  found by wiring it up to the Python API and verifying against a real
+  local Postgres 16 instance** -- this backend had apparently never
+  actually been exercised against a live Postgres server before, despite
+  being described as "real, working." (1) `initialize_schema()` used
+  invalid MySQL-only inline `INDEX name (cols)` syntax inside `CREATE
+  TABLE`, and bundled the table creation with a separate `CREATE INDEX`
+  statement into one `sqlx::query()` call, which `sqlx` rejects outright
+  ("cannot insert multiple commands into a prepared statement") -- every
+  connection attempt failed at schema init, for every caller. Fixed by
+  splitting into valid, separate `CREATE TABLE`/`CREATE INDEX` statements,
+  and making the PostGIS-dependent geospatial GIST index genuinely
+  optional (warns and continues if the `postgis` extension isn't
+  available, rather than failing the whole backend). (2) The `value_json`
+  column is `JSONB`, but the insert bound it as a plain string with no
+  cast -- every insert failed with a type error. Fixed by casting to
+  `::jsonb` in the `INSERT` statement. (3) `query_spatial_temporal`'s
+  `limit: usize` parameter was bound as `limit as i64` with no bounds
+  check; a large limit (e.g. the natural `usize::MAX` "no limit" value)
+  silently reinterpreted as a negative `i64`, and Postgres rejected the
+  query ("LIMIT must not be negative"). Fixed by clamping to
+  `limit.min(i64::MAX as usize)` before the cast. (4) The `id` column is
+  `UUID`, but was decoded as `String` -- `sqlx::Row::get` panics (not just
+  errors) on a decode-type mismatch, so every read of an existing row
+  crashed the process (a Rust panic across the PyO3 FFI boundary, from
+  Python's perspective). Fixed by decoding as `uuid::Uuid` and converting
+  to a string. (5) Likewise `value_json` (`JSONB`) was decoded as `String`
+  instead of being cast to text in the `SELECT`, also panicking on every
+  read. Fixed by selecting `value_json::text AS value_json`. (6)
+  `confidence` (`FLOAT`, i.e. Postgres `FLOAT8`/`f64`) was decoded as
+  `f32`, also panicking on every read. Fixed by decoding as `f64` and
+  narrowing to `f32` after the fact. Verified via a full push -> restart
+  (fresh instance) -> `restore_from_backend()` round trip against a real
+  Postgres container, confirming `robot_id`, `location`, `sensor_type`,
+  `value` (JSON), `confidence`, and `timestamp` all survive correctly.
+- **A real correctness bug in streaming throughput statistics**
+  (`advanced::streaming::StreamingPipeline::calculate_throughput()`,
+  `src/advanced/streaming.rs`), found as a flake
+  (`test_streaming_statistics`) while re-running the full suite for the
+  Postgres work above. The function returned a hardcoded `0.0` whenever
+  `current_batch.latency_us() == 0` -- but on fast/optimized `--release`
+  hardware, processing a small batch can genuinely complete in under 1
+  microsecond of wall-clock time, and that guard silently misreported
+  near-instantaneous processing as "zero throughput" instead of "very high
+  throughput." Fixed by flooring the latency at 1 microsecond (which also
+  guards against negative values from clock skew) instead of
+  special-casing it to a false zero. This test had previously been
+  documented in `ROADMAP_HONEST.md` as "genuinely flaky, not fixed"; it is
+  now fixed and stable (verified across 5 isolated reruns).
 - **8 of the 9 deterministic known-failing Rust unit tests, individually
   root-caused and fixed** (927 passed / 1 failed / 1 ignored, up from
   918-919 passed / 9-10 failed): 4 were real production logic bugs
