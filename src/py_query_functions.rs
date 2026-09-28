@@ -7,6 +7,7 @@
 //! - fuse_observations(observations) → FusedObservation
 //! - query_by_sensor(sensor_type, bbox, time_range) → QueryResult
 
+use crate::elevation::{sample_terrain, slope_to_risk_severity, OpenMeteoElevationProvider};
 use crate::py_api::{
     PyDataExplanation, PyMobilityAssessment, PyObservation, PyQueryResult, PyRisk,
     PyTerrainAnalysis,
@@ -17,7 +18,11 @@ use std::collections::HashMap;
 /// Analyze terrain at a location with given radius
 ///
 /// Performs comprehensive terrain analysis including elevation, slope,
-/// hazards, and robot mobility assessment.
+/// hazards, and robot mobility assessment. Queries real elevation data
+/// (Open-Meteo, Copernicus DEM GLO-90) at the center point and 4 cardinal
+/// points at `radius_km` to derive a real measured slope -- this makes a
+/// live network call and returns a real error (not fabricated data) if it
+/// fails, e.g. `OSError`-style `PyRuntimeError` on no network access.
 ///
 /// # Arguments
 /// * `lat` - Latitude
@@ -28,38 +33,71 @@ use std::collections::HashMap;
 /// TerrainAnalysis with findings, risks, and recommendations
 #[pyfunction]
 pub fn analyze_terrain(lat: f64, lon: f64, radius_km: f64) -> PyResult<PyTerrainAnalysis> {
-    // Create base analysis
     let mut analysis = PyTerrainAnalysis::new(lat, lon);
 
-    // Add location metadata
+    let provider = OpenMeteoElevationProvider::new();
+    let sample = sample_terrain(&provider, lat, lon, radius_km).map_err(|e| {
+        pyo3::exceptions::PyRuntimeError::new_err(format!(
+            "terrain analysis requires a real elevation lookup, which failed: {e}"
+        ))
+    })?;
+
+    analysis.elevation_m = Some(sample.center_elevation_m);
+    analysis.max_slope_degrees = Some(sample.max_slope_degrees);
+
     analysis.summary = format!(
-        "Terrain analysis for location ({:.4}, {:.4}) within {}km radius",
-        lat, lon, radius_km
+        "Terrain analysis for location ({:.4}, {:.4}) within {}km radius: \
+         elevation {:.0}m ASL (range {:.0}-{:.0}m across sampled points), \
+         max slope {:.1} degrees",
+        lat,
+        lon,
+        radius_km,
+        sample.center_elevation_m,
+        sample.min_elevation_m,
+        sample.max_elevation_m,
+        sample.max_slope_degrees
     );
 
-    // Add sample observations (in production, would query from data sources)
     analysis.add_observation(format!("Area analyzed with {} km radius", radius_km));
-    analysis.add_observation("Elevation data retrieved from SRTM".to_string());
+    analysis.add_observation(format!(
+        "Elevation data retrieved from Open-Meteo (Copernicus DEM GLO-90): \
+         center {:.1}m ASL",
+        sample.center_elevation_m
+    ));
+    analysis.add_observation(format!(
+        "Max slope across 4 cardinal directions at {}km: {:.2} degrees",
+        radius_km, sample.max_slope_degrees
+    ));
 
-    // Assess terrain for different personas
+    let slope_severity = slope_to_risk_severity(sample.max_slope_degrees);
     let slope_risk = PyRisk::new(
         "slope_hazard".to_string(),
-        0.4,
-        "Moderate slopes detected in analysis region".to_string(),
+        slope_severity,
+        format!(
+            "Measured max slope of {:.1} degrees in analysis region",
+            sample.max_slope_degrees
+        ),
     );
     analysis.add_risk(slope_risk);
 
-    // Add persona-specific recommendations
     analysis.add_recommendation(
         "drone".to_string(),
         "Safe area for aerial operations within radius".to_string(),
     );
     analysis.add_recommendation(
         "mobile_robot".to_string(),
-        "Monitor slope conditions during traversal".to_string(),
+        if sample.max_slope_degrees > 15.0 {
+            "Steep terrain detected -- verify traversability before committing to this route"
+                .to_string()
+        } else {
+            "Monitor slope conditions during traversal".to_string()
+        },
     );
 
-    analysis.confidence = 0.75;
+    // Real elevation data was successfully retrieved for this exact
+    // location, so this is higher-confidence than the old fixed 0.75 (which
+    // was assigned regardless of whether any real data backed the analysis).
+    analysis.confidence = 0.85;
     Ok(analysis)
 }
 
@@ -118,9 +156,52 @@ pub fn assess_mobility(
         }
     }
 
-    // Incorporate risk factors from terrain analysis
+    // Scale difficulty/speed by the real measured slope, when terrain
+    // analysis has it (i.e. came from a real analyze_terrain() call, not a
+    // bare PyTerrainAnalysis()). Drones are effectively slope-independent
+    // (flight, not ground contact); ground robots slow down and work harder
+    // on steeper real terrain, and become non-traversable past a real,
+    // robot-type-specific slope limit rather than only at the fixed 0.6
+    // risk-severity cutoff below.
+    if let Some(slope_deg) = terrain_analysis.max_slope_degrees {
+        let is_drone = robot_type.eq_ignore_ascii_case("drone");
+        if !is_drone {
+            let max_slope_deg: f32 = match robot_type.to_lowercase().as_str() {
+                "wheeled" => 20.0,
+                "quadruped" => 35.0,
+                "humanoid" => 25.0,
+                _ => 25.0,
+            };
+            let slope_fraction = ((slope_deg as f32) / max_slope_deg).clamp(0.0, 1.5);
+            if slope_fraction >= 1.0 {
+                assessment.traversable = false;
+                assessment.add_hazard(format!(
+                    "Measured slope {:.1} degrees exceeds this robot type's traversable limit \
+                     of {:.0} degrees",
+                    slope_deg, max_slope_deg
+                ));
+            } else {
+                // Blend the base (flat-terrain) difficulty toward 1.0 as
+                // slope approaches the robot's limit, and slow the
+                // recommended speed proportionally.
+                assessment.difficulty =
+                    (assessment.difficulty + slope_fraction * (1.0 - assessment.difficulty))
+                        .clamp(0.0, 1.0);
+                assessment.recommended_speed_ms *= 1.0 - 0.5 * slope_fraction;
+                assessment.battery_impact *= 1.0 + slope_fraction;
+                if assessment.recommended_speed_ms > 0.0 {
+                    assessment.time_to_cross_100m_seconds =
+                        100.0 / assessment.recommended_speed_ms;
+                }
+            }
+        }
+    }
+
+    // Incorporate other risk factors from terrain analysis (e.g. any risk
+    // besides slope_hazard, which is already handled above with a real
+    // per-robot-type slope limit rather than this fixed 0.6 cutoff).
     for risk in &terrain_analysis.risks {
-        if risk.severity > 0.6 {
+        if risk.risk_type != "slope_hazard" && risk.severity > 0.6 {
             assessment.add_hazard(format!(
                 "{} (severity: {:.2})",
                 risk.risk_type, risk.severity

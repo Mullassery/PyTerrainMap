@@ -30,6 +30,7 @@ pub mod cesium_integration;
 pub mod change_detection;
 pub mod persistence;
 pub mod weather_soil;
+pub mod elevation;  // Real elevation/DEM lookups (Open-Meteo) for analyze_terrain()
 pub mod intelligence;
 pub mod cli;
 pub mod spatial_reasoning;

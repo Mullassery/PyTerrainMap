@@ -1,6 +1,6 @@
 [package]
 name = "pyterrain-map"
-version = "1.7.0"
+version = "1.8.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
 description = "Collaborative terrain mapping platform for multi-robot fleets"
@@ -60,6 +60,12 @@ tokio-util = { version = "0.7", features = ["codec"] }  # MIT
 rustls = "0.23"  # Apache-2.0/MIT/ISC
 tokio-rustls = "0.26"  # MIT/Apache-2.0
 rustls-pemfile = "2.2"  # Apache-2.0/MIT/ISC
+
+# HTTP client for real elevation lookups (Open-Meteo, free/no-key public DEM API)
+# in src/elevation/mod.rs, used by analyze_terrain(). blocking (not the async
+# client) since analyze_terrain is a synchronous PyO3 function; rustls-tls to
+# match the no-OpenSSL-system-dep policy used for the HTTPS server above.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }  # MIT/Apache-2.0
 
 # Self-signed certificate generation for local dev/test HTTPS (NOT for production certs)
 rcgen = { version = "0.14", features = ["ring"] }  # MIT/Apache-2.0

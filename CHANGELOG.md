@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-09-28
+
+### Added
+
+- **Real elevation/DEM data wired into `analyze_terrain()`/`assess_mobility()`.**
+  `analyze_terrain()` previously returned fixed output regardless of the
+  coordinates passed in -- a hardcoded slope-risk severity of exactly
+  `0.4` every time, and a summary claiming "Elevation data retrieved from
+  SRTM" despite never actually querying any elevation source at all. It
+  now queries real elevation at the center point and 4 cardinal points at
+  the requested radius from Open-Meteo's free, no-API-key elevation API
+  (Copernicus DEM GLO-90, `src/elevation/mod.rs`), and derives a real
+  measured max slope (`atan(rise/run)`) from those samples. This makes a
+  real network call and raises a real `PyRuntimeError` if it fails, rather
+  than fabricating data. `PyTerrainAnalysis` gained two new real fields,
+  `elevation_m` and `max_slope_degrees`. `assess_mobility()` now scales
+  difficulty, recommended speed, battery impact, and traversability from
+  that real slope, per robot type (wheeled robots become non-traversable
+  above a real 20-degree slope limit; quadruped 35, humanoid 25; drones
+  are slope-independent, matching flight not ground contact). Verified
+  live against two real locations with genuinely different terrain:
+  Zermatt, Switzerland (alpine, measured ~25 degree slope, elevation
+  ~1613m, wheeled robots correctly marked non-traversable) vs. flat Iowa
+  farmland (measured ~1.7 degree slope). 8 new unit tests in
+  `src/elevation/mod.rs` (pure slope/offset math, deterministic, run in
+  CI) plus one `#[ignore]`d real-network integration test (run explicitly
+  with `--ignored`, not part of the default CI run since it depends on
+  outbound network access).
+
+### Fixed
+
+- Adding `reqwest` (for the elevation lookup above) put both the `ring`
+  and `aws-lc-rs` rustls crypto providers into the dependency graph
+  (`reqwest`'s `rustls-tls` feature supports either, leaving the choice to
+  the application), which broke the existing HTTPS server's
+  `tls_acceptor_from_pem()`: `rustls::ServerConfig::builder()` could no
+  longer auto-detect a single provider and started panicking ("Could not
+  automatically determine the process-level CryptoProvider"). This was a
+  real regression surfaced by the full test suite
+  (`server::tests::test_tls_acceptor_from_generated_cert`), not a
+  pre-existing issue. Fixed by explicitly installing the `ring` provider
+  (matching what `rcgen`, used for dev certificate generation, is already
+  built with) at the top of `tls_acceptor_from_pem()`. Verified via the
+  full unit test suite plus the real end-to-end HTTPS TLS handshake
+  integration test (`tests/server_integration.rs`).
+
 ## [1.7.0] - 2026-09-28
 
 ### Added

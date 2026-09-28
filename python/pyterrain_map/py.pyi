@@ -98,6 +98,8 @@ class PyTerrainAnalysis:
     observations: List[str]
     risks: List[PyRisk]
     confidence: float
+    elevation_m: Optional[float]
+    max_slope_degrees: Optional[float]
 
     def __init__(self, lat: float, lon: float) -> None: ...
     def __repr__(self) -> str: ...

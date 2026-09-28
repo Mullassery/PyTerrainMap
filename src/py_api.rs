@@ -575,6 +575,12 @@ pub struct PyTerrainAnalysis {
     pub risks: Vec<PyRisk>,
     pub recommendations: std::collections::HashMap<String, Vec<String>>,
     pub confidence: f32,
+    /// Real elevation at `location`, in meters above sea level, from
+    /// `analyze_terrain()`'s live DEM lookup. `None` if analysis hasn't
+    /// populated it (e.g. a bare `PyTerrainAnalysis::new()`).
+    pub elevation_m: Option<f64>,
+    /// Real max slope (degrees) measured across the analysis radius.
+    pub max_slope_degrees: Option<f64>,
 }
 
 #[pymethods]
@@ -589,7 +595,19 @@ impl PyTerrainAnalysis {
             risks: Vec::new(),
             recommendations: std::collections::HashMap::new(),
             confidence: 0.7,
+            elevation_m: None,
+            max_slope_degrees: None,
         }
+    }
+
+    #[getter]
+    pub fn elevation_m(&self) -> Option<f64> {
+        self.elevation_m
+    }
+
+    #[getter]
+    pub fn max_slope_degrees(&self) -> Option<f64> {
+        self.max_slope_degrees
     }
 
     pub fn __repr__(&self) -> String {

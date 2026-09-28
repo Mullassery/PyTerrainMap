@@ -463,6 +463,19 @@ pub fn tls_acceptor_from_pem(
     cert_pem: &[u8],
     key_pem: &[u8],
 ) -> Result<tokio_rustls::TlsAcceptor, String> {
+    // As of adding `reqwest` (for real elevation lookups, see src/elevation/),
+    // both the `ring` and `aws-lc-rs` rustls crypto providers are present in
+    // the dependency graph (reqwest's rustls-tls feature supports either, and
+    // leaves the choice to the application), so rustls can no longer
+    // auto-detect a single provider -- `ServerConfig::builder()` below would
+    // otherwise panic ("Could not automatically determine the process-level
+    // CryptoProvider"). Explicitly install `ring`, matching the provider
+    // `rcgen` (used by `generate_dev_certificate` above) is already built
+    // with. `install_default()` errors if a provider was already installed
+    // (e.g. by an earlier call in the same test binary) -- that's fine, it
+    // just means this is a no-op then.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     let certs = rustls_pemfile::certs(&mut &*cert_pem)
         .collect::<std::io::Result<Vec<_>>>()
         .map_err(|e| format!("Failed to parse certificate PEM: {e}"))?;

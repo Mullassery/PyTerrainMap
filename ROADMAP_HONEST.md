@@ -169,11 +169,6 @@ list, which predates this pass's fixes.
 
 ## 2. Not built / explicitly fake, by area (no hedging)
 
-- **Terrain intelligence (`analyze_terrain`, `assess_mobility`)**: returns
-  fixed/demo output regardless of input coordinates. `analyze_terrain()`
-  does not query any real elevation/DEM source. Does not work for real
-  terrain assessment. Tested only in the sense that its fixed-output shape
-  is exercised by tests -- the *content* is not real analysis.
 - **Photogrammetry** (`src/photogrammetry/mod.rs`, `src/reconstruction_3d/mod.rs`):
   bundle adjustment (`src/photogrammetry/mod.rs:347`), pose estimation
   (`src/reconstruction_3d/mod.rs:324`, `:792`), and point-cloud color
@@ -317,3 +312,13 @@ namespace next to `VISION.md`/`KNOWN_ISSUES.md` risks a reader treating a
 - H3 parent-cell rollup/compaction (`src/storage/rollup.rs`): real, not a
   stub -- reads a time window and produces genuine per-cell/per-bucket
   summaries. Not yet exposed to Python.
+- PostgreSQL persistence from Python (`TerrainMap.with_postgres(...)`,
+  `push_observation`/`push_batch`, `restore_from_backend()`): real,
+  verified against a live Postgres 16 instance (2026-09-28).
+- Terrain intelligence (`analyze_terrain`, `assess_mobility`): real, as of
+  2026-09-28 -- queries real elevation data (Open-Meteo, Copernicus DEM
+  GLO-90) and derives a genuine measured slope; `assess_mobility()` scales
+  difficulty/speed/traversability from it, per robot type. See CHANGELOG.md
+  for detail and the two locations (Zermatt vs. flat Iowa farmland) used to
+  verify it produces genuinely different output for genuinely different
+  terrain.
