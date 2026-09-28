@@ -77,7 +77,18 @@ impl LearnedPattern {
         self.elevation_variance = (self.elevation_variance * n + delta * delta * weight) / (n + weight);
 
         self.observations_contributing += 1;
-        self.confidence = ((self.observations_contributing as f32).ln() / 5.0).min(1.0);
+        // Regression fix: the previous formula (ln(n)/5) evaluates to 0.0 at
+        // n=1 and only ~0.14 at n=2 -- discontinuous with `new()`'s initial
+        // confidence of 0.5, so the very first real corroborating
+        // observation caused confidence to nonsensically *crash* from 0.5
+        // down to ~0.14 (it took 13 total observations just to climb back
+        // to where a pattern started before any reinforcement at all).
+        // Confidence should be monotonically non-decreasing as corroborating
+        // observations accumulate, never regress on new agreement. This
+        // formula matches `new()`'s 0.5 baseline at n=1 exactly and rises
+        // smoothly toward 1.0 as more observations corroborate the pattern.
+        let n = self.observations_contributing as f32;
+        self.confidence = (1.0 - 0.5 / n).min(1.0);
     }
 
     /// Get standard deviation

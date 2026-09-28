@@ -336,10 +336,21 @@ mod tests {
 
     #[test]
     fn test_loop_closure_detector() {
-        let vocab = FeatureVocabulary::new();
+        // Regression note: this test previously used an untrained, empty
+        // FeatureVocabulary::new() (zero words). BoWHistogram::from_descriptors
+        // assigns each descriptor to a vocabulary word, so with no words to
+        // assign to, every histogram stayed empty regardless of the real
+        // descriptors passed in -- and BoWHistogram::similarity() returns a
+        // hardcoded 0.0 whenever either histogram is empty (by design, to
+        // avoid a meaningless division). That's not a bug in the detector or
+        // the similarity math; it's what an untrained vocabulary always
+        // does. Fixed by actually training the vocabulary on the same real
+        // descriptors being searched, the same real pattern
+        // `test_vocabulary_creation` above already uses correctly.
+        let descriptors = vec![vec![1, 2, 3], vec![4, 5, 6]];
+        let vocab = FeatureVocabulary::from_training_data(descriptors.clone(), 4).unwrap();
         let mut detector = LoopClosureDetector::new(vocab);
 
-        let descriptors = vec![vec![1, 2, 3], vec![4, 5, 6]];
         detector.add_frame(0, &descriptors);
 
         let candidates = detector.search_loop_closures(50, &descriptors);

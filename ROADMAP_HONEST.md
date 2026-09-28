@@ -30,34 +30,122 @@ concrete technical debt with file:line references.
 
 ### Known-failing Rust unit tests
 
-**Updated 2026-09-22: now independently re-run and reconciled on macOS**,
-which was not previously possible (see the pyo3 `extension-module`
-feature-gating fix above). Authoritative result from
-`cargo test --workspace --no-default-features --features database --release`:
-typically **918-919 passed, 9-10 failed, 1 ignored** (one of the failures,
-`advanced::streaming::tests::test_streaming_statistics`, is intermittent --
-see item 10 below). The failures seen across repeated runs:
+**Updated 2026-09-28: 8 of the 9 deterministic failures below are now
+FIXED**, root-caused and verified individually
+(`cargo test --no-default-features --features database <module>::`, then a
+full `--release` run: **927 passed, 1 failed, 1 ignored** — down from
+918-919 passed / 9-10 failed). Of the 8 fixes, **4 were real production
+logic bugs** and **4 were bad test data/fixtures** (the real code they
+tested was already correct) — both kinds are called out explicitly below,
+since conflating them would hide which ones need a human to double-check
+the *design* intent, not just the arithmetic:
 
-1. `adapters::pyroboframes_adapter::tests::test_temporal_metadata_preservation` -- previously known.
-2. `adapters::pyrobovision_adapter::tests::test_select_best_model_rocky_night` -- previously known.
-3. `exploration::gaussian_frontier_integration::tests::test_score_frontier_with_high_uncertainty` -- previously known.
-4. `gaussian_splatting::fleet_learning::tests::test_fleet_learning_objects_near` -- previously known.
-5. `gaussian_splatting::semantic::tests::test_mission_terrain_cost_delivery` -- previously known.
-6. `slam::loop_closure::tests::test_loop_closure_detector` -- previously known (`test_loop_closure_detector` in README/VISION.md).
-7. `temporal::quality_gates::tests::test_anomaly_detection_spike` -- previously known (README/VISION.md).
-8. `fleet::consensus::tests::test_consensus_engine_majority` (`src/fleet/consensus.rs:397`, `assertion failed: consensus.is_some()`) -- **newly discovered this pass**, not previously documented anywhere, reproduces deterministically across repeated runs.
-9. `fleet::learning::tests::test_learned_pattern` (`src/fleet/learning.rs:268`, `assertion failed: pattern.confidence > 0.5`) -- **newly discovered this pass**, not previously documented anywhere, reproduces deterministically across repeated runs.
-10. `advanced::streaming::tests::test_streaming_statistics` (`src/advanced/streaming.rs:315`, `assert!(stats.throughput_points_per_sec > 0.0)`) -- **newly discovered this pass, and genuinely flaky/timing-dependent**, not previously documented anywhere. Root cause identified: `StreamingPipeline::calculate_throughput()` (`src/advanced/streaming.rs:232-237`) returns a hardcoded `0.0` whenever `self.current_batch.latency_us() == 0` -- on fast/optimized `--release` hardware, adding one point and immediately reading statistics back can complete in under 1 microsecond, hitting that guard and failing the `> 0.0` assertion. Reproduced 0/1 times in an initial multi-threaded run, then 1/1 times in two subsequent single-threaded reruns on the same machine -- timing-sensitive, not deterministic either way. Not fixed in this pass (would mean changing production throughput-calculation behavior, not just test/doc hygiene -- out of scope for a quick-fix pass); flagged for whoever next touches `src/advanced/streaming.rs`.
+1. **FIXED — real production bug.** `adapters::pyroboframes_adapter::tests::test_temporal_metadata_preservation`.
+   `sync_confidence: 0.9` in `pyroboframes_adapter.rs:108` was an outlier —
+   every other real usage in this codebase (`types.rs`'s
+   `TemporalMetadata` default, `late_arrival.rs`, `data_contracts.rs`) uses
+   `0.95` for the same "high confidence, synchronized data" case. Changed
+   to `0.95` to match the established convention.
+2. **FIXED — real production bug.** `adapters::pyrobovision_adapter::tests::test_select_best_model_rocky_night`.
+   `select_best_model()` ranked context-specific models and generic
+   "any"-context fallback models in one undifferentiated pool by raw mAP,
+   so a generalist model (`LiDAR_clustering`, mAP 0.82, any/any) could
+   silently outrank a model built specifically for the requested
+   conditions (`thermal_detector_v2`, mAP 0.76, night/clear) — defeating
+   the point of having condition-specific models at all. Fixed by
+   preferring an exact time+weather match first, only falling back to
+   "any"-accepting models when no exact match exists.
+3. **NOT FIXED — precisely re-diagnosed, and the previous "hardcoded
+   placeholder" framing for this one was wrong.**
+   `exploration::gaussian_frontier_integration::tests::test_score_frontier_with_high_uncertainty`.
+   The scoring formula and its weights are real
+   (`RiskEvaluator::estimate_risk`: `0.4*failure_score + 0.3*uncertainty +
+   0.3*terrain_difficulty`) — this is not fake/placeholder scoring. The
+   actual issue: `score_frontier_with_gaussian()`
+   (`gaussian_frontier_integration.rs:57`) calls `estimate_risk(0,
+   uncertainty, 0.0)` with `terrain_difficulty` hardcoded to `0.0` (already
+   honestly commented in the source: "would come from splat
+   traversability" — real traversability data isn't wired into this call
+   yet). With an empty Gaussian store, `uncertainty_at()` correctly returns
+   exactly `1.0`, so `risk = 0.3*1.0 + 0 + 0 = 0.3` *exactly* — and the
+   test's strict `risk_estimate > 0.3` fails on that precise boundary, not
+   because anything is fake. **Deliberately left failing rather than
+   loosening the assertion to `>=`**, which would silently paper over the
+   real, still-open gap (`terrain_difficulty` not wired to real
+   traversability) instead of surfacing it. Fixing this for real means
+   wiring `estimate_risk`'s `terrain_difficulty` argument to a real splat
+   traversability value — a real, separate feature, not a test tweak.
+4. **FIXED — bad test data, real code was already correct.**
+   `gaussian_splatting::fleet_learning::tests::test_fleet_learning_objects_near`.
+   `distance_between()` computes a real haversine geographic distance from
+   lat/lon-style coordinates — genuinely correct code. The test queried
+   0.001 degrees away from the stored object and expected that to be
+   "within 100m," but 0.001 degrees at this latitude is real ~156m,
+   *outside* the 100m radius the test itself specified. Fixed the test to
+   use 0.0001 degrees (~15.6m), which is what the test actually meant to
+   check.
+5. **FIXED — bad test fixture, real code was already correct.**
+   `gaussian_splatting::semantic::tests::test_mission_terrain_cost_delivery`.
+   `mission_terrain_cost()` matches purely on `terrain_type` against a bot
+   profile's real preference lists (DeliveryBot genuinely prefers "Road" at
+   weight 1.0 → cost 0.0) — real, correct logic. The test's "road" splat
+   never actually set `terrain_type = TerrainType::Road` (it silently
+   defaulted to `Unknown(0)` from `from_point_observation`), unlike the
+   sibling `test_mission_terrain_cost_avoid` test which correctly overrides
+   `water.terrain_type`. Fixed by setting the field the test's own name and
+   intent already implied.
+6. **FIXED — bad test fixture, real code was already correct.**
+   `slam::loop_closure::tests::test_loop_closure_detector`. Used an
+   untrained, empty `FeatureVocabulary::new()` (zero words), so
+   `BoWHistogram::from_descriptors` had no word to assign any descriptor
+   to, every histogram stayed empty, and `BoWHistogram::similarity()`
+   correctly (by design) returns `0.0` whenever either histogram is empty
+   — not a bug in the detector or the cosine-similarity math. Fixed by
+   training the vocabulary on the same real descriptors being searched
+   (the same real pattern the sibling `test_vocabulary_creation` test
+   already uses correctly).
+7. **FIXED — real production bug, two related issues in the same function.**
+   `temporal::quality_gates::tests::test_anomaly_detection_spike`.
+   `detect_anomalies()`'s sliding window included the point being tested
+   in its own baseline mean/std_dev (`points[i-window_size..=i]`,
+   inclusive of `i`) — a genuine spike shifts the mean toward itself and
+   inflates std_dev enough that `deviation > 3*std_dev` often can't fire
+   even for a real 10x outlier, systematically under-detecting exactly the
+   spikes this function exists to catch. Separately, `std_dev > 0.01` was
+   used as a *skip* condition rather than a floor, so a real spike right
+   after a perfectly flat baseline (std_dev ≈ 0) was silently ignored
+   instead of being flagged as maximally anomalous. Fixed both: the window
+   now excludes the current point (`points[i-window_size..i]`), and
+   `std_dev` is floored via `.max(0.01)` rather than used as a bypass.
+8. **FIXED — real production bug (confidence formula miscalibration).**
+   `fleet::learning::tests::test_learned_pattern`. `LearnedPattern`'s
+   confidence formula was `(observations_contributing.ln() / 5.0)`, which
+   evaluates to `0.0` at n=1 and only ~0.14 at n=2 — discontinuous with
+   `LearnedPattern::new()`'s own initial `confidence: 0.5`, so the very
+   first real corroborating observation caused confidence to nonsensically
+   *crash* from 0.5 down to ~0.14 (it took 13 total observations just to
+   climb back to where an unreinforced pattern started). Confidence should
+   be monotonically non-decreasing as corroborating observations
+   accumulate. Fixed to `1.0 - 0.5/n`, which matches the 0.5 baseline
+   exactly at n=1 and rises smoothly toward 1.0 as more observations
+   corroborate the pattern.
+9. **FIXED — bad test data, real code was already correct.**
+   `fleet::consensus::tests::test_consensus_engine_majority`.
+   `majority_consensus()`'s z-value grouping rounds to 2 decimal places
+   (~0.005m effective bucket width) per its own documented "0.01m
+   tolerance" comment. The test's two votes were 0.05m apart (z=3.0 vs
+   3.05) — 5x looser than that tolerance — so they correctly landed in two
+   separate 1-vote groups, and majority (`>50%` of 2 votes) correctly
+   couldn't be reached from a 1-1 split. Fixed the test to use z=3.002,
+   genuinely within the documented tolerance, which is what "two robots
+   agree" is supposed to look like.
+10. `advanced::streaming::tests::test_streaming_statistics` (`src/advanced/streaming.rs:315`, `assert!(stats.throughput_points_per_sec > 0.0)`) -- genuinely flaky/timing-dependent, not touched this pass. Root cause identified previously: `StreamingPipeline::calculate_throughput()` (`src/advanced/streaming.rs:232-237`) returns a hardcoded `0.0` whenever `self.current_batch.latency_us() == 0` -- on fast/optimized `--release` hardware, adding one point and immediately reading statistics back can complete in under 1 microsecond, hitting that guard. Not fixed (would mean changing production throughput-calculation behavior, e.g. a coarser clock or a minimum-elapsed-time floor, not just test/doc hygiene); flagged for whoever next touches `src/advanced/streaming.rs`.
 
-Not triaged or fixed in this pass beyond identifying root causes -- this was
-primarily a tooling/build fix (making `cargo test` runnable on macOS at all),
-not a full test-content audit. **Action item for a follow-up session**:
-root-cause and fix (or intentionally skip/mark) the two newly-discovered
-deterministic `fleet::` failures, decide whether `test_streaming_statistics`
-should use a coarser clock/epsilon instead of a hard `> 0.0` assertion, and
-reconcile this list against `docs/KNOWN_ISSUES.md`'s Linux/CI-sourced list
-(they should now substantially match, since both are running the same
-underlying suite, just on different platforms).
+**Still open, for a follow-up session**: item 3 above (wire real
+traversability data into `score_frontier_with_gaussian`'s
+`terrain_difficulty` argument) and item 10 (the flaky throughput
+calculation). Reconcile this list against `docs/KNOWN_ISSUES.md`'s
+Linux/CI-sourced list, which predates this pass's fixes.
 
 ---
 

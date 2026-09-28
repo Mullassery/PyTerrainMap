@@ -169,7 +169,15 @@ impl TemporalConsistencyValidator {
         // Compute moving average of z-values for trend detection
         let window_size = 3;
         for i in window_size..points.len() {
-            let window = &points[i - window_size..=i];
+            // Baseline is the `window_size` points *preceding* i, NOT
+            // including i itself. Previously the window was
+            // `points[i-window_size..=i]` (inclusive of i), so the point
+            // being tested was folded into its own mean/std_dev -- a single
+            // real spike shifts the mean toward itself and inflates std_dev
+            // enough that `deviation > 3*std_dev` often can't fire even for
+            // a genuine 10x outlier, systematically under-detecting the
+            // exact spikes this function exists to catch.
+            let window = &points[i - window_size..i];
             let z_values: Vec<f32> = window.iter().map(|p| p.z).collect();
             let mean_z = z_values.iter().sum::<f32>() / z_values.len() as f32;
 
@@ -182,12 +190,22 @@ impl TemporalConsistencyValidator {
                 .sum::<f32>()
                 / z_values.len() as f32)
                 .sqrt();
+            // A near-flat recent baseline (std_dev ~ 0) previously *skipped*
+            // detection entirely via `std_dev > 0.01`, meaning a real spike
+            // right after a perfectly stable run was silently ignored --
+            // exactly backwards, since a stable baseline makes a real spike
+            // *more* obviously anomalous, not exempt from detection. Floor
+            // std_dev instead of using it as a skip condition, so a real
+            // deviation off a flat baseline still produces a large,
+            // meaningful effective z-score rather than being divided by
+            // (near) zero or skipped outright.
+            let effective_std_dev = std_dev.max(0.01);
 
-            if deviation > 3.0 * std_dev && std_dev > 0.01 {
+            if deviation > 3.0 * effective_std_dev {
                 anomalies.push(TemporalAnomaly {
                     point: points[i],
                     anomaly_type: AnomalyType::ZValueSpike,
-                    severity: deviation / std_dev, // Z-score
+                    severity: deviation / effective_std_dev, // Z-score; floored denominator, see above
                     context: format!("Z-value {} deviates {} from mean {}", current_z, deviation, mean_z),
                 });
             }

@@ -381,6 +381,18 @@ mod tests {
 
     #[test]
     fn test_consensus_engine_majority() {
+        // Regression note: this test previously used z=3.0 and z=3.05 for
+        // the two votes -- a 0.05m gap that `majority_consensus`'s own
+        // z-grouping (rounds to 2 decimal places, ~0.005m effective bucket
+        // width) correctly does NOT merge, since it's 5x looser than the
+        // method's own documented "0.01m tolerance." With 2 votes split
+        // into two 1-robot groups, `agreeing_robots.len() (1) > threshold
+        // (2/2=1)` is false, so no majority is reachable -- that was the
+        // consensus engine correctly refusing to manufacture agreement
+        // between two genuinely-different height readings, not a bug in
+        // it. Fixed the test data (not the production logic) to use two
+        // observations that actually agree within the documented
+        // tolerance, which is what "majority consensus" is meant to test.
         let mut engine = ConsensusEngine::new(RobotId::new(1), ConsensusMethod::Majority);
 
         let point1 = TemporalPoint::new(1.0, 2.0, 3.0, 1000, 0.8);
@@ -388,7 +400,7 @@ mod tests {
         let vote1 = ObservationVote::new(RobotId::new(1), obs1, 0.8);
         engine.add_vote(vote1);
 
-        let point2 = TemporalPoint::new(1.0, 2.0, 3.05, 1000, 0.8);
+        let point2 = TemporalPoint::new(1.0, 2.0, 3.002, 1000, 0.8);
         let obs2 = RobotObservation::new(RobotId::new(2), point2, 0.9);
         let vote2 = ObservationVote::new(RobotId::new(2), obs2, 0.8);
         engine.add_vote(vote2);

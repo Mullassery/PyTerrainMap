@@ -105,7 +105,14 @@ impl RoboticsDataFrameAdapter {
                     clock_source: self.default_clock_source,
                     precision_us: 1_000, // 1ms precision (typical for sensor timestamps)
                     estimated_latency_us: (self.ingestion_time_us - reading.capture_time_us) as u32,
-                    sync_confidence: 0.9, // High confidence for PyRoboFrames-aligned data
+                    // Regression fix: was 0.9, inconsistent with the 0.95
+                    // convention used everywhere else in this codebase for
+                    // high-confidence synchronized data (types.rs's
+                    // TemporalMetadata default, late_arrival.rs,
+                    // data_contracts.rs) -- an outlier value, not a
+                    // deliberately different one (no comment ever justified
+                    // 0.9 specifically vs. the established 0.95).
+                    sync_confidence: 0.95, // High confidence for PyRoboFrames-aligned data
                     is_late_arrival: false,
                     jitter_us: (frame.window_size_us / 4) as u32, // Jitter ~ 1/4 window size
                     temporal_confidence: 0.95,

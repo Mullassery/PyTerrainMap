@@ -16,6 +16,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **8 of the 9 deterministic known-failing Rust unit tests, individually
+  root-caused and fixed** (927 passed / 1 failed / 1 ignored, up from
+  918-919 passed / 9-10 failed): 4 were real production logic bugs
+  (`pyroboframes_adapter`'s outlier `sync_confidence` constant,
+  `pyrobovision_adapter`'s model-selection tiering that let a generic
+  fallback model outrank a model built for the exact requested conditions,
+  `quality_gates`'s anomaly window including the tested point in its own
+  baseline plus a std_dev skip-guard that silently ignored spikes off a
+  flat baseline, and `fleet::learning`'s confidence formula that crashed
+  from 0.5 to ~0.14 on the very first real corroborating observation); 4
+  were bad test data/fixtures where the real production code was already
+  correct (`fleet::consensus`'s z-tolerance test data, `fleet_learning`'s
+  geographic-distance test data, `semantic`'s test splat never actually
+  setting `terrain_type`, and `loop_closure`'s untrained test vocabulary).
+  The 1 remaining failure (`gaussian_frontier_integration`) was
+  re-diagnosed precisely: the scoring formula and weights are real, but
+  one input (`terrain_difficulty`) is hardcoded to `0.0` pending real
+  splat-traversability wiring (already honestly commented in the source) —
+  left failing rather than loosening the test assertion, since that would
+  hide the real, still-open gap. Full root-cause detail for all 9 in
+  `ROADMAP_HONEST.md`.
 - Stale `License: Proprietary` metadata left over from before the Apache-2.0
   relicense: `python/pyterrain_map/__init__.py`'s `__license__` string
   (was actually shipped in package metadata), plus doc references in

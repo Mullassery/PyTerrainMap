@@ -120,20 +120,29 @@ impl VisionModelAwareAdapter {
             ));
         }
 
-        // Filter by time and weather context
+        // Prefer models built specifically for these exact conditions over
+        // generic "any"-context fallbacks, even when a fallback's raw mAP is
+        // numerically higher -- a model tuned for e.g. night+clear exists
+        // precisely because it real-world-outperforms a generalist in that
+        // specific condition, which its stated (unconditional) mAP score
+        // alone doesn't capture. Previously both tiers were filtered into
+        // one pool and ranked purely by mAP, so a generic "any" model could
+        // silently outrank the exact-context model it was supposed to
+        // defer to.
         let mut matching_models: Vec<_> = candidates
             .iter()
-            .filter(|m| {
-                (m.time_context == "any" || m.time_context == time_context) &&
-                (m.weather_context == "any" || m.weather_context == weather)
-            })
+            .filter(|m| m.time_context == time_context && m.weather_context == weather)
             .collect();
 
-        // If no exact match, fall back to "any" context models
+        // No exact-context model exists -- widen to models that accept
+        // "any" for the context(s) that didn't have an exact match.
         if matching_models.is_empty() {
             matching_models = candidates
                 .iter()
-                .filter(|m| m.time_context == "any" || m.weather_context == "any")
+                .filter(|m| {
+                    (m.time_context == "any" || m.time_context == time_context) &&
+                    (m.weather_context == "any" || m.weather_context == weather)
+                })
                 .collect();
         }
 

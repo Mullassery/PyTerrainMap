@@ -133,8 +133,23 @@ mod tests {
 
     #[test]
     fn test_mission_terrain_cost_delivery() {
+        // Regression note: `mission_terrain_cost` looks at `terrain_type`
+        // only (matched against the bot profile's preferred/avoid lists) --
+        // it doesn't consider `traversability` at all. This test's "road"
+        // splat never actually set `terrain_type = TerrainType::Road`
+        // (unlike the sibling `test_mission_terrain_cost_avoid` test just
+        // below, which correctly overrides `water.terrain_type`), so it
+        // silently defaulted to `TerrainType::Unknown(0)` from
+        // `from_point_observation`, matched none of DeliveryBot's real
+        // preferences, and fell through to the 0.5 default cost -- failing
+        // the strict `< 0.5` at exactly the boundary. Not a bug in the real
+        // (and correctly implemented) semantic classification/cost system:
+        // DeliveryBot really does prefer "Road" at weight 1.0 -> cost 0.0,
+        // verified once the splat's terrain_type is actually set to match
+        // its name/intent.
         let mapper = SemanticGaussianMapper::new_with_defaults();
-        let road = TerrainGaussian::from_point_observation([0.0, 0.0, 0.0], "bot_01", 0.8);
+        let mut road = TerrainGaussian::from_point_observation([0.0, 0.0, 0.0], "bot_01", 0.8);
+        road.terrain_type = TerrainType::Road;
         let cost = mapper.mission_terrain_cost("DeliveryBot", &road);
         assert!(cost < 0.5);  // Road should be preferred
     }

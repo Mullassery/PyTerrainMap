@@ -363,7 +363,16 @@ mod tests {
 
         fleet.ingest_observation("bot_01", vec![obs]);
         let now = chrono::Utc::now().timestamp_micros();
-        let nearby = fleet.objects_near([10.001, 20.001, 0.0], 100.0, now);
+        // Regression note: this test previously queried 0.001 degrees away
+        // (lat/lon, per `distance_between`'s real haversine calculation),
+        // assuming that's "very close." At this latitude, 0.001 degrees is
+        // actually ~156m real-world distance -- outside the 100m search
+        // radius the test itself specifies, so objects_near correctly found
+        // 0 results. Not a bug in the (correct) haversine math; the test's
+        // position delta just didn't mean what it looked like it meant.
+        // Fixed to use 0.0001 degrees (~15.6m here), genuinely within the
+        // stated 100m radius.
+        let nearby = fleet.objects_near([10.0001, 20.0001, 0.0], 100.0, now);
         assert_eq!(nearby.len(), 1);
     }
 
