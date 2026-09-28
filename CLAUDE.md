@@ -1,6 +1,6 @@
 # PyTerrainMap: 3-Layer Spatial-Temporal Intelligence Engine
 
-**Status:** v1.8.0 Released | **Architecture:** Rust Core + Python Bindings (PyO3)  
+**Status:** v1.9.0 Released | **Architecture:** Rust Core + Python Bindings (PyO3)  
 **Distribution:** Wheels-only via PyPI | **Tests:** 780+ Rust, 200+ Python | **License:** Apache License 2.0
 
 ---
@@ -442,4 +442,4 @@ for t in query_times:
 
 ---
 
-**Last Updated:** 2026-09-28 | **Version:** 1.8.0
+**Last Updated:** 2026-09-28 | **Version:** 1.9.0

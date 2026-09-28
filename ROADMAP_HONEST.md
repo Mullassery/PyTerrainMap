@@ -169,13 +169,6 @@ list, which predates this pass's fixes.
 
 ## 2. Not built / explicitly fake, by area (no hedging)
 
-- **Photogrammetry** (`src/photogrammetry/mod.rs`, `src/reconstruction_3d/mod.rs`):
-  bundle adjustment (`src/photogrammetry/mod.rs:347`), pose estimation
-  (`src/reconstruction_3d/mod.rs:324`, `:792`), and point-cloud color
-  estimation (`src/reconstruction_3d/mod.rs:833`) are explicit placeholders,
-  not a real structure-from-motion solver. Camera pose initialization
-  (`src/photogrammetry/mod.rs:288`) is also a placeholder. Untested beyond
-  "the placeholder code runs and returns its fixed value."
 - **Gaussian-splatting frontier/semantic scoring**: `strategic_value = 0.5`
   hardcoded (`src/gaussian_splatting/exploration.rs:47`), semantic terrain
   classification is a placeholder (`src/gaussian_splatting/semantic.rs:91`),
@@ -322,3 +315,26 @@ namespace next to `VISION.md`/`KNOWN_ISSUES.md` risks a reader treating a
   for detail and the two locations (Zermatt vs. flat Iowa farmland) used to
   verify it produces genuinely different output for genuinely different
   terrain.
+- Photogrammetry multi-view geometry (`src/photogrammetry/geometry.rs`,
+  wired into `src/photogrammetry/mod.rs`'s `StructureFromMotion`): real, as
+  of 2026-09-28 -- real nearest-neighbor feature matching with Lowe's ratio
+  test, a real normalized 8-point algorithm for fundamental/essential
+  matrix estimation, real cheirality-checked pose recovery, real DLT
+  triangulation, and real structure-only bundle adjustment (Gauss-Newton
+  minimization of reprojection error). Verified with 28 tests against
+  synthetic scenes with known ground-truth camera poses and 3D points,
+  including a full end-to-end pipeline test. Requires the caller to supply
+  real 2D keypoints (this crate doesn't load raw image bytes itself --
+  imaging is Python-side); not yet exposed through the Python API. Two-view
+  SfM's real, inherent scale ambiguity (recovered translation is a
+  direction, not a physical distance, without an external reference) is
+  documented in the code and the test that verifies against it, not
+  hidden. `src/reconstruction_3d/mod.rs` -- a second, entirely unused
+  (zero callers anywhere in the codebase, confirmed by grep) parallel SfM
+  engine that duplicated `photogrammetry/`'s purpose -- was deleted rather
+  than also made real, since its core math was equally fake under a
+  real-looking API (e.g. `solve_f_matrix()` built a real 8-point
+  constraint matrix from its inputs and then discarded it, returning a
+  hardcoded fixed matrix regardless) and fixing a second, dead, duplicate
+  4222-line implementation of the same capability would have been pure
+  wasted effort. See CHANGELOG.md.

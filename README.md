@@ -31,8 +31,9 @@ data (`TerrainMap`), indexed spatially (H3 hexagonal grid) and temporally
   `assess_mobility()` scales difficulty/speed/traversability from that
   real slope, per robot type (see Features table below).
 - **3D reconstruction + Gaussian-splatting probabilistic mapping** in the
-  Rust core (SLAM, photogrammetry, traversability graphs) -- exposed to
-  Python via PyO3 bindings.
+  Rust core (SLAM, traversability graphs -- exposed to Python via PyO3
+  bindings; photogrammetry is real but Rust-level only, not yet exposed to
+  Python -- see Features table below).
 
 If you're looking for something else -- a full SLAM pipeline you point a
 camera at, a hosted service, ML-based object classification -- this isn't
@@ -55,12 +56,16 @@ that (yet). This README describes what's implemented and testable today.
   write through immediately; `restore_from_backend()` reloads prior
   observations into memory). SQLite/BigQuery remain config/schema types
   with no live connection.
-- **Not yet a good fit for:** real photogrammetry (bundle adjustment/pose
-  estimation are explicit placeholders) — see [Features](#features) below
-  for the full per-feature breakdown. `analyze_terrain()` makes a real
-  network call to a public elevation API and will raise a real error
-  (rather than fabricate data) if it can't reach it, so it's not a fit for
-  fully offline/air-gapped use today.
+- **Not yet a good fit for:** a full end-to-end camera-to-keypoints
+  pipeline -- photogrammetry's real geometry (feature matching, pose
+  recovery, triangulation, bundle adjustment; see
+  [Features](#features) below) requires the caller to supply real 2D
+  keypoint detections (this crate's imaging boundary is deliberately
+  Python-side), and it's Rust-level only today, not yet exposed through
+  the Python API. `analyze_terrain()` makes a real network call to a
+  public elevation API and will raise a real error (rather than fabricate
+  data) if it can't reach it, so it's not a fit for fully offline/air-gapped
+  use today.
 
 ## Installation
 
@@ -179,7 +184,7 @@ curl http://127.0.0.1:8080/stats
 | Anomaly detection (z-score, IQR, rogue-bot, drift, spike) + temporal quality weighting | Implemented; one Rust unit test (`test_anomaly_detection_spike`) is currently failing on `main` -- the other detectors pass. |
 | Traversability knowledge graph | Implemented, tested |
 | Gaussian-splatting probabilistic mapping (fusion, frontier detection, fleet learning) | Partially implemented -- core fusion/storage works, but frontier "strategic value" scoring and semantic terrain classification are hardcoded placeholders, and splat temporal decay (`apply_decay_to_store`) is currently a no-op. 3 related Rust unit tests are currently failing on `main` (frontier scoring, fleet learning, semantic terrain cost). |
-| 3D reconstruction (SLAM, photogrammetry, 3D Tiles export) | Mixed -- SLAM (loop closure, BoW) and 3D Tiles export are real implementations; photogrammetry's bundle adjustment, pose estimation, and point-cloud color estimation are explicitly-marked placeholders, not a real SfM solver. One SLAM unit test (`test_loop_closure_detector`) is currently failing on `main`. |
+| 3D reconstruction (SLAM, photogrammetry, 3D Tiles export) | Mixed -- SLAM (loop closure, BoW) and 3D Tiles export are real implementations. Photogrammetry (`src/photogrammetry/`) is now real multi-view geometry, as of 2026-09-28: real nearest-neighbor feature matching with Lowe's ratio test, a real normalized 8-point algorithm for fundamental/essential matrix estimation, real cheirality-checked pose recovery (Longuet-Higgins decomposition), real DLT triangulation, and real structure-only bundle adjustment (Gauss-Newton minimization of reprojection error, `src/photogrammetry/geometry.rs`) -- verified against synthetic scenes with known ground-truth camera poses and 3D points (28 tests, including a full end-to-end pipeline test). This requires the caller to supply real 2D keypoint detections per image (pixel coordinates + a real feature descriptor + real sampled color) since this crate doesn't load raw image bytes itself (imaging is Python-side, see `Cargo.toml`'s `image` crate removal note) -- not yet exposed through the Python API, so this is Rust-level only today. Two-view SfM has an inherent, real scale ambiguity (recovered translation is a direction, not a physical distance, without an external reference like known odometry); this is documented in the code, not hidden. One SLAM unit test (`test_loop_closure_detector`) is currently failing on `main`. |
 | Persistent storage backends (SQLite/PostgreSQL/BigQuery) | **Mixed.** PostgreSQL is now real end-to-end, including from Python: `TerrainMap.with_postgres(connection_string, pool_size)` connects, `push_observation`/`push_batch` write through, and `restore_from_backend()` reloads observations back into memory. This was verified against a real local Postgres 16 instance while wiring it up (2026-09-28), which surfaced and fixed **six previously-undiscovered bugs** in the Rust backend that had apparently never been exercised against a live Postgres server before: (1) `initialize_schema()` used invalid MySQL-only inline `INDEX` syntax and bundled multiple statements into one prepared query -- Postgres connection failed on the very first call, for every caller; (2) the `value_json` insert wasn't cast to `::jsonb`, so every insert failed with a type error; (3) `query_spatial_temporal`'s `limit: usize` was bound as `limit as i64` with no bounds check, so a large limit (e.g. `usize::MAX`) silently became a negative `i64` and Postgres rejected the query ("LIMIT must not be negative"); (4) the `id` column (`UUID` in the schema) was decoded as `String`, panicking on every read via `sqlx::Row::get`'s unwrap-on-decode-failure behavior; (5) `value_json` (`JSONB`) was likewise decoded as `String` instead of being cast to text in the query, also panicking on every read; (6) `confidence` (`FLOAT`/`FLOAT8` in Postgres) was decoded as `f32` instead of `f64`, also panicking on every read. All six were real bugs in `src/storage/postgres.rs`, not test artifacts -- every one of them would have hard-crashed (via Rust panic across the PyO3 FFI boundary) or outright failed the first real read/write against Postgres. SQLite and BigQuery remain config/schema types only, with no live DB connection. |
 
 ---

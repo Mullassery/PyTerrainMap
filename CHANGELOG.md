@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-28
+
+### Added
+
+- **Real multi-view geometry for photogrammetry**
+  (`src/photogrammetry/geometry.rs`), wired into `StructureFromMotion`
+  (`src/photogrammetry/mod.rs`). Previously every stage was fake: camera
+  poses initialized to identity and never updated, "feature matching" that
+  ignored actual descriptors and fabricated sequential-index matches, a
+  fundamental matrix hardcoded to the identity, triangulated points placed
+  at a fixed offset regardless of the actual matched pixels, and a "bundle
+  adjustment" that only nudged a confidence score without touching any
+  position. It's now real: nearest-neighbor descriptor matching with
+  Lowe's ratio test (rejects ambiguous matches), a real normalized
+  8-point algorithm (Hartley-normalized, SVD-based, rank-2-enforced) for
+  fundamental/essential matrix estimation, real cheirality-checked pose
+  recovery (Longuet-Higgins essential-matrix decomposition -- picks the
+  one physically valid (R, t) of the 4 SVD candidates by checking which
+  puts triangulated points in front of both cameras), real DLT (Direct
+  Linear Transform) triangulation, and real structure-only bundle
+  adjustment (Gauss-Newton minimization of summed reprojection error
+  across a point's real observations, with Levenberg-Marquardt damping for
+  numerical stability). Since this crate deliberately doesn't load raw
+  image bytes (imaging is Python-side -- see the `image` crate removal
+  note elsewhere in `Cargo.toml`), the caller now supplies real per-image
+  2D keypoints (`FeatureKeypoint`: pixel coordinate + a real sampled color
+  + a real descriptor vector) rather than this module fabricating
+  correspondences from nothing. `match_image_pair()`/`triangulate()`
+  return real errors (not fabricated output) when keypoints or a known
+  pose aren't available. Verified with 28 tests, including a full
+  end-to-end pipeline test against a synthetic scene with known
+  ground-truth camera poses and 3D points -- pose recovery, triangulation,
+  and bundle adjustment are all checked against that ground truth (with
+  the real, inherent two-view scale ambiguity of monocular SfM -- recovered
+  translation is a direction, not a physical distance, without an external
+  reference like known robot odometry -- explicitly accounted for in the
+  test, not hidden). Adds `nalgebra` (pure-Rust SVD, no system BLAS/LAPACK
+  dependency) and `reqwest`'s transitive dependencies.
+
+### Removed
+
+- **`src/reconstruction_3d/` (4222 lines) -- a second, entirely unused
+  parallel Structure-from-Motion engine.** Confirmed via grep across the
+  whole repo (`src/`, `tests/`, `python/`) that nothing anywhere called
+  into it beyond its own module and a crate-root re-export in `lib.rs` --
+  it duplicated `src/photogrammetry/`'s exact purpose end-to-end (its own
+  `CameraPose`, `Point3D`, `ReconstructionFrame`, RANSAC fundamental-matrix
+  estimation, essential-matrix decomposition, triangulation, and even its
+  own separate bundle-adjustment optimizer), and its core math was
+  equally fake beneath a real-looking API: `compute_fundamental_matrix()`
+  built a real 8-point constraint matrix from its real inputs, then handed
+  it to `solve_f_matrix()`, which discarded it entirely and returned a
+  hardcoded fixed matrix regardless of the input; `decompose_essential_matrix()`
+  likewise ignored its inputs and returned a hardcoded translation and
+  identity rotation; triangulated point color was a hardcoded placeholder.
+  Given it had zero callers, making it real too would have meant
+  re-implementing the same capability added above a second time for a
+  module nothing uses -- pure duplicate effort with no functional gain, and
+  leaving it in place (now sitting right next to a genuinely real
+  `photogrammetry/`) would have actively misled anyone who found it into
+  thinking there were two competing SfM engines, one real and one not.
+  Deleted rather than fixed. Also removed its `pub use` re-export from
+  `lib.rs` (`CameraIntrinsics`, `CameraPose`, `Point3D`,
+  `ReconstructionFrame`, `PointCloud`, `ReconstructionEngine`,
+  `PointCloudStats`, `ReconstructionStats` -- none had any real caller
+  outside the deleted module). Full test suite: 826 passed / 1 failed / 2
+  ignored (down from 946/1/2 -- exactly the 120 tests that lived in the
+  deleted module, no other regressions).
+
 ## [1.8.0] - 2026-09-28
 
 ### Added

@@ -1,6 +1,6 @@
 [package]
 name = "pyterrain-map"
-version = "1.8.0"
+version = "1.9.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
 description = "Collaborative terrain mapping platform for multi-robot fleets"
@@ -40,6 +40,12 @@ geo = "0.28"  # Apache 2.0
 
 # Math/Stats
 ndarray = "0.15"  # MIT/Apache 2.0
+
+# Linear algebra (SVD) for real photogrammetry: essential-matrix pose
+# estimation, DLT triangulation, structure-only bundle adjustment
+# (src/photogrammetry/geometry.rs). Pure-Rust SVD -- no system BLAS/LAPACK
+# dependency, which matters for cross-platform maturin wheel builds.
+nalgebra = "0.33"  # Apache 2.0
 
 # Concurrency (use parking_lot, not crossbeam, for smaller deps)
 # crossbeam = "0.8"  # REMOVED: Use parking_lot instead
