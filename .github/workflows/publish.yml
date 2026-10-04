@@ -16,32 +16,51 @@ on:
 
 jobs:
   build:
-    name: Build wheels
+    name: Build wheels (${{ matrix.os }}, ${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          # Linux wheels MUST be built via maturin-action's manylinux
+          # container (not a bare `maturin build` on the runner's own
+          # glibc) -- PyPI rejects a plain `linux_x86_64`/`linux_aarch64`
+          # tagged wheel outright; only `manylinux_*` tags are accepted.
+          # Previously this workflow ran `maturin build` directly on
+          # ubuntu-latest, which would have produced exactly that
+          # unpublishable tag -- it had also never actually been run (see
+          # ROADMAP_HONEST.md), so this had never been caught.
+          - os: ubuntu-latest
+            target: x86_64
+          - os: ubuntu-latest
+            target: aarch64
+          - os: macos-latest
+            target: aarch64
+          - os: macos-latest
+            target: x86_64
+          - os: windows-latest
+            target: x64
 
     steps:
     - uses: actions/checkout@v4
-
-    - uses: dtolnay/rust-toolchain@stable
 
     - uses: actions/setup-python@v5
       with:
         python-version: "3.11"
 
-    - name: Install maturin
-      run: pip install maturin
-
-    - name: Build wheels (no source distribution)
-      run: maturin build --release --no-sdist
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release --out dist --no-sdist
+        manylinux: auto
+        sccache: 'true'
 
     - name: Upload wheels
       uses: actions/upload-artifact@v4
       with:
-        name: wheels-${{ matrix.os }}
-        path: target/wheels/
+        name: wheels-${{ matrix.os }}-${{ matrix.target }}
+        path: dist/
 
   publish:
     name: Publish wheels to PyPI
@@ -67,6 +86,7 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        skip-existing: true
 
     - name: Publish to PyPI
       if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_env == 'pypi')
