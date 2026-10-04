@@ -77,7 +77,12 @@ reqwest = { version = "0.12", default-features = false, features = ["blocking", 
 rcgen = { version = "0.14", features = ["ring"] }  # MIT/Apache-2.0
 
 # Optional: Database (OSS only)
-sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-native-tls", "sqlite", "postgres", "uuid", "chrono", "any", "macros", "migrate", "json"], optional = true }  # MIT/Apache 2.0
+# tls-rustls (-> tls-rustls-ring), not tls-native-tls: avoids a system OpenSSL dependency,
+# matching this crate's existing policy for the HTTPS server (see rustls/rcgen above) --
+# real CI failure found 2026-10-04 building a Linux wheel in a manylinux container with no
+# pkg-config/OpenSSL dev headers installed (openssl-sys's build script hard-fails without
+# them); tls-rustls needs neither.
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "tls-rustls", "sqlite", "postgres", "uuid", "chrono", "any", "macros", "migrate", "json"], optional = true }  # MIT/Apache 2.0
 rusqlite = { version = "0.37", features = ["bundled"], optional = true }  # MIT
 
 # Optional: Image processing for PyNoramic (OSS only)
