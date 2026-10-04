@@ -55,6 +55,14 @@ jobs:
         args: --release --out dist
         manylinux: auto
         sccache: 'true'
+      env:
+        # ring's pregenerated ARMv8 assembly (pulled in transitively via
+        # rustls/rcgen) needs __ARM_ARCH defined by the compiler; the
+        # manylinux2014-cross aarch64 cross-compiler doesn't define it by
+        # default under maturin-action, which otherwise fails every .S file
+        # in ring's build script with "ARM assembler must define __ARM_ARCH"
+        # (found running this workflow for real against aarch64 Linux).
+        CFLAGS_aarch64_unknown_linux_gnu: -march=armv8-a
 
     - name: Upload wheels
       uses: actions/upload-artifact@v4
