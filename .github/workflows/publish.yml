@@ -52,7 +52,7 @@ jobs:
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
-        args: --release --out dist --no-sdist
+        args: --release --out dist
         manylinux: auto
         sccache: 'true'
 
