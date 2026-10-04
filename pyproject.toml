@@ -105,6 +105,11 @@ pytm-setup = "pyterrain_map.setup_wizard:main"
 module-name = "pyterrain_map"
 features = ["pyo3/extension-module"]
 python-source = "python"
+# Recurring org-wide bug: without this, a maturin sdist omits LICENSE and
+# PyPI rejects the upload with a 400. Dormant here today (publish.yml
+# doesn't pass --sdist), but set preemptively so turning on sdist
+# publishing later doesn't resurrect this.
+include = ["LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

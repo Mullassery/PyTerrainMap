@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`publish.yml` real Linux wheel builds.** The workflow had never
+  actually been run for real: it built with plain `maturin build` on
+  `ubuntu-latest`'s own glibc, producing an unpublishable `linux_x86_64`
+  wheel tag (PyPI only accepts `manylinux_*`). Switched to
+  `PyO3/maturin-action@v1` with a manylinux container for both Linux
+  targets, then fixed, via real CI runs, three further issues this
+  exposed: an obsolete `--no-sdist` flag, `sqlx`'s `tls-native-tls`
+  needing system OpenSSL absent in the manylinux container (switched to
+  `tls-rustls`), and `ring`'s pregenerated ARMv8 assembly needing
+  `__ARM_ARCH` explicitly defined for the aarch64 cross-compiler (`-march`
+  alone doesn't do it on this toolchain). All 5 matrix legs now build
+  green for real.
+- Added `permissions: id-token: write` to `publish.yml`'s publish job
+  (needed for OIDC trusted publishing to PyPI/TestPyPI). Does not by
+  itself make publishing work -- see `ROADMAP_HONEST.md` for the
+  still-open gap (no PyPI/TestPyPI secrets or trusted publisher
+  configured).
+- Added `include = ["LICENSE"]` to `[tool.maturin]` in `pyproject.toml`,
+  preemptively closing a recurring org-wide bug (sdist omitting LICENSE,
+  causing PyPI to reject the upload) before it could affect this repo.
+
 ## [1.9.0] - 2026-09-28
 
 ### Added

@@ -27,6 +27,8 @@ concrete technical debt with file:line references.
 | `ruff check python/` | same | **Passes** -- re-run in this pass, "All checks passed!". |
 | `pytest tests/` | `pytest tests/ -q --no-cov` | **Passes: 205/205**, 1.35s -- re-run for real in this pass against a `maturin build --release` wheel built from the post-fix `Cargo.toml` (Python 3.11 venv, `pip install maturin pytest pytest-cov pytest-asyncio numpy opencv-python`, then the built wheel force-installed). Confirms the pyo3 feature-gating fix above didn't regress the actual Python-facing extension module. |
 | `actionlint .github/workflows/*.yml` | `actionlint` | **Already fixed as of commit `081c6ee`** (the prior pass) -- re-verified clean in this pass too, exit 0, no findings on either `ci.yml` or `publish.yml`. Both files already use current, non-deprecated actions (`actions/checkout@v4`, `dtolnay/rust-toolchain@stable`, `actions/setup-python@v5`, `actions/upload-artifact@v4`/`download-artifact@v4`, `codecov/codecov-action@v4`, `pypa/gh-action-pypi-publish@release/v1`, `softprops/action-gh-release@v2`). No changes needed this pass. |
+| `publish.yml` real Linux wheel build | real `workflow_dispatch` runs against `testpypi`, not just `actionlint` | **FIXED 2026-10-04, verified with real GitHub Actions runs, not just lint.** Before this: `publish.yml` ran plain `maturin build` directly on `ubuntu-latest`'s own glibc, which produces a `linux_x86_64`/`linux_aarch64`-tagged wheel that PyPI outright rejects (only `manylinux_*` tags are accepted) -- and this workflow had never actually been run for real (confirmed: PyPI's current published release is 1.6.0, one file, `macosx_11_0_arm64` only; nothing newer was ever published). Fixed in 4 real iterations, each found by actually running the workflow rather than guessing: (1) switched the build step to `PyO3/maturin-action@v1` with a 5-way OS/arch matrix (`manylinux: auto` for the two Linux legs) -- immediately hit `error: unexpected argument '--no-sdist' found` (maturin dropped that flag; not building sdist is now the default, so the flag was simply removed); (2) both Linux legs then failed on `openssl-sys`/`pkg-config` (sqlx's `tls-native-tls` feature needs system OpenSSL, absent in the manylinux2014-cross container) -- switched `Cargo.toml`'s sqlx feature from `tls-native-tls` to `tls-rustls` (pure-Rust, no system dep, matching this crate's existing policy for its HTTPS server); (3) `ubuntu-latest, aarch64` then failed on `ring`'s pregenerated ARMv8 `.S` files erroring `"ARM assembler must define __ARM_ARCH"` -- first attempt added `CFLAGS_aarch64_unknown_linux_gnu: -march=armv8-a`, which looked plausible but **did not fix it**: the retriggered run showed the identical error with `-march=armv8-a` already present in the failing `gcc` invocation, proving this cross-compiler doesn't auto-define `__ARM_ARCH` from `-march` the way bare-metal ARM GCC does; (4) fixed for real by adding `-D__ARM_ARCH=8` directly to the same CFLAGS variable. **Result: all 5 matrix legs (`ubuntu-latest`/`macos-latest`/`windows-latest` × `x86_64`/`aarch64`) now build green for real** (verified run: https://github.com/Mullassery/PyTerrainMap/actions/runs/37166321257). |
+| `publish.yml` actual PyPI/TestPyPI publish step | same real run | **Separate, still-open gap found by the same real run** (not fixed by the wheel-build fix above, and not something CI config alone can close): the `publish` job failed with `Trusted publishing exchange failure: OpenID Connect token retrieval failed` -- `gh secret list` confirms this repo has **zero** secrets configured, neither `TEST_PYPI_API_TOKEN` nor `PYPI_API_TOKEN`, so `pypa/gh-action-pypi-publish` falls back to OIDC "trusted publishing," which also wasn't set up. Added the job-level `permissions: id-token: write` the error message asked for (necessary but **not sufficient**) -- actually publishing still requires one of: (a) registering a PyPI/TestPyPI "trusted publisher" for this exact repo+workflow on pypi.org/test.pypi.org (manual PyPI account action, can't be done from CI config), or (b) generating real API tokens and adding them as `TEST_PYPI_API_TOKEN`/`PYPI_API_TOKEN` repo secrets. **Net effect: wheel *building* is now fully fixed and verified; wheel *publishing* has never worked and still doesn't**, independent of and in addition to the manylinux gap above. |
 
 ### Known-failing Rust unit tests
 
@@ -277,16 +279,12 @@ namespace next to `VISION.md`/`KNOWN_ISSUES.md` risks a reader treating a
   this won't block CI either way, but coverage upload may silently no-op
   without a token configured. Unverified in this sandbox (no network to
   Codecov).
-- **`[tool.maturin]` in `pyproject.toml` has no `include = ["LICENSE"]`.**
-  This is a recurring bug pattern elsewhere in this org (sdist omits
-  LICENSE, PyPI rejects the upload with a 400) -- it is **not currently live**
-  here because `publish.yml` builds with `maturin build --release --no-sdist`
-  (no sdist is ever produced or uploaded, which the README already discloses
-  as a limitation for a different reason: no source fallback on
-  unsupported platforms). If sdist publishing is ever turned on for this
-  repo, add `include = ["LICENSE"]` under `[tool.maturin]` *first* -- verified
-  via direct inspection of `pyproject.toml`, not assumed from the pattern
-  alone.
+- ~~**`[tool.maturin]` in `pyproject.toml` has no `include = ["LICENSE"]`.**~~
+  **Fixed 2026-10-04**: added `include = ["LICENSE"]` under `[tool.maturin]`
+  preemptively. Was dormant (no sdist is currently built or uploaded -- see
+  below), but this recurring org-wide pattern (sdist omits LICENSE, PyPI
+  rejects the upload with a 400) is now closed before it can resurface if
+  sdist publishing is ever turned on.
 
 ---
 
