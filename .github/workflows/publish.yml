@@ -77,6 +77,16 @@ jobs:
     name: Publish wheels to PyPI
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      # Required for OIDC-based "trusted publishing" to PyPI/TestPyPI
+      # (pypa/gh-action-pypi-publish defaults to this when no password
+      # secret is set -- which is the real CI failure found running this
+      # workflow for real: neither TEST_PYPI_API_TOKEN nor PYPI_API_TOKEN
+      # is configured as a repo secret, `gh secret list` is empty). This
+      # permission alone is NOT sufficient -- a PyPI/TestPyPI "trusted
+      # publisher" must also be registered for this repo+workflow on
+      # pypi.org/test.pypi.org, which requires manual PyPI account action.
+      id-token: write
 
     steps:
     - uses: actions/checkout@v4
