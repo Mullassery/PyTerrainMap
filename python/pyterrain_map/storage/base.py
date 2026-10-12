@@ -187,19 +187,19 @@ class StorageBackend(ABC):
         """Check if observation matches all filters."""
         if robot_id and obs.robot_id != robot_id:
             return False
-        if start_time and obs.timestamp < start_time:
+        if start_time is not None and obs.timestamp < start_time:
             return False
-        if end_time and obs.timestamp > end_time:
+        if end_time is not None and obs.timestamp > end_time:
             return False
         if sensor_type and obs.sensor_type != sensor_type:
             return False
-        if lat_min and obs.location_lat < lat_min:
+        if lat_min is not None and obs.location_lat < lat_min:
             return False
-        if lat_max and obs.location_lat > lat_max:
+        if lat_max is not None and obs.location_lat > lat_max:
             return False
-        if lon_min and obs.location_lon < lon_min:
+        if lon_min is not None and obs.location_lon < lon_min:
             return False
-        if lon_max and obs.location_lon > lon_max:
+        if lon_max is not None and obs.location_lon > lon_max:
             return False
         return True
 
@@ -242,20 +242,3 @@ class StorageFactory:
     def list_backends(cls) -> List[str]:
         """List available backend types."""
         return list(cls._backends.keys())
-
-
-# Auto-register built-in backends
-def _register_backends():
-    """Register all built-in backends."""
-    from .adls import ADLSStorageBackend
-    from .gcs import GCSStorageBackend
-    from .local import LocalStorageBackend
-    from .s3 import S3StorageBackend
-
-    StorageFactory.register("local", LocalStorageBackend)
-    StorageFactory.register("s3", S3StorageBackend)
-    StorageFactory.register("gcs", GCSStorageBackend)
-    StorageFactory.register("adls", ADLSStorageBackend)
-
-
-_register_backends()

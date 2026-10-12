@@ -69,8 +69,12 @@ pytm configure
 # Show version
 pytm version
 
-# Query observations (placeholder for future)
-pytm query
+# Query observations from the local store
+pytm query --robot-id robot1
+
+# Radius query around a point, last hour, machine-readable
+pytm query --lat 40.1 --lon -74.5 --radius-km 0.5 \
+    --start-time "$(date -u +%Y-%m-%dT%H:%M:00Z)" --json
 ```
 
 **Features:**
@@ -78,6 +82,11 @@ pytm query
 - Subcommand dispatch
 - Config directory customization
 - User-friendly help messages
+- `pytm query` filters the local NDJSON observation store by robot id,
+  sensor type, start/end time (ISO-8601, `YYYY-MM-DD`, or microseconds),
+  and an approximate lat/lon bounding box (`--lat`/`--lon`/`--radius-km`),
+  with `--limit`, `--json`, and `--verbose` output. See
+  `tests/test_cli_query.py`.
 
 ---
 

@@ -56,3 +56,5 @@ target/
 *.log
 temp/
 tmp/
+
+.venv-test/

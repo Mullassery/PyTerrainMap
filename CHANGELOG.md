@@ -5,10 +5,34 @@ All notable changes to PyTerrainMap will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.10.0] - 2026-10-11
+
+### Added
+
+- **`pytm query` is now a real command.** Previously a stub that printed
+  "Query command - Not yet implemented" and returned exit code 1, it now
+  queries the local NDJSON observation store (`LocalStorageBackend`) with
+  `--robot-id`, `--sensor-type`, `--start-time`/`--end-time` (ISO-8601,
+  `YYYY-MM-DD`, or microseconds), a `--lat`/`--lon`/`--radius-km` bounding
+  query, `--limit`, `--json`, and `--verbose`. Adds
+  `tests/test_cli_query.py` (10 tests).
 
 ### Fixed
 
+- **`pyterrain_map.storage` was unimportable (circular import).**
+  `storage/base.py` registered its backends by importing every backend
+  module at import time, which cycled (`base -> adls -> base`) whenever
+  the package was imported. Backend registration moved into
+  `storage/__init__.py` after the backend modules are imported.
+- **`LocalStorageBackend.query` dropped the first day of any time-bounded
+  query.** It compared a midnight `file_date` against a time-of-day
+  `start_date`, so any `start_time` after midnight excluded that day's
+  files entirely; the date range now compares day-to-day while
+  `_matches_filters` still enforces the exact instants.
+- **`StorageBackend._matches_filters` ignored zero-valued bounds.** The
+  numeric filters used truthiness (`if lat_min and ...`), so a legitimate
+  `0.0` latitude/longitude bound (or microsecond timestamp) was silently
+  treated as "no filter"; they now use `is not None`.
 - **`publish.yml` real Linux wheel builds.** The workflow had never
   actually been run for real: it built with plain `maturin build` on
   `ubuntu-latest`'s own glibc, producing an unpublishable `linux_x86_64`
@@ -29,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `include = ["LICENSE"]` to `[tool.maturin]` in `pyproject.toml`,
   preemptively closing a recurring org-wide bug (sdist omitting LICENSE,
   causing PyPI to reject the upload) before it could affect this repo.
+
+## [Unreleased]
 
 ## [1.9.0] - 2026-09-28
 

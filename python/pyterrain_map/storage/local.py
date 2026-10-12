@@ -6,7 +6,7 @@ Useful for development, testing, and edge deployments.
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -120,16 +120,20 @@ class LocalStorageBackend(StorageBackend):
         results = []
         count = 0
 
-        # Find files in date range
+        # Find files in date range. Files are partitioned by *day*
+        # (YYYY/MM/DD/...), so compare only the date component here; the
+        # exact instant is still enforced per-observation in
+        # `_matches_filters` below. Comparing a midnight `file_date` against
+        # a time-of-day `start_date` used to drop the entire start day.
         if start_time is None:
-            start_date = datetime.utcnow() - timedelta(days=30)
+            start_date = (datetime.utcnow() - timedelta(days=30)).date()
         else:
-            start_date = datetime.utcfromtimestamp(start_time / 1_000_000)
+            start_date = datetime.utcfromtimestamp(start_time / 1_000_000).date()
 
         if end_time is None:
-            end_date = datetime.utcnow()
+            end_date = datetime.utcnow().date()
         else:
-            end_date = datetime.utcfromtimestamp(end_time / 1_000_000)
+            end_date = datetime.utcfromtimestamp(end_time / 1_000_000).date()
 
         # Scan all NDJSON files in date range
         for ndjson_file in self.base_path.rglob("*.ndjson"):
@@ -139,7 +143,7 @@ class LocalStorageBackend(StorageBackend):
             if len(parts) < 4:
                 continue
 
-            file_date = datetime(int(parts[0]), int(parts[1]), int(parts[2]))
+            file_date = date(int(parts[0]), int(parts[1]), int(parts[2]))
 
             # Skip if file outside date range
             if file_date < start_date or file_date > end_date:
