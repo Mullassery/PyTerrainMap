@@ -25,7 +25,11 @@ def _resolve_observations_dir(config_dir: Optional[str], data_dir: Optional[str]
     if data_dir:
         return Path(data_dir).expanduser()
 
-    config_path = Path(config_dir).expanduser() / "config.json" if config_dir else Path.home() / ".pyterrain" / "config.json"
+    config_path = (
+        Path(config_dir).expanduser() / "config.json"
+        if config_dir
+        else Path.home() / ".pyterrain" / "config.json"
+    )
     if config_path.exists():
         try:
             config = json.loads(config_path.read_text())
@@ -59,9 +63,7 @@ def _parse_timestamp(value: Optional[str]) -> Optional[int]:
     return int(dt.timestamp() * 1_000_000)
 
 
-def _bounding_box(
-    lat: float, lon: float, radius_km: float
-) -> Dict[str, float]:
+def _bounding_box(lat: float, lon: float, radius_km: float) -> Dict[str, float]:
     """Approximate lat/lon box enclosing a circle of `radius_km` (a real
     equirectangular approximation, not a precise geodesic box -- adequate
     for an initial bounded scan, which the caller then optionally refines)."""
@@ -282,9 +284,7 @@ Examples:
         default=None,
         help="Observation store directory (default: ~/.pyterrain/observations)",
     )
-    query_parser.add_argument(
-        "--robot-id", default=None, help="Filter by robot id"
-    )
+    query_parser.add_argument("--robot-id", default=None, help="Filter by robot id")
     query_parser.add_argument(
         "--sensor-type", default=None, help="Filter by sensor type (e.g. thermal, lidar)"
     )
@@ -313,9 +313,7 @@ Examples:
     query_parser.add_argument(
         "--limit", type=int, default=100, help="Maximum observations to return (default 100)"
     )
-    query_parser.add_argument(
-        "--json", action="store_true", help="Emit machine-readable JSON"
-    )
+    query_parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     query_parser.add_argument(
         "--verbose", action="store_true", help="Show each observation's value payload"
     )
