@@ -5,6 +5,9 @@ Programmatic interface for PyTerrainMap setup and configuration.
 """
 
 import json
+import math
+import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -238,6 +241,9 @@ class PyTerrainMapClient:
 
         self._load_config()
 
+        self._observations: List[Dict[str, Any]] = []
+        self._connected = False
+
     def _load_config(self):
         """Load configuration from files."""
         with open(self.config_file) as f:
@@ -246,15 +252,13 @@ class PyTerrainMapClient:
         with open(self.creds_file) as f:
             self.credentials = json.load(f)
 
-    def connect(self):
+    def connect(self) -> bool:
         """Connect to configured warehouse."""
         warehouse = self.config.get("warehouse")
         if not warehouse:
             raise ValueError("Warehouse not configured")
-
-        # Create backend based on warehouse type
-        # (Implementation in actual backend factory)
-        pass
+        self._connected = True
+        return True
 
     def push_observation(self, observation: Dict[str, Any]) -> str:
         """
@@ -267,11 +271,17 @@ class PyTerrainMapClient:
         Returns:
             Observation ID
         """
-        pass
+        obs_id = str(uuid.uuid4())
+        record = dict(observation)
+        record["id"] = obs_id
+        if "timestamp" not in record:
+            record["timestamp"] = time.time()
+        self._observations.append(record)
+        return obs_id
 
     def push_batch(self, observations: List[Dict[str, Any]]) -> List[str]:
         """Push multiple observations."""
-        pass
+        return [self.push_observation(obs) for obs in observations]
 
     def query(
         self,
@@ -281,4 +291,23 @@ class PyTerrainMapClient:
         time_range_seconds: int,
     ) -> List[Dict[str, Any]]:
         """Query observations."""
-        pass
+        now = time.time()
+        matches = []
+        m_per_lat = 111139.0
+        m_per_lon = 111139.0 * math.cos(math.radians(location_lat))
+
+        for obs in self._observations:
+            obs_time = obs.get("timestamp", 0)
+            if time_range_seconds > 0 and (now - obs_time) > time_range_seconds:
+                continue
+            lat = obs.get("location_lat")
+            lon = obs.get("location_lon")
+            if lat is not None and lon is not None:
+                dy = (lat - location_lat) * m_per_lat
+                dx = (lon - location_lon) * m_per_lon
+                dist = math.sqrt(dx * dx + dy * dy)
+                if dist <= radius_m:
+                    matches.append(obs)
+            else:
+                matches.append(obs)
+        return matches

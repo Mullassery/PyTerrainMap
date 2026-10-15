@@ -132,16 +132,50 @@ terrain.restore_from_backend()
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports: [GitHub Issues](https://github.com/Mullassery/PyTerrainMap/issues). Support: mullassery@gmail.com.
 
-## Related projects
+## Decentralized fleet sync with SyncFleet (planned integration)
 
-Part of the Mullassery open-source family:
+PyTerrainMap pairs with [SyncFleet](https://github.com/Mullassery/SyncFleet), a
+secure, local-first, peer-to-peer SQLite synchronization engine. The intended
+design gives a multi-robot edge swarm an out-of-the-box decentralized
+map-sharing protocol: each robot accumulates terrain observations in its local
+PyTerrainMap store, and SyncFleet replicates the selected observation table to
+authorized peers over mutual-TLS 1.3 — with no cloud round-trip or broker, so it
+keeps working across intermittent or air-gapped links.
 
-- [PyRoboSimulator](https://github.com/Mullassery/PyRoboSimulator) — large-scale world simulator for autonomous systems
-- [PyRoboVision](https://github.com/Mullassery/PyRoboVision) — perception stack (multi-object tracking, 3D fusion)
-- [PyRoboReplay](https://github.com/Mullassery/PyRoboReplay) — robotics perception and replay engine
-- [PyRoboFrames](https://github.com/Mullassery/PyRoboFrames) — high-performance robotics dataloader
-- [PyTerrainMap](https://github.com/Mullassery/PyTerrainMap) — unified terrain intelligence for multi-robot fleets
-- [Browse all projects](https://github.com/Mullassery?tab=repositories)
+**Why they fit together**
+
+- Observations are **append-only**, so cross-robot inserts never conflict — the
+  case SyncFleet's single-writer default handles cleanly, without needing CRDTs.
+- The observation table maps to a SyncFleet **dataset** (table allowlist), and
+  each observation UUID becomes an operation `entity_id`.
+- Both are Rust + Tokio + rustls / TLS 1.3 with an edge, local-first focus.
+- SyncFleet supplies mutual-TLS transport, peer enrollment, and per-dataset ACLs
+  for the replication channel.
+
+**Status: not wired up yet.** This is a design goal, not a current capability.
+Before it works, SyncFleet must (1) materialize replicated operations into the
+allowlisted table (today it only replicates its journal), (2) share a live
+storage substrate (SyncFleet is SQLite; PyTerrainMap's live backend is
+PostgreSQL), and (3) capture PyTerrainMap writes as SyncFleet operations via an
+outbox/CDC bridge. Until then, treat the two as independent, complementary
+tools.
+
+## Part of the robotics & autonomy family
+
+PyTerrainMap is one of six complementary, composable tools in the Mullassery **robotics & autonomy** family. Together they form a single stack: **perceive → map → simulate → learn → debug → coordinate the fleet**.
+
+| Tool | Role | What it does |
+|---|---|---|
+| [PyRoboVision](https://github.com/Mullassery/PyRoboVision) | Perception | Multi-object tracker (Kalman filter + Hungarian algorithm) and trajectory predictor for robot perception. |
+| [PyTerrainMap](https://github.com/Mullassery/PyTerrainMap) | Mapping / SLAM | **This project** — fuses multi-robot terrain observations into a spatial-temporal store, with H3 spatial indexing and SLAM. |
+| [PyRoboSimulator](https://github.com/Mullassery/PyRoboSimulator) | Simulation | World simulator for autonomous systems, with a FastAPI backend. |
+| [PyRoboFrames](https://github.com/Mullassery/PyRoboFrames) | Learning data | Rust-backed ML dataloader for robot-learning datasets (native LeRobot format, Apple Silicon hardware video decode). |
+| [PyRoboReplay](https://github.com/Mullassery/PyRoboReplay) | Mission forensics | Forensic-debugging and causal-analysis engine for autonomous robot mission replay. |
+| [SyncFleet](https://github.com/Mullassery/SyncFleet) | Fleet coordination | Rust + SQLite, peer-to-peer state sync for robotics fleets — mutual-TLS 1.3, version-vector replication, mDNS discovery; conflict resolution on the roadmap. |
+
+Each works standalone, but they're complementary by design. The planned integration with SyncFleet (detailed below) will allow terrain maps to sync across fleets without relying on a central database.
+
+[Browse all projects →](https://github.com/Mullassery?tab=repositories)
 
 ## License
 
