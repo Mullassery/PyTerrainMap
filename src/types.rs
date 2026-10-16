@@ -353,6 +353,7 @@ impl Observation {
     }
 
     /// Create observation with explicit clock source
+    #[allow(clippy::too_many_arguments)]
     pub fn with_clock_source(
         robot_id: String,
         timestamp: i64,

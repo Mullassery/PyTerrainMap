@@ -4,7 +4,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use super::patterns::EnvironmentType;
 use crate::traversability::TraversabilityObservation;
 
 /// Robot capability profile
@@ -120,7 +119,7 @@ impl FleetStatistics {
                 .unwrap_or(0.5);
 
             // Blend robot success rate with environment success rate
-            (profile.success_rate * 0.6 + env_success * 0.4).max(0.0).min(1.0)
+            (profile.success_rate * 0.6 + env_success * 0.4).clamp(0.0, 1.0)
         } else {
             self.success_rate_by_environment
                 .get(environment)

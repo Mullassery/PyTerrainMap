@@ -75,7 +75,7 @@ impl Pose {
     /// the full camera matrix).
     pub fn extrinsics(&self) -> Matrix3x4<f64> {
         let mut m = Matrix3x4::zeros();
-        m.fixed_view_mut::<3, 3>(0, 0).copy_from(&self.rotation.matrix());
+        m.fixed_view_mut::<3, 3>(0, 0).copy_from(self.rotation.matrix());
         m.fixed_view_mut::<3, 1>(0, 3).copy_from(&self.translation);
         m
     }
@@ -102,7 +102,7 @@ fn hartley_normalize(points: &[(f64, f64)]) -> (Vec<(f64, f64)>, Matrix3<f64>) {
 
     let mean_dist: f64 = points
         .iter()
-        .map(|(x, y)| (((x - cx).powi(2) + (y - cy).powi(2)) as f64).sqrt())
+        .map(|(x, y)| ((x - cx).powi(2) + (y - cy).powi(2)).sqrt())
         .sum::<f64>()
         / n;
     let scale = if mean_dist > 1e-12 {

@@ -174,7 +174,7 @@ impl ExternalFeature {
 
     /// Set confidence
     pub fn with_confidence(mut self, confidence: f32) -> Self {
-        self.confidence = confidence.max(0.0).min(1.0);
+        self.confidence = confidence.clamp(0.0, 1.0);
         self
     }
 
@@ -326,7 +326,7 @@ impl DataSourceRegistry {
     ) -> Result<Vec<ExternalFeature>> {
         let mut features = Vec::new();
 
-        for (_, config) in &self.sources {
+        for config in self.sources.values() {
             if !config.enabled {
                 continue;
             }

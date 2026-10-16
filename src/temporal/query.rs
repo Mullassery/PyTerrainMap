@@ -65,6 +65,7 @@ pub struct QueryOperators;
 
 impl QueryOperators {
     /// At-time query: Get data at specific timestamp
+    #[allow(clippy::too_many_arguments)]
     pub fn at_time(
         index: &TemporalSpatialIndex,
         x_min: f32,
@@ -123,6 +124,7 @@ impl QueryOperators {
     }
 
     /// Spatio-temporal range: Get data in region and time interval
+    #[allow(clippy::too_many_arguments)]
     pub fn spatio_temporal_range(
         index: &TemporalSpatialIndex,
         x_min: f32,
@@ -162,6 +164,7 @@ impl QueryOperators {
     }
 
     /// High-quality only: Filter results by quality threshold
+    #[allow(clippy::too_many_arguments)]
     pub fn high_quality(
         index: &TemporalSpatialIndex,
         x_min: f32,

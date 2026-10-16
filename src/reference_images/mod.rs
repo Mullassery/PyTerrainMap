@@ -250,7 +250,7 @@ impl ReferenceImageStore {
         let hash = image.descriptor.perceptual_hash.clone();
 
         // Index by hash
-        self.hash_index.entry(hash).or_insert_with(Vec::new).push(id.clone());
+        self.hash_index.entry(hash).or_default().push(id.clone());
         self.images.insert(id.clone(), image);
 
         Ok(id)
@@ -274,7 +274,7 @@ impl ReferenceImageStore {
     ) -> Vec<(String, f32)> {
         let mut results = Vec::new();
 
-        for (_, image) in &self.images {
+        for image in self.images.values() {
             let similarity = image.descriptor.similarity_score(descriptor);
             if similarity >= threshold {
                 results.push((image.id.clone(), similarity));

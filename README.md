@@ -40,7 +40,7 @@ PyTerrainMap is an append-only observation store for multi-robot terrain data (`
 
 ## Project status
 
-Alpha (Development Status 3), version **1.10.0** (matching the latest PyPI release). The append-only store, H3/temporal indexing, HTTP/HTTPS server, PostgreSQL persistence, and terrain-slope intelligence are implemented and tested. Known open items: `cargo clippy` reports ~227 `non_snake_case` lints (mostly Cesium 3D Tiles spec field names; CI non-blocking), three Gaussian-splatting Rust unit tests currently fail on `main`, and one SLAM loop-closure test fails. Prebuilt wheels are published for **macOS arm64 only**; other platforms build from the source distribution with a Rust toolchain. See [docs/DATA_INTEGRITY.md](docs/DATA_INTEGRITY.md) and `docs/` for details.
+Alpha (Development Status 3), version **1.10.1**. The append-only store, H3/temporal indexing, HTTP/HTTPS server, PostgreSQL persistence, and terrain-slope intelligence are implemented and tested. The Rust core is now **`cargo clippy --release -- -D warnings` clean (0 warnings)** and `cargo test` passes except for one documented, pre-existing failing test (`exploration::gaussian_frontier_integration::tests::test_score_frontier_with_high_uncertainty`); the remaining dead-code fields have been wired into real behavior (temporal decay application, cache update policy, scheduler temporal-correction queue, fleet conflict resolution, predictive-caching learning rates, Postgres table name, federated query accessors). Prebuilt wheels are published for **macOS arm64 only**; other platforms build from the source distribution with a Rust toolchain. See [docs/DATA_INTEGRITY.md](docs/DATA_INTEGRITY.md) and `docs/` for details.
 
 ## Installation
 

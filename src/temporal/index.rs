@@ -3,9 +3,8 @@
 //! Implements R*-tree with temporal dimension treating time as a first-class coordinate.
 //! Enables efficient queries in 5D space: (x, y, z, time, quality).
 
-use crate::types::{Result, Error};
+use crate::types::Result;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
 
 /// 5D Point in temporal-spatial space
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
@@ -132,7 +131,7 @@ impl BoundingBox5D {
         let spatial_vol = (self.max_x - self.min_x)
             * (self.max_y - self.min_y)
             * (self.max_z - self.min_z);
-        let temporal_vol = ((self.max_time - self.min_time) as f32 / 1_000_000.0); // Convert to seconds
+        let temporal_vol = (self.max_time - self.min_time) as f32 / 1_000_000.0; // Convert to seconds
         let quality_vol = self.max_quality - self.min_quality;
         spatial_vol * temporal_vol * quality_vol
     }
@@ -256,6 +255,7 @@ impl TemporalSpatialIndex {
     }
 
     /// Spatial query at specific time
+    #[allow(clippy::too_many_arguments)]
     pub fn query_at_time(
         &self,
         min_x: f32,

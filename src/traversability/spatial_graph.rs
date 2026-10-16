@@ -3,7 +3,7 @@
 //! Main graph structure managing nodes, edges, and traversability observations.
 
 use crate::traversability::{
-    Node, NodeType, Edge, EdgeType, TraversabilityObservation, TraversalOutcome,
+    Node, Edge, TraversabilityObservation,
     ConsensusResult, SpatialMetadata,
 };
 use std::collections::HashMap;
@@ -240,6 +240,7 @@ impl SpatialGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traversability::{NodeType, EdgeType, TraversalOutcome};
 
     fn create_test_graph() -> SpatialGraph {
         SpatialGraph::new("test_env".to_string(), (0.0, 0.0, 0.0))

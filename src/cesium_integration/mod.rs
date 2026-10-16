@@ -143,7 +143,7 @@ impl CameraPosition {
 
     /// Set pitch (angle down from horizontal)
     pub fn with_pitch(mut self, pitch: f64) -> Self {
-        self.pitch = pitch.max(-90.0).min(90.0);
+        self.pitch = pitch.clamp(-90.0, 90.0);
         self
     }
 
@@ -167,6 +167,7 @@ impl Default for CameraPosition {
 
 /// Terrain provider options
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum TerrainProvider {
     /// Cesium Ion asset (requires API key)
     CesiumIon {
@@ -174,6 +175,7 @@ pub enum TerrainProvider {
         access_token: String,
     },
     /// USGS elevation data
+    #[default]
     USGS,
     /// Mapbox Terrain-RGB
     Mapbox {
@@ -212,11 +214,6 @@ impl TerrainProvider {
     }
 }
 
-impl Default for TerrainProvider {
-    fn default() -> Self {
-        TerrainProvider::USGS
-    }
-}
 
 /// Base imagery layer
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -284,7 +281,7 @@ impl TilesetLayer {
 
     /// Set opacity
     pub fn with_opacity(mut self, opacity: f32) -> Self {
-        self.opacity = opacity.max(0.0).min(1.0);
+        self.opacity = opacity.clamp(0.0, 1.0);
         self
     }
 

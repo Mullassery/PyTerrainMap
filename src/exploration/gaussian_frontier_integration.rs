@@ -3,7 +3,7 @@
 //! Combines Gaussian uncertainty scores with frontier prioritization for
 //! intelligent exploration targeting.
 
-use crate::gaussian_splatting::{GaussianSplatStore, TerrainGaussian};
+use crate::gaussian_splatting::GaussianSplatStore;
 use super::frontier::{Frontier, CuriosityScorer, RiskEvaluator};
 
 /// Gaussian-aware frontier scorer
@@ -114,6 +114,7 @@ impl Default for GaussianFrontierScorer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gaussian_splatting::TerrainGaussian;
 
     #[test]
     fn test_scorer_creation() {

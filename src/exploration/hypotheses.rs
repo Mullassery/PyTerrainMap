@@ -122,7 +122,7 @@ impl HypothesisManager {
     pub fn generate_hypotheses(
         &mut self,
         element_id: &str,
-        context: &[Node],
+        _context: &[Node],
     ) -> Vec<Hypothesis> {
         let mut hypotheses = Vec::new();
 
@@ -159,7 +159,7 @@ impl HypothesisManager {
         // Store hypotheses
         self.hypotheses
             .entry(element_id.to_string())
-            .or_insert_with(Vec::new)
+            .or_default()
             .extend(hypotheses.clone());
 
         hypotheses

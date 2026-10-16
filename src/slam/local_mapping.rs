@@ -3,7 +3,7 @@
 //! Implements intelligent keyframe selection and local bundle adjustment
 //! for real-time performance.
 
-use crate::types::{Result, Error};
+use crate::types::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{VecDeque, HashMap};
 use std::f32::consts::PI;
@@ -164,7 +164,7 @@ impl LocalMapper {
             let mut total_residual = 0.0;
             for keyframe in &local_keyframes {
                 // Residual: difference between observed and expected depth
-                for (point_id, point_pos) in &self.map_points {
+                for point_pos in self.map_points.values() {
                     let dx = point_pos.0 - keyframe.position.0;
                     let dy = point_pos.1 - keyframe.position.1;
                     let dz = point_pos.2 - keyframe.position.2;
@@ -197,7 +197,7 @@ impl LocalMapper {
     }
 
     /// Clear old map points (for memory management)
-    pub fn prune_map_points(&mut self, min_observations: u32) {
+    pub fn prune_map_points(&mut self, _min_observations: u32) {
         // Remove points with too few observations (simplified: random pruning for demo)
         if self.map_points.len() > 10000 {
             let keys: Vec<_> = self.map_points.keys().copied().collect();

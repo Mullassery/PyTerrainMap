@@ -267,6 +267,12 @@ impl TemporalIndexEnhanced {
         self.watermark_us
     }
 
+    /// Apply this index's configured decay function to a confidence value
+    /// given the observation's age in milliseconds.
+    pub fn apply_decay(&self, original_confidence: f32, age_ms: i64) -> f32 {
+        self.decay.apply(original_confidence, age_ms)
+    }
+
     /// Get observations that arrived late
     pub fn late_arrivals(&self) -> &[usize] {
         &self.late_arrivals

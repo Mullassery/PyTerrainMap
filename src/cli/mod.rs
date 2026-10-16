@@ -4,7 +4,6 @@
 //! Makes PyTerrainMap accessible from the command line.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// CLI command types (natural language parsing)
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -154,7 +153,7 @@ impl CLICommand {
         for i in 0..parts.len() - 1 {
             if let (Ok(lat), Ok(lon)) = (parts[i].parse::<f64>(), parts[i + 1].parse::<f64>()) {
                 // Validate latitude and longitude ranges
-                if lat >= -90.0 && lat <= 90.0 && lon >= -180.0 && lon <= 180.0 {
+                if (-90.0..=90.0).contains(&lat) && (-180.0..=180.0).contains(&lon) {
                     return Some((lat, lon));
                 }
             }

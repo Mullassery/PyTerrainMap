@@ -4,7 +4,7 @@
 //! information gain, curiosity value, risk, and robot capabilities.
 
 use serde::{Deserialize, Serialize};
-use crate::traversability::{Node, SpatialGraph};
+use crate::traversability::SpatialGraph;
 use super::SemanticContext;
 
 /// A frontier: boundary of mapped region where exploration could continue
@@ -49,7 +49,7 @@ impl Frontier {
         // High cost + high risk = deprioritize
         let numerator = self.expected_information_gain * self.curiosity_score;
         let denominator = (self.exploration_cost + 0.1) * (self.risk_estimate + 0.1);
-        self.priority = (numerator / denominator).min(1.0).max(0.0);
+        self.priority = (numerator / denominator).clamp(0.0, 1.0);
     }
 
     /// Set all components and update priority
@@ -158,7 +158,7 @@ impl CuriosityScorer {
     /// Score curiosity for a frontier
     pub fn score_curiosity(
         &self,
-        frontier: &Frontier,
+        _frontier: &Frontier,
         information_scarcity: f32,
         strategic_importance: f32,
         connectivity_potential: f32,
@@ -245,7 +245,7 @@ impl FrontierPrioritizer {
                 self.discovery_importance * discovery_score
                 - self.cost_importance * cost_penalty
                 - self.risk_importance * risk_penalty
-            ).max(0.0).min(1.0);
+            ).clamp(0.0, 1.0);
         }
 
         // Sort by priority (highest first)

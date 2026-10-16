@@ -4,7 +4,6 @@
 //! change tracking, and temporal statistics.
 
 use super::index::TemporalPoint;
-use super::query::QueryOperators;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 

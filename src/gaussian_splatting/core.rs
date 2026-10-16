@@ -36,6 +36,7 @@ impl TerrainType {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(s: &str) -> Self {
         match s {
             "Road" => TerrainType::Road,
@@ -50,6 +51,14 @@ impl TerrainType {
             "RestrictedArea" => TerrainType::RestrictedArea,
             _ => TerrainType::Unknown(0),
         }
+    }
+}
+
+impl std::str::FromStr for TerrainType {
+    type Err = std::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(TerrainType::from_str(s))
     }
 }
 

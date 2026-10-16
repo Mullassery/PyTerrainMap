@@ -8,9 +8,9 @@
 
 use std::sync::Arc;
 use crate::storage::backends::{
-    StorageBackend, BackendRegistry, QueryOptimizer, FederatedQueryExecutor,
+    StorageBackend, BackendRegistry, QueryOptimizer,
     DataPlacementPolicy, DataTier, Region, TimeRange, AggregationQuery, StorageObservation,
-    BackendResult, BackendError,
+    BackendResult,
 };
 
 /// Query router that dispatches to appropriate backends
@@ -32,6 +32,16 @@ impl QueryRouter {
             optimizer,
             policy,
         }
+    }
+
+    /// Query optimizer used to plan routing decisions
+    pub fn optimizer(&self) -> &Arc<QueryOptimizer> {
+        &self.optimizer
+    }
+
+    /// Data placement policy applied when routing queries
+    pub fn policy(&self) -> &Arc<DataPlacementPolicy> {
+        &self.policy
     }
 
     /// Route observation insert to appropriate backend

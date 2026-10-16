@@ -5,8 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::traversability::TraversabilityObservation;
-use super::predictions::PredictiveModel;
 
 /// Outcome of a prediction validation
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -48,13 +46,13 @@ impl PredictionOutcome {
 
     /// Set continuous error magnitude (for numeric predictions)
     pub fn with_magnitude(mut self, magnitude: f32) -> Self {
-        self.error_magnitude = magnitude.max(0.0).min(1.0);
+        self.error_magnitude = magnitude.clamp(0.0, 1.0);
         self
     }
 
     /// Set prediction confidence
     pub fn with_confidence(mut self, confidence: f32) -> Self {
-        self.prediction_confidence = confidence.max(0.0).min(1.0);
+        self.prediction_confidence = confidence.clamp(0.0, 1.0);
         self
     }
 }
@@ -257,12 +255,11 @@ impl ActiveLearner {
         let systematic = self.validator.systematic_errors();
 
         // Calculate what to update
-        let mut confidence_adjustment = 0.0;
-        if outcome.was_correct {
-            confidence_adjustment = self.learning_rate * (1.0 - outcome.prediction_confidence);
+        let confidence_adjustment = if outcome.was_correct {
+            self.learning_rate * (1.0 - outcome.prediction_confidence)
         } else {
-            confidence_adjustment = -self.learning_rate * outcome.prediction_confidence;
-        }
+            -self.learning_rate * outcome.prediction_confidence
+        };
 
         LearningUpdate {
             outcome_id: outcome.prediction_id.clone(),

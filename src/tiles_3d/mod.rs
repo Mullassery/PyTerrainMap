@@ -8,6 +8,7 @@ use std::collections::HashMap;
 
 /// 3D Tiles tileset root
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct Tileset {
     /// Version of 3D Tiles specification
     pub asset: AssetMetadata,
@@ -93,6 +94,7 @@ pub struct PropertyDefinition {
 
 /// Single 3D Tile
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct Tile {
     /// Bounding volume
     pub boundingVolume: BoundingVolume,
@@ -215,6 +217,7 @@ impl PNTSHeader {
 
 /// Point cloud feature data
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct PointCloudFeatures {
     /// Points per tile (each tile has max points)
     pub POINTS_LENGTH: u32,

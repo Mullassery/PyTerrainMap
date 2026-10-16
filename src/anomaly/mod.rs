@@ -48,6 +48,7 @@ impl AnomalyDetector {
     }
 
     /// Create detector with default thresholds (conservative)
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         AnomalyDetector {
             z_threshold: 2.5,      // 2.5 sigma = ~98% normal

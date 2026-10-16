@@ -263,7 +263,7 @@ impl MultiTierCache {
 
     /// Put in cache (L1 first, overflow to L2)
     pub fn put(&mut self, entry: CacheEntry) {
-        let key = entry.key.clone();
+        let _key = entry.key.clone();
         let size = entry.size_bytes;
 
         // If too large for L1, put in L2

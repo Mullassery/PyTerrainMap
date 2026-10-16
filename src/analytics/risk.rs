@@ -5,7 +5,6 @@
 
 use crate::temporal::TemporalPoint;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Risk level
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, PartialOrd, Eq, Ord)]
@@ -139,7 +138,7 @@ impl RiskScorer {
     }
 
     /// Add custom risk factor
-    pub fn add_factor(&mut self, factor: RiskFactor) {
+    pub fn add_factor(&mut self, _factor: RiskFactor) {
         // Store for batching
     }
 

@@ -3,9 +3,7 @@
 //! Combines inertial measurements (accelerometer, gyroscope) with visual odometry
 //! to estimate robot pose and velocity with reduced drift.
 
-use crate::types::{Result, Error};
 use serde::{Deserialize, Serialize};
-use std::f32::consts::PI;
 
 /// IMU state (bias, noise parameters)
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -235,7 +233,7 @@ impl IMUFusion {
 
         // Update covariance (reduction due to measurement)
         for i in 0..6 {
-            self.covariance[i] *= (1.0 - kalman_gain);
+            self.covariance[i] *= 1.0 - kalman_gain;
         }
     }
 

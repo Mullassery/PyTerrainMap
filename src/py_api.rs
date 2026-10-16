@@ -19,7 +19,7 @@ use crate::types::GeoPoint;
 // ============================================================================
 
 /// Geographic point (latitude, longitude)
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyGeoPoint {
     pub lat: f64,
@@ -61,7 +61,7 @@ impl PyGeoPoint {
 // ============================================================================
 
 /// Geographic region (bounding box)
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyRegion {
     pub north: f64,
@@ -117,7 +117,7 @@ impl PyRegion {
 // ============================================================================
 
 /// Single sensor observation
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyObservation {
     pub robot_id: String,
@@ -198,7 +198,7 @@ impl PyObservation {
 // ============================================================================
 
 /// Results from a spatial-temporal query
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyQueryResult {
     pub total_count: u64,
@@ -225,6 +225,10 @@ impl PyQueryResult {
         self.observations.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.observations.is_empty()
+    }
+
     pub fn __getitem__(&self, idx: usize) -> PyResult<PyObservation> {
         self.observations
             .get(idx)
@@ -248,7 +252,7 @@ impl PyQueryResult {
     }
 
     pub fn to_dict(&self, py: Python<'_>) -> Py<PyAny> {
-        let mut dict_items = vec![
+        let dict_items = vec![
             ("count", self.total_count.into_py_any(py).expect("infallible")),
             (
                 "avg_confidence",
@@ -565,7 +569,7 @@ impl PyTerrainMap {
 // ============================================================================
 
 /// Terrain intelligence analysis for a location
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyTerrainAnalysis {
     pub location: (f64, f64),
@@ -666,7 +670,7 @@ impl PyTerrainAnalysis {
     pub fn add_recommendation(&mut self, persona: String, recommendation: String) {
         self.recommendations
             .entry(persona)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(recommendation);
     }
 
@@ -683,7 +687,7 @@ impl PyTerrainAnalysis {
 // ============================================================================
 
 /// Risk assessment for terrain analysis
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyRisk {
     pub risk_type: String,
@@ -770,7 +774,7 @@ impl PyRisk {
 // ============================================================================
 
 /// Robot mobility assessment for terrain
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyMobilityAssessment {
     pub traversable: bool,
@@ -874,12 +878,18 @@ impl PyMobilityAssessment {
     }
 }
 
+impl Default for PyMobilityAssessment {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // EnvironmentalConditions Wrapper (Phase 2)
 // ============================================================================
 
 /// Environmental conditions (weather + soil)
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyEnvironmentalConditions {
     pub location: (f64, f64),
@@ -930,7 +940,7 @@ impl PyEnvironmentalConditions {
 // ============================================================================
 
 /// Explanation of a data field for agent introspection
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyDataExplanation {
     pub field: String,

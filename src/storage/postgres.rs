@@ -40,6 +40,11 @@ impl PostgresBackend {
         })
     }
 
+    /// Name of the table backing this backend
+    pub fn table_name(&self) -> &str {
+        &self.table_name
+    }
+
     /// Initialize database schema.
     ///
     /// FIXED: this previously used MySQL-only inline `INDEX name (cols)`

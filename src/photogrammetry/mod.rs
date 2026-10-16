@@ -580,8 +580,8 @@ impl StructureFromMotion {
             let reprojected1 = geometry::project(&position3d, &pose1, &intrinsics1);
             let reprojected2 = geometry::project(&position3d, &pose2, &intrinsics2);
             if let (Some((u1, v1)), Some((u2, v2))) = (reprojected1, reprojected2) {
-                let e1 = (((k1pt.x as f64 - u1).powi(2) + (k1pt.y as f64 - v1).powi(2)) as f64).sqrt();
-                let e2 = (((k2pt.x as f64 - u2).powi(2) + (k2pt.y as f64 - v2).powi(2)) as f64).sqrt();
+                let e1 = ((k1pt.x as f64 - u1).powi(2) + (k1pt.y as f64 - v1).powi(2)).sqrt();
+                let e2 = ((k2pt.x as f64 - u2).powi(2) + (k2pt.y as f64 - v2).powi(2)).sqrt();
                 point.reprojection_error = ((e1 + e2) / 2.0) as f32;
                 point.confidence = (1.0 / (1.0 + point.reprojection_error)).clamp(0.0, 1.0);
             }

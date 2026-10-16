@@ -279,6 +279,7 @@ pub struct ApiConfig {
 }
 
 impl ApiConfig {
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         ApiConfig {
             host: "127.0.0.1".to_string(),

@@ -124,6 +124,7 @@ pub struct GPUResources {
 /// Space-time scheduler: Manages parallel execution across GPUs
 pub struct SpaceTimeScheduler {
     /// Observation work queues by (region, time_window, agent)
+    #[allow(clippy::type_complexity)]
     work_queues: Arc<RwLock<BTreeMap<(Option<RegionId>, Option<TimeWindow>, Option<AgentId>), VecDeque<WorkPacket>>>>,
 
     /// GPU resource pool
@@ -213,7 +214,7 @@ impl SpaceTimeScheduler {
     pub fn submit_work(&self, packet: WorkPacket) {
         let key = (packet.region, packet.time_window, packet.agent.clone());
         let mut queues = self.work_queues.write();
-        queues.entry(key).or_insert_with(VecDeque::new).push_back(packet);
+        queues.entry(key).or_default().push_back(packet);
     }
 
     /// Get next batch of work for available GPU
@@ -241,7 +242,7 @@ impl SpaceTimeScheduler {
 
         // Fall back to regular work queues
         let mut work = Vec::new();
-        for (_, queue) in queues.iter_mut() {
+        for queue in queues.values_mut() {
             if let Some(packet) = queue.pop_front() {
                 work.push(packet);
                 if work.len() >= 32 {  // Max batch size
@@ -281,6 +282,18 @@ impl SpaceTimeScheduler {
         metrics.late_arrivals_handled += 1;
     }
 
+    /// Record a temporal correction that must be re-applied downstream
+    pub fn record_correction(&self, correction: TemporalCorrection) {
+        self.corrections_queue.write().push(correction);
+        let mut metrics = self.metrics.write();
+        metrics.temporal_corrections_applied += 1;
+    }
+
+    /// Drain the pending temporal corrections queue
+    pub fn drain_corrections(&self) -> Vec<TemporalCorrection> {
+        std::mem::take(&mut *self.corrections_queue.write())
+    }
+
     /// Get scheduler metrics
     pub fn metrics(&self) -> SchedulerMetrics {
         self.metrics.read().clone()
@@ -301,6 +314,7 @@ impl SpaceTimeScheduler {
 
 /// Execution metadata for observations
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ExecutionMetadata {
     /// GPU device where observation was processed
     pub processing_gpu: Option<GPUDeviceId>,
@@ -324,19 +338,6 @@ pub struct ExecutionMetadata {
     pub last_processed_us: i64,
 }
 
-impl Default for ExecutionMetadata {
-    fn default() -> Self {
-        ExecutionMetadata {
-            processing_gpu: None,
-            spatial_partition: None,
-            temporal_partition: None,
-            agent_id: None,
-            processing_latency_us: 0,
-            reprocess_count: 0,
-            last_processed_us: 0,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {

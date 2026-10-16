@@ -108,7 +108,6 @@ fn py_persona_dict(py: Python<'_>) -> Py<PyAny> {
         ("MissionPlanner", "mission_planner"),
     ]
     .into_iter()
-    .map(|(k, v)| (k, v))
     .collect::<std::collections::BTreeMap<_, _>>()
     .into_py_dict(py)
     .expect("dict of strings should never fail to convert")

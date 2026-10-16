@@ -132,7 +132,7 @@ impl ConsensusEngine {
         let location_key = format!("{:.2}_{:.2}", vote.observation.point.x, vote.observation.point.y);
         self.votes
             .entry(location_key)
-            .or_insert_with(VecDeque::new)
+            .or_default()
             .push_back(vote);
     }
 
@@ -170,7 +170,7 @@ impl ConsensusEngine {
         let mut groups: HashMap<i32, Vec<RobotId>> = HashMap::new();
         for (z, robot_id) in &z_votes {
             let z_key = (z * 100.0).round() as i32; // Group within 0.01m tolerance
-            groups.entry(z_key).or_insert_with(Vec::new).push(*robot_id);
+            groups.entry(z_key).or_default().push(*robot_id);
         }
 
         // Find largest group
@@ -209,7 +209,7 @@ impl ConsensusEngine {
         let mut groups: HashMap<i32, Vec<RobotId>> = HashMap::new();
         for (z, robot_id) in &z_votes {
             let z_key = (z * 100.0).round() as i32;
-            groups.entry(z_key).or_insert_with(Vec::new).push(*robot_id);
+            groups.entry(z_key).or_default().push(*robot_id);
         }
 
         let (z_key, agreeing_robots) = groups.iter().max_by_key(|(_, robots)| robots.len())?;

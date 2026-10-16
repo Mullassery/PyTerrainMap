@@ -1,4 +1,4 @@
-use crate::gaussian_splatting::core::{GaussianCovariance, SplatKind, TerrainGaussian};
+use crate::gaussian_splatting::core::{GaussianCovariance, TerrainGaussian};
 use serde::{Deserialize, Serialize};
 
 /// A level of detail for hierarchical Gaussian representations
@@ -82,14 +82,14 @@ impl HierarchicalLOD {
         for (dx, dy) in offsets {
             let mut child = splat.clone();
             child.id = uuid::Uuid::new_v4();
-            child.position[0] += (dx * sigma_x as f64);
-            child.position[1] += (dy * sigma_y as f64);
+            child.position[0] += dx * sigma_x as f64;
+            child.position[1] += dy * sigma_y as f64;
 
             // Halve covariance
             let mut new_cov = [[0.0; 3]; 3];
-            for i in 0..3 {
-                for j in 0..3 {
-                    new_cov[i][j] = splat.covariance.matrix[i][j] * 0.25;
+            for (i, row) in new_cov.iter_mut().enumerate() {
+                for (j, cell) in row.iter_mut().enumerate() {
+                    *cell = splat.covariance.matrix[i][j] * 0.25;
                 }
             }
             child.covariance = GaussianCovariance { matrix: new_cov };
@@ -120,13 +120,12 @@ impl HierarchicalLOD {
 
         // Union covariance (max of all)
         let mut merged_cov = [[0.0; 3]; 3];
-        for i in 0..3 {
-            for j in 0..3 {
-                let max_val = group
+        for (i, row) in merged_cov.iter_mut().enumerate() {
+            for (j, cell) in row.iter_mut().enumerate() {
+                *cell = group
                     .iter()
                     .map(|s| s.covariance.matrix[i][j])
                     .fold(0.0_f32, f32::max);
-                merged_cov[i][j] = max_val;
             }
         }
 

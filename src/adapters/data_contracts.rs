@@ -99,6 +99,12 @@ pub struct LineageTracker {
     lineage: HashMap<String, Vec<LineageEntry>>,
 }
 
+impl Default for LineageTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LineageTracker {
     /// Create new tracker
     pub fn new() -> Self {
@@ -119,7 +125,7 @@ impl LineageTracker {
 
         self.lineage
             .entry(observation_id)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(entry);
     }
 

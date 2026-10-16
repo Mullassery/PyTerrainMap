@@ -103,7 +103,7 @@ impl FleetLearningEngine {
                         (splat.position[1] - obs.position[1]) as f32,
                         (splat.position[2] - obs.position[2]) as f32,
                     ];
-                    let d_sq = dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2];
+                    let _d_sq = dist[0] * dist[0] + dist[1] * dist[1] + dist[2] * dist[2];
                     // Within 3σ of covariance
                     if obs.covariance.mahalanobis_sq(dist) <= 9.0 {
                         found_splat = Some(*id);

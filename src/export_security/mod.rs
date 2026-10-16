@@ -349,7 +349,7 @@ pub mod sanitize {
 
     /// Validate coordinate to prevent injection
     pub fn validate_coordinate(coord: f64) -> Result<f64, String> {
-        if coord.is_finite() && coord >= -180.0 && coord <= 180.0 {
+        if coord.is_finite() && (-180.0..=180.0).contains(&coord) {
             Ok(coord)
         } else {
             Err(format!("Invalid coordinate: {}", coord))

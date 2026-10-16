@@ -325,6 +325,21 @@ impl CacheManager {
         }
     }
 
+    /// Construct a cache manager with an explicit update policy
+    pub fn with_policy(policy: CacheUpdatePolicy) -> Self {
+        CacheManager {
+            memory_cache: Arc::new(RwLock::new(HashMap::new())),
+            quality: Arc::new(RwLock::new(HashMap::new())),
+            policy,
+            stats: Arc::new(RwLock::new(CacheStats::default())),
+        }
+    }
+
+    /// Access the active cache update policy
+    pub fn policy(&self) -> &CacheUpdatePolicy {
+        &self.policy
+    }
+
     /// Get cache for specific information need
     pub fn get_for_need(&self, location: &str, need: InformationNeed) -> CachedResult {
         let (start_layer, end_layer) = need.layers_needed();
@@ -341,7 +356,7 @@ impl CacheManager {
             };
 
             // Collect available layers
-            if start_layer <= 0 && end_layer >= 0 {
+            if start_layer == 0 {
                 if let Some(summary) = &entry.layer0 {
                     result.layers.insert(CacheLayer(0), CachedLayer::Summary(summary.clone()));
                     result.available_layers |= 1 << 0;

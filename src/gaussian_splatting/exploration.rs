@@ -3,7 +3,6 @@ use crate::gaussian_splatting::passage::PassageSplat;
 use crate::gaussian_splatting::prediction::PredictedSplat;
 use crate::gaussian_splatting::store::GaussianSplatStore;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /// Exploration target with priority scoring
 #[derive(Clone, Debug, Serialize, Deserialize)]

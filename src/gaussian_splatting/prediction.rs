@@ -72,16 +72,16 @@ impl UnknownRegionPredictor {
         // Average covariance (but doubled for extra uncertainty)
         let mut avg_cov = [[0.0; 3]; 3];
         for splat in &nearby {
-            for i in 0..3 {
-                for j in 0..3 {
-                    avg_cov[i][j] += splat.covariance.matrix[i][j];
+            for (i, row) in avg_cov.iter_mut().enumerate() {
+                for (j, cell) in row.iter_mut().enumerate() {
+                    *cell += splat.covariance.matrix[i][j];
                 }
             }
         }
-        for i in 0..3 {
-            for j in 0..3 {
-                avg_cov[i][j] /= nearby.len() as f32;
-                avg_cov[i][j] *= 2.0;  // Double uncertainty for predictions
+        for row in avg_cov.iter_mut() {
+            for cell in row.iter_mut() {
+                *cell /= nearby.len() as f32;
+                *cell *= 2.0;  // Double uncertainty for predictions
             }
         }
 

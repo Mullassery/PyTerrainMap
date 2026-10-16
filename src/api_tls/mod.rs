@@ -175,6 +175,7 @@ impl CertificateValidator {
     }
 
     /// Default validator (balanced)
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         CertificateValidator {
             verify_hostname: true,

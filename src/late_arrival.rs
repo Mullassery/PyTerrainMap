@@ -3,8 +3,8 @@
 //! Handles observations that arrive after the watermark (max event_time seen).
 //! Detects impacts on existing queries and invalidates affected caches.
 
-use crate::types::{Observation, Result, Error, GeoPoint};
-use std::collections::{HashSet, HashMap};
+use crate::types::{Observation, Result, Error};
+use std::collections::HashSet;
 
 /// Late-arrival reprocessing pipeline
 ///
@@ -17,6 +17,12 @@ pub struct LateArrivalProcessor {
     affected_queries: HashSet<String>,
     /// Time to reprocess queries (microseconds)
     last_reprocess_time_us: i64,
+}
+
+impl Default for LateArrivalProcessor {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LateArrivalProcessor {
@@ -61,7 +67,7 @@ impl LateArrivalProcessor {
 
         // High-latency observations affect larger regions
         // ~1 cell per second of latency (approx 1km per second in typical deployments)
-        let num_cells = ((latency_us / 1_000_000) as usize).min(10).max(1);
+        let num_cells = ((latency_us / 1_000_000) as usize).clamp(1, 10);
 
         for i in 0..num_cells {
             affected.push(format!("cell_{}", i));
@@ -168,6 +174,7 @@ impl LateArrivalBatch {
 mod tests {
     use super::*;
     use crate::types::{GeoPoint, SensorType, SensorValue, ClockSource, TemporalMetadata};
+    use std::collections::HashMap;
     use uuid::Uuid;
 
     fn create_test_observation(event_time: i64, location: GeoPoint) -> Observation {

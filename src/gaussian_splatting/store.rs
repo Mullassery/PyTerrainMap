@@ -1,5 +1,5 @@
 use crate::gaussian_splatting::core::{GaussianCovariance, SplatKind, TerrainGaussian};
-use crate::gaussian_splatting::fusion::{FusionAction, FusionResult, ObservationFuser};
+use crate::gaussian_splatting::fusion::{FusionResult, ObservationFuser};
 use crate::gaussian_splatting::fleet_learning::{FleetLearningEngine, ObjectObservation, ObjectState};
 use crate::gaussian_splatting::change_events::ChangeEvent;
 use crate::temporal::DecayFunction;
@@ -83,7 +83,7 @@ impl GaussianSplatStore {
         self.update_stats_for_insert(&splat);
 
         if let Some(key) = H3SplatKey::from_position(splat.position[0], splat.position[1], splat.position[2]) {
-            self.spatial_index.entry(key).or_insert_with(Vec::new).push(id);
+            self.spatial_index.entry(key).or_default().push(id);
         }
 
         self.splats.insert(id, splat);
@@ -265,6 +265,7 @@ impl Default for GaussianSplatStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gaussian_splatting::FusionAction;
 
     #[test]
     fn test_store_creation() {

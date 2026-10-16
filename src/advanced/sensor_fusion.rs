@@ -203,7 +203,7 @@ impl SensorFusionEngine {
     }
 
     /// Fuse observations using averaging
-    pub fn fuse_average(&mut self, location_key: &str, observations: &[SensorObservation]) -> Option<FusedObservation> {
+    pub fn fuse_average(&mut self, _location_key: &str, observations: &[SensorObservation]) -> Option<FusedObservation> {
         if observations.is_empty() {
             return None;
         }
@@ -241,7 +241,7 @@ impl SensorFusionEngine {
     }
 
     /// Fuse observations using weighting
-    pub fn fuse_weighted(&mut self, location_key: &str, observations: &[SensorObservation]) -> Option<FusedObservation> {
+    pub fn fuse_weighted(&mut self, _location_key: &str, observations: &[SensorObservation]) -> Option<FusedObservation> {
         if observations.is_empty() {
             return None;
         }

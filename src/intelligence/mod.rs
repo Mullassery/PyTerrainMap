@@ -53,7 +53,7 @@ impl TerrainAnalysis {
     pub fn add_recommendation(&mut self, persona: Persona, recommendation: String) {
         self.recommendations
             .entry(persona)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(recommendation);
     }
 
@@ -417,6 +417,12 @@ pub struct MobilityAssessment {
     pub battery_impact: f32,
     /// Time to cross (seconds for 100m)
     pub time_to_cross_100m_seconds: f32,
+}
+
+impl Default for MobilityAssessment {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MobilityAssessment {

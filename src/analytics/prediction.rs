@@ -3,7 +3,6 @@
 //! Phase 6.1: Predict terrain elevation at unobserved locations using
 //! spatial interpolation, regression, and machine learning.
 
-use crate::temporal::TemporalPoint;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

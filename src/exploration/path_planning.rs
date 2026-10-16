@@ -4,7 +4,7 @@
 //! for informed navigation decisions.
 
 use crate::gaussian_splatting::{
-    GaussianSplatStore, TraversabilityDistanceEngine, PathCost,
+    GaussianSplatStore, TraversabilityDistanceEngine,
 };
 use crate::traversability::{Node, Edge};
 use serde::{Deserialize, Serialize};

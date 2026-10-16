@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::gaussian_splatting::GaussianSplatStore;
 use crate::caching::{
-    InformationNeed, CacheLayer, CacheQuality, InvalidationReason, CacheUpdatePolicy,
+    CacheLayer, CacheQuality, InvalidationReason, CacheUpdatePolicy,
 };
 
 /// Summary of Gaussian terrain distribution (Layer 0)
@@ -255,7 +255,7 @@ impl GaussianCacheManager {
     }
 
     /// Invalidate cache for region (new observations arrived)
-    pub fn invalidate_region(&self, region_key: &str, reason: InvalidationReason) {
+    pub fn invalidate_region(&self, region_key: &str, _reason: InvalidationReason) {
         let mut cache = self.cache.write();
         if cache.remove(region_key).is_some() {
             let mut stats = self.stats.write();

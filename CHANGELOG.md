@@ -56,6 +56,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-10-16
+
+### Fixed
+
+- **`cargo clippy --release -- -D warnings` is now clean (was 232 errors).**
+  Spec-mirroring Cesium 3D Tiles fields stay non-snake-case but are now
+  `#[allow(non_snake_case)]`-annotated per struct (`Tileset`, `Tile`,
+  `PointCloudFeatures`); the intentional inherent `default()`/`from_str()`
+  constructors, the bbox/query helpers, the `#[async_trait]`
+  `StorageBackend` trait, and two complex signatures are explicitly
+  annotated; `manual_clamp`/`needless_range_loop`/`needless_late_init`
+  lints were fixed rather than allowed; `Default` was added for the five
+  `new()`-only types; `PyQueryResult` gained `is_empty`; and the `mAP`
+  local was renamed to `m_ap`.
+- **Dead code wired into real behavior instead of suppressed.**
+  `TemporalIndexEnhanced::apply_decay`, `CacheManager::{with_policy,policy}`,
+  `SpaceTimeScheduler::{record_correction,drain_corrections}`,
+  `FleetCoordinator` conflict resolution now runs through `ObservationFuser`,
+  `TrajectoryPredictor`/`PredictionLearner::learning_rate`,
+  `PostgresBackend::table_name`, and `FederatedQueryExecutor`/`QueryRouter`
+  accessors are all live.
+- **`cargo test` compilation restored.** A prior import-pruning pass removed
+  several types that were only referenced from `#[cfg(test)]` modules
+  (`ObjectDetection`, `NodeType`/`EdgeType`/`TraversalOutcome`,
+  `TerrainGaussian`, `FusionAction`, `HashMap`), which stopped the test
+  binaries from compiling. The imports are restored inside the affected
+  test modules. Full run (feature-gated): 826 passed, 1 pre-existing
+  failure (`test_score_frontier_with_high_uncertainty`), 2 ignored.
+
 ## [1.9.0] - 2026-09-28
 
 ### Added

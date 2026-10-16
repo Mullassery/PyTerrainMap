@@ -178,6 +178,7 @@ impl GeographicBounds {
 
 /// Database statistics
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct DatabaseStats {
     /// Total observations
     pub total_observations: u64,
@@ -197,20 +198,6 @@ pub struct DatabaseStats {
     pub newest_timestamp_us: Option<i64>,
 }
 
-impl Default for DatabaseStats {
-    fn default() -> Self {
-        DatabaseStats {
-            total_observations: 0,
-            active_observations: 0,
-            archived_observations: 0,
-            unique_robots: 0,
-            unique_sensor_types: 0,
-            database_size_bytes: 0,
-            oldest_timestamp_us: None,
-            newest_timestamp_us: None,
-        }
-    }
-}
 
 /// Index configuration for performance
 #[derive(Clone, Debug, Serialize, Deserialize)]

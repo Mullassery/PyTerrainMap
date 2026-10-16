@@ -7,9 +7,8 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::gaussian_splatting::{GaussianSplatStore, TerrainGaussian};
+use crate::gaussian_splatting::{GaussianSplatStore, ObservationFuser, TerrainGaussian};
 
 /// Message from bot to fleet about observations
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -145,7 +144,17 @@ impl FleetCoordinator {
             );
 
             let mut store = self.store.write();
-            store.insert(splat);
+            let existing = store
+                .query_radius(splat.position, 5.0)
+                .first()
+                .map(|s| (*s).clone());
+
+            let resolved = match existing {
+                Some(existing) => self.resolve_conflict(&existing, &splat),
+                None => splat,
+            };
+
+            store.insert(resolved);
         }
 
         // Update bot status
@@ -236,7 +245,11 @@ impl FleetCoordinator {
                     existing.clone()
                 }
             }
-            _ => existing.clone(),  // Default to existing
+            ConflictResolution::MajorityVote | ConflictResolution::Consensus => {
+                let mut merged = existing.clone();
+                ObservationFuser::fuse(&mut merged, incoming);
+                merged
+            }
         }
     }
 

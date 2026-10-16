@@ -84,7 +84,7 @@ impl TraversabilityDistanceEngine {
         let elevation_cost = elevation_delta * self.elevation_weight;
 
         // 3-5. Sample path at 1m intervals for terrain/uncertainty
-        let samples = ((distance_m / 1.0) as usize).max(2).min(100);
+        let samples = ((distance_m / 1.0) as usize).clamp(2, 100);
         let mut terrain_cost = 0.0;
         let mut uncertainty_cost = 0.0;
 

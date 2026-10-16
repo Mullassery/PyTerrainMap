@@ -52,7 +52,7 @@ impl TemporalGaussianManager {
     }
 
     /// Remove expired splats from store
-    pub fn prune_expired(&self, store: &mut GaussianSplatStore, current_time_us: i64) -> u32 {
+    pub fn prune_expired(&self, store: &mut GaussianSplatStore, _current_time_us: i64) -> u32 {
         store.remove_stale(0.0)
     }
 }

@@ -249,11 +249,10 @@ impl PoseGraph {
             let matches = self.match_features(current_frame, keyframe);
             let similarity = matches as f32 / current_frame.features.len().max(1) as f32;
 
-            if similarity > 0.3 {
-                if best_match.is_none() || similarity > best_match.unwrap().1 {
+            if similarity > 0.3
+                && (best_match.is_none() || similarity > best_match.unwrap().1) {
                     best_match = Some((idx as u32, similarity));
                 }
-            }
         }
 
         best_match.map(|(prev_id, similarity)| LoopClosure {

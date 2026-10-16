@@ -4,7 +4,6 @@
 
 use super::index::TemporalPoint;
 use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
 
 /// Quality gate for temporal data validation
 #[derive(Clone, Debug, Serialize, Deserialize)]

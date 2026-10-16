@@ -65,7 +65,7 @@ impl WeatherObservation {
 
     /// Set humidity
     pub fn with_humidity(mut self, humidity: f32) -> Self {
-        self.humidity = humidity.max(0.0).min(1.0);
+        self.humidity = humidity.clamp(0.0, 1.0);
         self
     }
 
@@ -196,19 +196,19 @@ impl SoilCondition {
 
     /// Set moisture
     pub fn with_moisture(mut self, moisture: f32) -> Self {
-        self.moisture_percent = moisture.max(0.0).min(100.0);
+        self.moisture_percent = moisture.clamp(0.0, 100.0);
         self
     }
 
     /// Set pH
     pub fn with_ph(mut self, ph: f32) -> Self {
-        self.ph = ph.max(0.0).min(14.0);
+        self.ph = ph.clamp(0.0, 14.0);
         self
     }
 
     /// Set compaction
     pub fn with_compaction(mut self, compaction: f32) -> Self {
-        self.compaction_index = compaction.max(0.0).min(1.0);
+        self.compaction_index = compaction.clamp(0.0, 1.0);
         self
     }
 
@@ -478,6 +478,7 @@ impl SoilDataSource {
 
 /// Soil data source types
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[allow(non_camel_case_types)]
 pub enum SoilSourceType {
     ISRIC,
     USDA_NRCS,

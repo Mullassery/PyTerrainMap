@@ -149,6 +149,7 @@ pub struct BackendCapabilities {
 // Storage Backend Trait
 // ============================================================================
 
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait StorageBackend: Send + Sync {
     fn backend_id(&self) -> &str;
@@ -288,6 +289,21 @@ impl FederatedQueryExecutor {
             optimizer,
             policy,
         }
+    }
+
+    /// Backend registry consulted for federated query routing
+    pub fn registry(&self) -> &Arc<BackendRegistry> {
+        &self.registry
+    }
+
+    /// Query optimizer used to plan federated execution
+    pub fn optimizer(&self) -> &Arc<QueryOptimizer> {
+        &self.optimizer
+    }
+
+    /// Data placement policy applied when routing queries
+    pub fn policy(&self) -> &Arc<DataPlacementPolicy> {
+        &self.policy
     }
 }
 

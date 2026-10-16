@@ -34,13 +34,11 @@ impl VocabularyWord {
 
     /// Compute hamming distance to another descriptor
     fn hamming_distance(&self, descriptor: &[u8]) -> u32 {
-        let mut distance = 0;
-        let min_len = self.center.len().min(descriptor.len());
-        for i in 0..min_len {
-            let xor = self.center[i] ^ descriptor[i];
-            distance += xor.count_ones();
-        }
-        distance
+        self.center
+            .iter()
+            .zip(descriptor.iter())
+            .map(|(a, b)| (a ^ b).count_ones())
+            .sum()
     }
 }
 
@@ -215,7 +213,7 @@ impl Ord for LoopClosureCandidate {
 
 impl PartialOrd for LoopClosureCandidate {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        other.score.partial_cmp(&self.score)
+        Some(self.cmp(other))
     }
 }
 

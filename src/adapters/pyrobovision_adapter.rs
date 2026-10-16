@@ -3,7 +3,7 @@
 //! Integrates PyRoboVision's model performance metrics with PyTerrainMap fusion,
 //! enabling adaptive model selection based on terrain, time of day, weather, etc.
 
-use crate::types::{Observation, Result, Error};
+use crate::types::{Result, Error};
 use std::collections::HashMap;
 
 /// Model performance metrics for a specific terrain
@@ -28,6 +28,12 @@ pub struct ModelMetrics {
 pub struct VisionModelRegistry {
     /// All available models: model_id -> ModelMetrics
     models: HashMap<String, ModelMetrics>,
+}
+
+impl Default for VisionModelRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl VisionModelRegistry {
@@ -103,11 +109,11 @@ impl VisionModelAwareAdapter {
         }
 
         // Clamp values to valid ranges
-        let mAP = model.map_score.clamp(0.0, 1.0);
+        let m_ap = model.map_score.clamp(0.0, 1.0);
         let conf = inference_confidence.clamp(0.0, 1.0);
         let quality = sensor_quality.clamp(0.0, 1.0);
 
-        Ok(mAP * conf * quality)
+        Ok(m_ap * conf * quality)
     }
 
     /// Select best model for current terrain and context

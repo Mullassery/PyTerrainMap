@@ -167,7 +167,7 @@ impl Query {
 
     /// Apply temporal decay to a set of observation indices
     fn apply_decay(&self, indices: &[usize]) -> Result<Vec<QueryResult>> {
-        let observations = self.store.get_batch(&indices.to_vec())?;
+        let observations = self.store.get_batch(indices)?;
         let mut results = Vec::with_capacity(observations.len());
 
         for (original_idx, obs) in indices.iter().zip(observations.iter()) {

@@ -91,17 +91,17 @@ impl H3SpatialIndex {
 
         self.index_coarse
             .entry(coarse_cell)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(splat_id.to_string());
 
         self.index_medium
             .entry(medium_cell)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(splat_id.to_string());
 
         self.index_fine
             .entry(fine_cell)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(splat_id.to_string());
 
         self.total_indexed += 1;

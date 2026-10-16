@@ -15,23 +15,17 @@ use pyo3::types::IntoPyDict;
 use std::sync::Arc;
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use uuid::Uuid;
 
 use crate::gaussian_splatting::{
     TerrainGaussian, GaussianCovariance, TerrainType,
-    GaussianSplatStore, DynamicObjectSplat, ObjectClass,
-    ChangeEvent, ChangeEventType, PathCost,
+    GaussianSplatStore, DynamicObjectSplat, ObjectClass, ChangeEventType,
     ObjectObservation as RsObjectObservation,
 };
 use crate::exploration::gaussian_frontier_integration::GaussianFrontierScorer as RsGaussianFrontierScorer;
-use crate::exploration::gaussian_cache_integration::{
-    GaussianCacheManager as RsGaussianCacheManager,
-    GaussianTerrainSummary as RsGaussianTerrainSummary,
-};
+use crate::exploration::gaussian_cache_integration::GaussianCacheManager as RsGaussianCacheManager;
 use crate::exploration::multi_bot_sync::{
     FleetCoordinator as RsFleetCoordinator,
     BotObservationMessage as RsBotObservationMessage,
-    BotStatus as RsBotStatus,
 };
 use crate::exploration::frontier::Frontier;
 use crate::caching::InvalidationReason;
@@ -41,7 +35,7 @@ use crate::caching::InvalidationReason;
 // ============================================================================
 
 /// 3×3 covariance matrix for Gaussian splats
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyGaussianCovariance {
     pub matrix: [[f32; 3]; 3],
@@ -95,7 +89,7 @@ impl PyGaussianCovariance {
 // ============================================================================
 
 /// Core Gaussian splat: position + covariance + traversability + terrain type
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyTerrainGaussian {
     pub id: String,
@@ -207,7 +201,7 @@ impl PyTerrainGaussian {
 // ============================================================================
 
 /// Tracked dynamic object (pallet, person, cart, etc.)
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyDynamicObjectSplat {
     pub id: String,
@@ -311,7 +305,7 @@ impl PyDynamicObjectSplat {
 // ============================================================================
 
 /// Environment change event
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyChangeEvent {
     pub id: String,
@@ -363,7 +357,7 @@ impl PyChangeEvent {
 // ============================================================================
 
 /// 5-component path cost breakdown
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyPathCost {
     pub distance_cost: f32,
@@ -431,7 +425,7 @@ impl PyPathCost {
 // ============================================================================
 
 /// Observation of an object from a bot
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyObjectObservation {
     pub object_class: String,
@@ -506,7 +500,7 @@ impl PyObjectObservation {
 // ============================================================================
 
 /// Current state of an object from the shared map
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyObjectState {
     pub id: String,
@@ -555,9 +549,15 @@ impl PyObjectState {
 // ============================================================================
 
 /// Global shared probabilistic world model (thread-safe)
-#[pyclass]
+#[pyclass(from_py_object)]
 pub struct PyGaussianSplatStore {
     inner: Arc<RwLock<GaussianSplatStore>>,
+}
+
+impl Default for PyGaussianSplatStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[pymethods]
@@ -735,7 +735,7 @@ impl Clone for PyGaussianSplatStore {
 // ============================================================================
 
 /// Unified path cost integrating traversability graphs and Gaussian uncertainty
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyUnifiedPathCost {
     pub graph_cost: f32,
@@ -795,7 +795,7 @@ impl PyUnifiedPathCost {
 // ============================================================================
 
 /// Exploration frontier with Gaussian-aware scoring
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyFrontier {
     pub id: String,
@@ -997,6 +997,12 @@ impl PyGaussianFrontierScorer {
     }
 }
 
+impl Default for PyGaussianFrontierScorer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // PyGaussianCacheManager Wrapper (Caching Integration)
 // ============================================================================
@@ -1084,12 +1090,18 @@ impl PyGaussianCacheManager {
     }
 }
 
+impl Default for PyGaussianCacheManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ============================================================================
 // PyFleetCoordinator Wrapper (Multi-Bot Synchronization)
 // ============================================================================
 
 /// Multi-bot observation message
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyBotObservationMessage {
     pub bot_id: String,
@@ -1155,7 +1167,7 @@ impl PyBotObservationMessage {
 }
 
 /// Bot status in fleet
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PyBotStatus {
     pub bot_id: String,
@@ -1224,7 +1236,7 @@ impl PyFleetCoordinator {
         };
 
         self.inner.read().ingest_bot_observation(rs_msg)
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))
+            .map_err(pyo3::exceptions::PyRuntimeError::new_err)
     }
 
     /// Broadcast observation to fleet
@@ -1240,7 +1252,7 @@ impl PyFleetCoordinator {
         };
 
         self.inner.read().broadcast_observation(rs_msg)
-            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))
+            .map_err(pyo3::exceptions::PyRuntimeError::new_err)
     }
 
     /// Get fleet synchronization state

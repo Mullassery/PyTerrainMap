@@ -165,7 +165,7 @@ impl MapSynchronizer {
         let robot_id = update.robot_id;
         self.pending_updates
             .entry(robot_id)
-            .or_insert_with(VecDeque::new)
+            .or_default()
             .push_back(update);
     }
 

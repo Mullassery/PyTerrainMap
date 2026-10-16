@@ -29,7 +29,7 @@ impl FleetLearningModel {
     }
 
     /// Update model with new observation
-    pub fn update(&mut self, observation: &TemporalPoint, is_correct: bool) {
+    pub fn update(&mut self, _observation: &TemporalPoint, is_correct: bool) {
         self.observations_seen += 1;
 
         let update_rate = 0.1; // Learning rate
@@ -162,7 +162,7 @@ impl FleetLearningEngine {
     }
 
     /// Predict elevation at location based on learned patterns
-    pub fn predict_elevation(&self, x: f32, y: f32, search_radius: f32) -> Option<(f32, f32)> {
+    pub fn predict_elevation(&self, x: f32, _y: f32, search_radius: f32) -> Option<(f32, f32)> {
         let mut nearby_patterns = Vec::new();
 
         for (location, pattern) in &self.patterns {

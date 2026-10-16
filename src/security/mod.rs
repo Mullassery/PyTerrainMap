@@ -13,7 +13,7 @@ pub struct TrustScore(pub f32);
 
 impl TrustScore {
     pub fn new(value: f32) -> Self {
-        TrustScore(value.max(0.0).min(1.0))
+        TrustScore(value.clamp(0.0, 1.0))
     }
 
     pub fn is_trusted(&self) -> bool {

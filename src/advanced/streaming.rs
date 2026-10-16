@@ -189,7 +189,7 @@ impl StreamingPipeline {
         }
 
         // Remove closed windows
-        while self.windows.len() > 0 && self.windows[0].is_closed {
+        while !self.windows.is_empty() && self.windows[0].is_closed {
             self.windows.pop_front();
         }
     }

@@ -4,7 +4,7 @@
 //! to produce fused estimates with aggregated confidence.
 
 use crate::types::{
-    FusedData, FusedDetection, GridCell, ObjectDetection, Observation, Result, SensorType,
+    FusedData, FusedDetection, GridCell, Observation, Result, SensorType,
     SensorValue, TemperatureEstimate, Error, BaselineStatistics,
 };
 use std::collections::HashMap;
@@ -82,6 +82,7 @@ impl SensorFusion {
     }
 
     /// Create fusion with default equal weights
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         SensorFusion {
             weights: SensorWeights::default_equal(),
@@ -108,7 +109,7 @@ impl SensorFusion {
     /// - Linear interpolation in between
     fn extract_temporal_quality(&self, obs: &Observation) -> f32 {
         let latency_us = obs.temporal.ingestion_time_us.saturating_sub(obs.temporal.event_time_us);
-        let latency_ms = (latency_us / 1_000) as i64;
+        let latency_ms = latency_us / 1_000;
 
         if latency_ms <= 100 {
             1.0
@@ -325,7 +326,7 @@ impl SensorFusion {
 
                     detection_groups
                         .entry(detection.class_label.clone())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push((weight, detection.bbox));
 
                     *total_weight_by_class
@@ -467,7 +468,7 @@ impl Default for SensorFusion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::GeoPoint;
+    use crate::types::{GeoPoint, ObjectDetection};
 
     fn create_obs(
         robot_id: &str,

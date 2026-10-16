@@ -8,7 +8,6 @@
 //! - Change event detection
 
 use std::sync::Arc;
-use std::time::Instant;
 use serde::{Deserialize, Serialize};
 
 /// Observability context for a Gaussian Splatting operation

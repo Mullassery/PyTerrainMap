@@ -52,7 +52,7 @@ impl SpatialIndex {
 
     /// Create spatial index with custom H3 resolution
     pub fn with_resolution(resolution: i32) -> Result<Self> {
-        if resolution < 0 || resolution > 15 {
+        if !(0..=15).contains(&resolution) {
             return Err(Error::InvalidLocation);
         }
         Ok(SpatialIndex {
@@ -91,7 +91,7 @@ impl SpatialIndex {
 
         self.cells
             .entry(key)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(obs_index);
 
         Ok(key)
@@ -104,7 +104,7 @@ impl SpatialIndex {
         // Convert meters to H3 ring radius (approximate)
         // H3 resolution 9 ~ 174m hexagon, so k ≈ radius_m / 174
         let k_ring = (radius_m / 174.0).ceil() as i32;
-        let k_ring = k_ring.max(0).min(MAX_K_RING);
+        let k_ring = k_ring.clamp(0, MAX_K_RING);
 
         // grid_disk returns all cells within k distance
         let max_cells = xs_h3::max_grid_disk_size(k_ring)

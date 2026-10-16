@@ -145,6 +145,7 @@ impl PoseGraphOptimizer {
     }
 
     /// Get optimized pose
+    #[allow(clippy::type_complexity)]
     pub fn get_pose(&self, node_id: u32) -> Option<(f32, f32, f32, (f32, f32, f32, f32))> {
         self.nodes.get(&node_id).map(|n| (n.position.0, n.position.1, n.position.2, n.rotation))
     }

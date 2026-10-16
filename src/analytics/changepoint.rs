@@ -158,8 +158,8 @@ impl ChangePointDetector {
             sum_x2 += x * x;
         }
 
-        let slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
-        slope
+        
+        (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
     }
 
     /// Get statistics

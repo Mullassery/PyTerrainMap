@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::traversability::{Node, NodeType, Edge, EdgeType};
+use crate::traversability::{Node, NodeType, Edge};
 
 /// Types of environments
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -187,7 +187,7 @@ impl PatternLibrary {
         edges: &[Edge],
     ) {
         let key = env_type.as_str().to_string();
-        let mut pattern = self.patterns
+        let pattern = self.patterns
             .entry(key)
             .or_insert_with(|| EnvironmentPattern::new(env_type.clone()));
 

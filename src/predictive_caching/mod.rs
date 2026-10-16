@@ -4,8 +4,6 @@
 //! Avoids waiting for requests to occur before retrieving data.
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use uuid::Uuid;
 use crate::types::GeoPoint;
 
 // ============================================================================
@@ -193,6 +191,11 @@ impl TrajectoryPredictor {
         TrajectoryPredictor { model, learning_rate }
     }
 
+    /// Learning rate used when adapting this predictor
+    pub fn learning_rate(&self) -> f32 {
+        self.learning_rate
+    }
+
     pub fn predict_trajectory(
         &self,
         state: &DecisionState,
@@ -208,7 +211,7 @@ impl TrajectoryPredictor {
             }
         };
 
-        let confidence = self.calculate_confidence(&waypoints, &history);
+        let confidence = self.calculate_confidence(&waypoints, history);
 
         PredictedTrajectory {
             agent_id: state.agent_id.clone(),
@@ -490,6 +493,11 @@ impl PredictionLearner {
             accuracy_stats: parking_lot::RwLock::new(AccuracyStatistics::default()),
             learning_rate,
         }
+    }
+
+    /// Learning rate used when adapting this learner
+    pub fn learning_rate(&self) -> f32 {
+        self.learning_rate
     }
 
     pub fn record_outcome(

@@ -62,7 +62,7 @@ impl RoboticsDataFrameAdapter {
     pub fn new(clock_source: ClockSource) -> Self {
         RoboticsDataFrameAdapter {
             default_clock_source: clock_source,
-            ingestion_time_us: chrono::Utc::now().timestamp_micros() as i64,
+            ingestion_time_us: chrono::Utc::now().timestamp_micros(),
         }
     }
 
@@ -83,7 +83,7 @@ impl RoboticsDataFrameAdapter {
         }
 
         let mut observations = Vec::new();
-        let processing_time_us = chrono::Utc::now().timestamp_micros() as i64;
+        let processing_time_us = chrono::Utc::now().timestamp_micros();
 
         for (sensor_name, reading) in &frame.sensor_readings {
             // Create observation with full provenance
