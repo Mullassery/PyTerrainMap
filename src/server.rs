@@ -30,7 +30,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use bytes::Bytes;
-use http_body_util::{BodyExt, Full};
+use http_body_util::{BodyExt, Full, Limited};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
@@ -42,6 +42,16 @@ use tokio::sync::oneshot;
 /// are complete, in-memory JSON, so there's no need for a streaming body -
 /// `Full<Bytes>` is hyper 1.x's equivalent of hyper 0.14's `Body::from(bytes)`.
 type ResBody = Full<Bytes>;
+
+/// Maximum accepted request-body size for the JSON endpoints. Requests whose
+/// body exceeds this are rejected with a 400 before being deserialized, so a
+/// client cannot make the server buffer unbounded memory.
+const MAX_REQUEST_BODY_BYTES: usize = 8 * 1024 * 1024;
+
+/// Environment variable holding the optional write-API token. When set (and
+/// non-empty), write endpoints require it; when unset, the server keeps its
+/// previous open behavior.
+const API_TOKEN_ENV: &str = "PYTERRAINMAP_API_TOKEN";
 
 use crate::api::{
     ApiError, HealthResponse, QueryObservationResponse, SpatialQueryRequest,
@@ -188,16 +198,46 @@ async fn read_body_json<T, B>(req: Request<B>) -> Result<T, ApiError>
 where
     T: serde::de::DeserializeOwned,
     B: hyper::body::Body,
-    B::Error: std::fmt::Display,
+    B::Error: std::fmt::Display + Into<Box<dyn std::error::Error + Send + Sync>>,
 {
-    let bytes = req
-        .into_body()
+    let bytes = Limited::new(req.into_body(), MAX_REQUEST_BODY_BYTES)
         .collect()
         .await
         .map_err(|e| ApiError::invalid_request(&format!("Failed to read request body: {e}")))?
         .to_bytes();
     serde_json::from_slice(&bytes)
         .map_err(|e| ApiError::invalid_request(&format!("Invalid JSON body: {e}")))
+}
+
+/// The optional write-API token, if `PYTERRAINMAP_API_TOKEN` is set to a
+/// non-empty value. `None` means write authentication is disabled.
+fn configured_api_token() -> Option<String> {
+    std::env::var(API_TOKEN_ENV)
+        .ok()
+        .filter(|token| !token.is_empty())
+}
+
+/// Enforce the write-API token when one is configured. `expected == None`
+/// keeps the default (unauthenticated) behavior.
+fn check_write_token<B>(expected: Option<&str>, req: &Request<B>) -> Result<(), ApiError> {
+    let Some(expected) = expected else {
+        return Ok(());
+    };
+    let provided = req
+        .headers()
+        .get("x-api-token")
+        .and_then(|value| value.to_str().ok())
+        .or_else(|| {
+            req.headers()
+                .get(hyper::header::AUTHORIZATION)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.strip_prefix("Bearer "))
+        });
+    if provided == Some(expected) {
+        Ok(())
+    } else {
+        Err(ApiError::unauthorized())
+    }
 }
 
 /// Route + dispatch a single request. This is the single source of truth for
@@ -208,7 +248,7 @@ async fn handle<B>(
 ) -> Result<Response<ResBody>, Infallible>
 where
     B: hyper::body::Body,
-    B::Error: std::fmt::Display,
+    B::Error: std::fmt::Display + Into<Box<dyn std::error::Error + Send + Sync>>,
 {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
@@ -248,8 +288,9 @@ async fn handle_submit<B>(
 ) -> Result<Response<ResBody>, ApiError>
 where
     B: hyper::body::Body,
-    B::Error: std::fmt::Display,
+    B::Error: std::fmt::Display + Into<Box<dyn std::error::Error + Send + Sync>>,
 {
+    check_write_token(configured_api_token().as_deref(), &req)?;
     let submit: SubmitObservationRequest = read_body_json(req).await?;
     let obs = submit.to_observation()?;
 
@@ -300,7 +341,7 @@ async fn handle_spatial_query<B>(
 ) -> Result<Response<ResBody>, ApiError>
 where
     B: hyper::body::Body,
-    B::Error: std::fmt::Display,
+    B::Error: std::fmt::Display + Into<Box<dyn std::error::Error + Send + Sync>>,
 {
     let q: SpatialQueryRequest = read_body_json(req).await?;
 
@@ -657,5 +698,49 @@ mod tests {
     fn test_tls_acceptor_rejects_garbage() {
         let result = tls_acceptor_from_pem(b"not a cert", b"not a key");
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn oversized_request_body_is_rejected() {
+        let body = Full::new(Bytes::from(vec![b'x'; MAX_REQUEST_BODY_BYTES + 1]));
+        let http_req = Request::builder()
+            .method(Method::POST)
+            .uri("/observations")
+            .body(body)
+            .unwrap();
+
+        let result = read_body_json::<serde_json::Value, _>(http_req).await;
+
+        assert!(result.is_err(), "a body over the cap must be rejected");
+    }
+
+    #[test]
+    fn write_token_is_optional_by_default() {
+        let http_req = Request::builder()
+            .method(Method::POST)
+            .uri("/observations")
+            .body(Full::new(Bytes::new()))
+            .unwrap();
+
+        assert!(check_write_token(None, &http_req).is_ok());
+    }
+
+    #[test]
+    fn write_token_is_required_when_configured() {
+        let make = |header: Option<(&str, &str)>| {
+            let mut builder = Request::builder().method(Method::POST).uri("/observations");
+            if let Some((name, value)) = header {
+                builder = builder.header(name, value);
+            }
+            builder.body(Full::new(Bytes::new())).unwrap()
+        };
+
+        assert!(check_write_token(Some("s3cret"), &make(None)).is_err());
+        assert!(check_write_token(Some("s3cret"), &make(Some(("x-api-token", "s3cret")))).is_ok());
+        assert!(
+            check_write_token(Some("s3cret"), &make(Some(("authorization", "Bearer s3cret"))))
+                .is_ok()
+        );
+        assert!(check_write_token(Some("s3cret"), &make(Some(("x-api-token", "wrong")))).is_err());
     }
 }
