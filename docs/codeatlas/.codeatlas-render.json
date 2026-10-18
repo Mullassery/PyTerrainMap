@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "outputs": {
+    "md": [
+      "overview.md",
+      "pyterrain_map.3.2.md",
+      "python.3.md",
+      "src.5.md",
+      "tools.7.md"
+    ],
+    "html": [
+      "overview.html",
+      "pyterrain_map.3.2.html",
+      "python.3.html",
+      "src.5.html",
+      "tools.7.html"
+    ]
+  }
+}

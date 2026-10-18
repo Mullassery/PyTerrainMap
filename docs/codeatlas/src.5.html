@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CodeAtlas</title>
+<script src="https://unpkg.com/cytoscape@3.23.0/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://unpkg.com/cytoscape-dagre@2.4.0/cytoscape-dagre.js"></script>
+<style>
+  body { margin: 0; font-family: -apple-system, sans-serif; }
+  #cy { width: 100vw; height: 100vh; }
+  header { padding: 12px 16px; border-bottom: 1px solid #eee; }
+</style>
+</head>
+<body>
+<header>
+  <strong>CodeAtlas</strong>
+  <p>Owns 377 symbols across 10 file(s).</p>
+</header>
+<div id="cy"></div>
+<script>
+const data = {"nodes": [{"data": {"id": "adapters", "label": "adapters", "description": "Owns 55 symbols across 4 file(s)."}}, {"data": {"id": "advanced", "label": "advanced", "description": "Owns 153 symbols across 6 file(s)."}}, {"data": {"id": "analytics", "label": "analytics", "description": "Owns 88 symbols across 6 file(s)."}}, {"data": {"id": "anomaly", "label": "anomaly", "description": "Owns 29 symbols across 1 file(s)."}}, {"data": {"id": "api", "label": "api", "description": "Owns 46 symbols across 1 file(s)."}}, {"data": {"id": "api_tls", "label": "api_tls", "description": "Owns 38 symbols across 1 file(s)."}}, {"data": {"id": "caching", "label": "caching", "description": "Owns 44 symbols across 1 file(s)."}}, {"data": {"id": "cesium_integration", "label": "cesium_integration", "description": "Owns 78 symbols across 1 file(s)."}}, {"data": {"id": "change_detection", "label": "change_detection", "description": "Owns 44 symbols across 1 file(s)."}}, {"data": {"id": "cli", "label": "cli", "description": "Owns 34 symbols across 1 file(s)."}}, {"data": {"id": "data_sources", "label": "data_sources", "description": "Owns 43 symbols across 1 file(s)."}}, {"data": {"id": "distributed", "label": "distributed", "description": "Owns 30 symbols across 6 file(s)."}}, {"data": {"id": "elevation", "label": "elevation", "description": "Owns 28 symbols across 1 file(s)."}}, {"data": {"id": "enterprise", "label": "enterprise", "description": "Owns 24 symbols across 6 file(s)."}}, {"data": {"id": "exploration", "label": "exploration", "description": "Owns 246 symbols across 13 file(s)."}}, {"data": {"id": "export", "label": "export", "description": "Owns 38 symbols across 1 file(s)."}}, {"data": {"id": "export_security", "label": "export_security", "description": "Owns 36 symbols across 1 file(s)."}}, {"data": {"id": "fleet", "label": "fleet", "description": "Owns 143 symbols across 6 file(s)."}}, {"data": {"id": "fusion", "label": "fusion", "description": "Owns 38 symbols across 1 file(s)."}}, {"data": {"id": "gaussian_splatting", "label": "gaussian_splatting", "description": "Owns 319 symbols across 18 file(s)."}}, {"data": {"id": "intelligence", "label": "intelligence", "description": "Owns 72 symbols across 1 file(s)."}}, {"data": {"id": "parallel_execution", "label": "parallel_execution", "description": "Owns 36 symbols across 1 file(s)."}}, {"data": {"id": "persistence", "label": "persistence", "description": "Owns 59 symbols across 1 file(s)."}}, {"data": {"id": "photogrammetry", "label": "photogrammetry", "description": "Owns 93 symbols across 2 file(s)."}}, {"data": {"id": "predictive_caching", "label": "predictive_caching", "description": "Owns 60 symbols across 1 file(s)."}}, {"data": {"id": "query", "label": "query", "description": "Owns 24 symbols across 1 file(s)."}}, {"data": {"id": "reference_images", "label": "reference_images", "description": "Owns 44 symbols across 1 file(s)."}}, {"data": {"id": "security", "label": "security", "description": "Owns 48 symbols across 1 file(s)."}}, {"data": {"id": "slam", "label": "slam", "description": "Owns 147 symbols across 5 file(s)."}}, {"data": {"id": "spatial", "label": "spatial", "description": "Owns 25 symbols across 1 file(s)."}}, {"data": {"id": "spatial_reasoning", "label": "spatial_reasoning", "description": "Owns 42 symbols across 1 file(s)."}}, {"data": {"id": "storage", "label": "storage", "description": "Owns 135 symbols across 6 file(s)."}}, {"data": {"id": "temporal", "label": "temporal", "description": "Owns 186 symbols across 6 file(s)."}}, {"data": {"id": "tiles_3d", "label": "tiles_3d", "description": "Owns 46 symbols across 1 file(s)."}}, {"data": {"id": "traversability", "label": "traversability", "description": "Owns 98 symbols across 7 file(s)."}}, {"data": {"id": "weather_soil", "label": "weather_soil", "description": "Owns 75 symbols across 1 file(s)."}}], "edges": [{"data": {"id": "edge_0", "source": "src", "target": "cli", "label": "calls"}}, {"data": {"id": "edge_1", "source": "src", "target": "elevation", "label": "calls"}}, {"data": {"id": "edge_2", "source": "src", "target": "exploration", "label": "calls"}}, {"data": {"id": "edge_3", "source": "src", "target": "query", "label": "calls"}}, {"data": {"id": "edge_4", "source": "src", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_5", "source": "src", "target": "storage", "label": "calls"}}, {"data": {"id": "edge_6", "source": "src", "target": "anomaly", "label": "calls"}}, {"data": {"id": "edge_7", "source": "src", "target": "api", "label": "calls"}}, {"data": {"id": "edge_8", "source": "adapters", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_9", "source": "elevation", "target": "traversability", "label": "calls"}}, {"data": {"id": "edge_10", "source": "exploration", "target": "src", "label": "calls"}}, {"data": {"id": "edge_11", "source": "exploration", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_12", "source": "exploration", "target": "traversability", "label": "calls"}}, {"data": {"id": "edge_13", "source": "exploration", "target": "caching", "label": "calls"}}, {"data": {"id": "edge_14", "source": "fleet", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_15", "source": "fusion", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_16", "source": "advanced", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_17", "source": "gaussian_splatting", "target": "src", "label": "calls"}}, {"data": {"id": "edge_18", "source": "gaussian_splatting", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_19", "source": "gaussian_splatting", "target": "temporal", "label": "calls"}}, {"data": {"id": "edge_20", "source": "photogrammetry", "target": "reference_images", "label": "calls"}}, {"data": {"id": "edge_21", "source": "query", "target": "storage", "label": "calls"}}, {"data": {"id": "edge_22", "source": "query", "target": "temporal", "label": "calls"}}, {"data": {"id": "edge_23", "source": "reference_images", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_24", "source": "slam", "target": "src", "label": "calls"}}, {"data": {"id": "edge_25", "source": "storage", "target": "src", "label": "calls"}}, {"data": {"id": "edge_26", "source": "storage", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_27", "source": "temporal", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_28", "source": "traversability", "target": "src", "label": "calls"}}, {"data": {"id": "edge_29", "source": "anomaly", "target": "slam", "label": "calls"}}, {"data": {"id": "edge_30", "source": "change_detection", "target": "src", "label": "calls"}}]};
+const cy = cytoscape({
+  container: document.getElementById('cy'),
+  elements: data,
+  style: [
+    { selector: 'node', style: {
+      'label': 'data(label)',
+      'shape': 'round-rectangle',
+      'background-color': '#eef2ff',
+      'border-color': '#6366f1',
+      'border-width': 1,
+      'width': 'label',
+      'padding': '10px',
+      'text-valign': 'center',
+      'text-halign': 'center',
+      'font-size': '12px',
+    }},
+    { selector: 'edge', style: {
+      'label': 'data(label)',
+      'curve-style': 'bezier',
+      'target-arrow-shape': 'triangle',
+      'font-size': '10px',
+      'text-rotation': 'autorotate',
+    }}
+  ],
+  layout: { name: 'dagre', rankDir: 'LR' }
+});
+cy.on('tap', 'node', evt => {
+  const node = evt.target;
+  if (node.data('linkUrl')) { window.location.href = node.data('linkUrl'); }
+});
+</script>
+</body>
+</html>
