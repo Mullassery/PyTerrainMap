@@ -5,6 +5,14 @@ All notable changes to PyTerrainMap will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.2] - 2026-10-18
+
+### Security
+- Upgrade `rustls` to `0.23.46`, resolving `RUSTSEC-2026-0346`, `0347`, `0348`, and `0349` (RECHECK-031).
+
+### Fixed
+- Refresh `docs/KNOWN_ISSUES.md` version metadata from `1.5.0` to `1.10.2` (RECHECK-009).
+
 ## [1.10.0] - 2026-10-11
 
 ### Added

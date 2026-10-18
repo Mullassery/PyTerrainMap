@@ -1,7 +1,7 @@
 # PyTerrainMap - Known Issues
 
-**Last Updated:** 2026-08-23  
-**Version:** 1.5.0  
+**Last Updated:** 2026-10-18  
+**Version:** 1.10.2  
 **Status:** Published to PyPI (macOS arm64 wheel only — see Platform Support below)
 
 ---
