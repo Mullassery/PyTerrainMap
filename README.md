@@ -128,6 +128,11 @@ terrain.restore_from_backend()
 - [python/examples/01_quick_start.py](python/examples/01_quick_start.py) — runnable quick start
 - [CHANGELOG.md](CHANGELOG.md) — notable changes
 
+## Queue status
+
+Shipped, blocked/failed, and rejected work for this repository is documented in
+[`QUEUE_STATUS.md`](QUEUE_STATUS.md).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports: [GitHub Issues](https://github.com/Mullassery/PyTerrainMap/issues). Support: mullassery@gmail.com.
