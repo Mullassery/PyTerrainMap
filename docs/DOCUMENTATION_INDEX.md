@@ -7,7 +7,7 @@
 ## 📖 Where to Start
 
 ### 🟢 Absolute Beginner (New to the platform)
-1. Read: **[README.md](README.md)** (3 min) — What is PyTerrainMap?
+1. Read: **[README.md](../README.md)** (3 min) — What is PyTerrainMap?
 2. Try: **[GETTING_STARTED.md](GETTING_STARTED.md)** (5 min) — Install and run first demo
 3. Understand: **[GETTING_STARTED.md#5-minute-quick-start](GETTING_STARTED.md#5-minute-quick-start)** — Real examples
 
@@ -31,7 +31,9 @@
 ## 📚 Documentation Map
 
 ### Core Concepts
-- **[README.md](README.md)** — High-level platform overview
+- **[STATUS.md](STATUS.md)** — current status and verified gaps
+- **[COMPARISON.md](COMPARISON.md)** — H3, grid_map, PostGIS
+- **[README.md](../README.md)** — High-level platform overview
   - What it is (not what it isn't)
   - Quick start
   - Feature matrix
@@ -96,7 +98,7 @@
 
 ### Storage & Data Management
 - **Where to start:** [GETTING_STARTED.md#step-2-configure-your-storage](GETTING_STARTED.md#step-2-configure-your-storage)
-- **How it works:** [README.md#architecture](README.md#architecture)
+- **How it works:** [Architecture](ARCHITECTURE.md)
 - **Backend options:** [INSTALLATION.md#step-2-configure-your-storage](INSTALLATION.md#step-2-configure-your-storage)
 - **Code reference:** [ROS_BRIDGE_IMPLEMENTATION_COMPLETE.md#1-storage-backends](ROS_BRIDGE_IMPLEMENTATION_COMPLETE.md#1-storage-backends)
 
@@ -239,7 +241,7 @@
 
 ### Cross-Links
 When a document references another, click the link to jump there:
-- [Other Document](path/to/document.md) — Click to read
+- [Architecture](ARCHITECTURE.md) — Click to read
 
 ---
 
@@ -251,4 +253,4 @@ When a document references another, click the link to jump there:
 
 ---
 
-**Next:** Pick a learning path above, or jump to [README.md](README.md) to start!
+**Next:** Pick a learning path above, or jump to [README.md](../README.md) to start!

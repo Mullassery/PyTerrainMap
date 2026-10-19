@@ -253,7 +253,7 @@ DJI_M300_CONFIG = {
 
 **Scenario**: Warthog with LiDAR collecting terrain data
 
-```
+````
 1. ROS2 publishes /warthog/scan (LaserScan) @ 10 Hz
    timestamp: 1721683200.123456
    
@@ -294,6 +294,7 @@ DJI_M300_CONFIG = {
    ]
    backend.insert_batch(observations)
    ```
+````
 
 ## Launch Files
 
