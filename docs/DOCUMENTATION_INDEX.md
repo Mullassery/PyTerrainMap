@@ -32,6 +32,7 @@
 
 ### Core Concepts
 - **[SYNCFLEET_INTEGRATION.md](SYNCFLEET_INTEGRATION.md)** — replicate observations through SyncFleet (operation-capture bridge)
+- **[STATGUARDIAN_INTEGRATION.md](STATGUARDIAN_INTEGRATION.md)** — real StatGuardian HTTP client vs local heuristics
 - **[STATUS.md](STATUS.md)** — current status and verified gaps
 - **[COMPARISON.md](COMPARISON.md)** — H3, grid_map, PostGIS
 - **[README.md](../README.md)** — High-level platform overview

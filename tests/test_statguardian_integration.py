@@ -1,4 +1,4 @@
-"""Tests for StatGuardian integration in PyTerrainMap."""
+"""Tests for the local sensor-quality heuristics (not a StatGuardian client)."""
 
 import pytest
 from pyterrain_map.statguardian_integration import (

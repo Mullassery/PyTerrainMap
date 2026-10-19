@@ -323,10 +323,13 @@ below as unimplemented design intent, not a current capability:
 - Temporal normalization aligns out-of-order sensor events
 - Fleet learning: "Did obstacle cause this robot's failure?"
 
-### StatGuardian (Quality Scoring) — not implemented
-- StatGuardian flags anomalous observations
-- PyTerrainMap confidence scores: observation quality →  spatial layer quality
-- Anomalies don't pollute fleet consensus
+### StatGuardian (Quality Scoring) — local heuristics + optional real client
+- `pyterrain_map.statguardian_integration` provides local in-process rules
+  (calibration, consistency, temporal, terrain). It does **not** call StatGuardian.
+- `pyterrain_map.statguardian_client` calls a running StatGuardian `/validate`
+  service; covered by `tests/test_statguardian_client_live.py`.
+- Not tested: `enum`/`between`/min/max enforcement over the single-row endpoint
+  (observed not enforced in StatGuardian 2.8.0).
 
 ### PyStreamMCP (Orchestration) — not implemented
 - Selective caching of spatial queries (high-value, stable)

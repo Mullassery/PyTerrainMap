@@ -83,6 +83,10 @@ where the table's dating was in question (see the Postgres note below).
   `CLAUDE.md`) were checked via grep across all repos in both directions and
   found not implemented anywhere. `CLAUDE.md` and `pyroboreplay`'s README have
   already been corrected to mark this as aspirational, not shipped.
+  **Update 2026-10-19:** a real StatGuardian HTTP client
+  (`statguardian_client.py`, tested against a live service) and a SyncFleet
+  operation-capture bridge (`syncfleet.py`, tested against the real binary) now
+  exist. Other pairings remain aspirational.
 
 ## Realistic near-term roadmap
 

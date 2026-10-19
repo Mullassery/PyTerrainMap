@@ -134,6 +134,8 @@ terrain.restore_from_backend()
 ## Documentation
 
 - [Documentation index](docs/DOCUMENTATION_INDEX.md) — start here
+- [StatGuardian integration](docs/STATGUARDIAN_INTEGRATION.md) — real HTTP client vs local heuristics
+- [SyncFleet integration](docs/SYNCFLEET_INTEGRATION.md) — operation-capture bridge
 - [Installation](docs/INSTALLATION.md) — setup and configuration
 - [Project status](docs/STATUS.md) — verified capabilities and gaps
 - [Comparison](docs/COMPARISON.md) — H3, grid_map, PostGIS

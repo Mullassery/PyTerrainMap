@@ -1,7 +1,12 @@
-"""StatGuardian Integration for PyTerrainMap.
+"""Local sensor-quality heuristics for PyTerrainMap.
 
-Deep embedding of quality validation in sensor fusion pipeline.
-Ensures every sensor reading and terrain map meets quality standards.
+These are in-process Python rules for calibration, multi-sensor consistency,
+temporal coordinates, and terrain anomalies. They do **not** call StatGuardian.
+
+For a real StatGuardian service, use
+:class:`pyterrain_map.statguardian_client.StatGuardianQualityClient` (HTTP
+``/validate``). Keeping the two separate avoids presenting local heuristics as
+a cross-repo integration.
 """
 
 import json
