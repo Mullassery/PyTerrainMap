@@ -31,6 +31,7 @@
 ## 📚 Documentation Map
 
 ### Core Concepts
+- **[ADVANCED_OPS.md](ADVANCED_OPS.md)** — `run_op()` / `ops()` JSON bridge for photogrammetry, SLAM tracking, Cesium 3D Tiles, and SRTM
 - **[SYNCFLEET_INTEGRATION.md](SYNCFLEET_INTEGRATION.md)** — replicate observations through SyncFleet (operation-capture bridge)
 - **[STATGUARDIAN_INTEGRATION.md](STATGUARDIAN_INTEGRATION.md)** — real StatGuardian HTTP client vs local heuristics
 - **[STATUS.md](STATUS.md)** — current status and verified gaps

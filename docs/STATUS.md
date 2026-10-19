@@ -1,6 +1,6 @@
 # Project status
 
-**Version:** 1.10.2 (alpha) · **Updated:** 2026-10-19
+**Version:** 1.10.2 (alpha) · **Updated:** 2026-10-20
 
 ## Working today
 
@@ -15,11 +15,21 @@
 - `pytm` CLI: `setup`, `configure`, `version`, `query`. `pytm-setup`.
 - Grid-map JSON export (`pyterrain_map.gridmap.write_grid_map`) as a custom
   interchange (not the ROS `grid_map` format).
+- Advanced operation bridge: `pyterrain_map.run_op(op, payload_json)` and
+  `ops()` (allowlisted JSON in/out) expose photogrammetry reconstruction,
+  SLAM keyframe tracking, Cesium 3D Tiles export, and local SRTM `.hgt`
+  elevation lookup. See [ADVANCED_OPS.md](ADVANCED_OPS.md).
 
-## Partial / Rust-only
+## Partial / limited
 
-- SLAM (loop closure, bag-of-words), photogrammetry geometry, and Cesium 3D
-  Tiles export are implemented in the Rust core but not exposed through Python.
+- `photogrammetry.reconstruct` requires caller-supplied keypoints (imaging is
+  Python-side) and two-view results retain monocular scale ambiguity.
+- `slam.track` maintains a keyframe pose graph with loop closure; it is not a
+  full camera-to-map SLAM pipeline.
+- `cesium.export_tileset` writes one local-coordinate root point-cloud tile
+  (no LOD subdivision or automatic georeferencing).
+- `elevation.srtm_lookup` reads local `.hgt` tiles only; it does not download
+  SRTM data.
 - Gaussian-splatting mapping: fusion/storage work; frontier strategic-value
   scoring and semantic classification are partial; splat temporal decay is a
   no-op.
@@ -34,7 +44,6 @@
 | Prebuilt wheels are macOS arm64 only | Linux/Windows/Intel users must build from source | Open |
 | No GitHub releases/tags | No release feed despite PyPI 1.10.2 | Open |
 | PyPI license metadata is `None` | License scanners/trust signals | Open |
-| Python API does not expose SLAM/photogrammetry | Capability is Rust-only | Planned |
 | Not fully offline (`analyze_terrain`) | Requires network for elevation | By design |
 | Not a hosted service | Self-hosted only | By design |
 

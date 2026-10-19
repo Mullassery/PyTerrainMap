@@ -10,6 +10,7 @@
 
 use pyo3::prelude::*;
 use pyo3::types::IntoPyDict;
+use crate::ops::{run_op as run_op_core, OpError, OpErrorKind};
 use crate::py_api::{
     PyTerrainMap, PyObservation, PyQueryResult, PyGeoPoint, PyRegion,
     PyTerrainAnalysis, PyRisk, PyMobilityAssessment, PyEnvironmentalConditions, PyDataExplanation,
@@ -90,10 +91,37 @@ fn pyterrain_map(py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyServerHandle>()?;
     m.add_function(wrap_pyfunction!(start_server, m)?)?;
 
+    // Allowlisted JSON bridge for Rust-only advanced operations
+    m.add_function(wrap_pyfunction!(run_op, m)?)?;
+    m.add_function(wrap_pyfunction!(ops, m)?)?;
+
     // Persona constants
     m.add("Persona", py_persona_dict(py))?;
 
     Ok(())
+}
+
+/// Run one allowlisted advanced operation with a JSON payload and return JSON.
+#[pyfunction]
+fn run_op(op: &str, payload_json: &str) -> PyResult<String> {
+    run_op_core(op, payload_json).map_err(op_error_to_py)
+}
+
+/// Return the allowlisted advanced operations with descriptions and schemas.
+#[pyfunction]
+fn ops() -> String {
+    crate::ops::ops_json()
+}
+
+fn op_error_to_py(error: OpError) -> PyErr {
+    match error.kind {
+        OpErrorKind::NotFound => pyo3::exceptions::PyFileNotFoundError::new_err(error.message),
+        OpErrorKind::Forbidden => pyo3::exceptions::PyPermissionError::new_err(error.message),
+        OpErrorKind::UnknownOp | OpErrorKind::InvalidPayload => {
+            pyo3::exceptions::PyValueError::new_err(error.message)
+        }
+        OpErrorKind::Internal => pyo3::exceptions::PyRuntimeError::new_err(error.message),
+    }
 }
 
 /// Create Persona enum as Python dict

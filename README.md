@@ -17,7 +17,7 @@ PyTerrainMap is an append-only observation store for multi-robot terrain data (`
 - **Real HTTP/HTTPS API server** — `pyterrain_map.start_server(host, port, tls=...)`; tested end-to-end in Rust and Python (including a TLS handshake). Endpoints include `GET /health`, `GET /stats`, `POST /observations`, `POST /query/spatial`.
 - **Terrain intelligence** — `analyze_terrain()` queries real elevation (Open-Meteo / Copernicus DEM GLO-90) at the center and four cardinal points and derives a real measured slope; `assess_mobility()` scales difficulty, speed, and traversability per robot type (drone / wheeled / quadruped / humanoid).
 - **Traversability knowledge graph** — implemented and tested.
-- **3D reconstruction** — SLAM (loop closure, bag-of-words), real multi-view photogrammetry geometry, and Cesium 3D Tiles export (Rust core; see status for exposure).
+- **3D reconstruction and elevation lookup** — SLAM keyframe/loop-closure tracking, real multi-view photogrammetry geometry, Cesium 3D Tiles export, and local SRTM tile lookup are reachable from Python through the allowlisted `run_op()` / `ops()` JSON bridge (see [Advanced operations](docs/ADVANCED_OPS.md)).
 - **Gaussian-splatting probabilistic mapping** — fusion and storage work; frontier scoring and semantic classification are partial.
 - **Persistent storage** — PostgreSQL is real end-to-end from Python (`TerrainMap.with_postgres(...)`, `push_observation`/`push_batch` write-through, `restore_from_backend()`).
 - **CLI** — `pytm` (`setup`, `configure`, `version`, `query`) and `pytm-setup`.
@@ -32,7 +32,7 @@ PyTerrainMap is an append-only observation store for multi-robot terrain data (`
 
 ## What it is not
 
-- **Not a full camera-to-map SLAM pipeline.** Photogrammetry requires caller-supplied 2D keypoint detections (imaging is deliberately Python-side) and is Rust-level only today, not exposed via the Python API.
+- **Not a full camera-to-map SLAM pipeline.** Photogrammetry requires caller-supplied 2D keypoint detections (imaging is deliberately Python-side); `slam.track` maintains a keyframe pose graph rather than running visual odometry from raw images. Both are exposed through the `run_op()` JSON bridge with those limits documented.
 - **Not fully offline.** `analyze_terrain()` makes a real network call to a public elevation API and raises an error (rather than fabricating data) if it cannot reach it.
 - **Not all storage backends are live.** SQLite and BigQuery are config/schema types with no live connection; only PostgreSQL is real end-to-end.
 - **Gaussian-splatting mapping is partially implemented** — frontier "strategic value" scoring and semantic terrain classification are placeholder, and splat temporal decay is a no-op.
@@ -136,6 +136,7 @@ terrain.restore_from_backend()
 - [Documentation index](docs/DOCUMENTATION_INDEX.md) — start here
 - [StatGuardian integration](docs/STATGUARDIAN_INTEGRATION.md) — real HTTP client vs local heuristics
 - [SyncFleet integration](docs/SYNCFLEET_INTEGRATION.md) — operation-capture bridge
+- [Advanced operations](docs/ADVANCED_OPS.md) — `run_op()` / `ops()` for photogrammetry, SLAM tracking, Cesium 3D Tiles, and SRTM
 - [Installation](docs/INSTALLATION.md) — setup and configuration
 - [Project status](docs/STATUS.md) — verified capabilities and gaps
 - [Comparison](docs/COMPARISON.md) — H3, grid_map, PostGIS

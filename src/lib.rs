@@ -33,6 +33,7 @@ pub mod elevation;  // Real elevation/DEM lookups (Open-Meteo) for analyze_terra
 pub mod intelligence;
 pub mod cli;
 pub mod spatial_reasoning;
+pub mod ops;  // Allowlisted JSON operation bridge for Rust-only advanced features
 pub mod py;  // PyO3 Python bindings
 pub mod py_api;  // Python wrapper classes (TerrainMap, Observation, QueryResult, etc.)
 pub mod py_query_functions;  // High-level PyO3 module functions (analyze_terrain, assess_mobility, etc.)

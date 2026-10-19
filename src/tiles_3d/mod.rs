@@ -414,6 +414,97 @@ impl QuantizedPointCloud {
     }
 }
 
+/// A point in a point-cloud tileset (local Cartesian coordinates + RGB).
+#[derive(Clone, Copy, Debug)]
+pub struct PointCloudPoint {
+    pub position: [f32; 3],
+    pub color: [u8; 3],
+}
+
+impl PointCloudPoint {
+    pub fn new(position: [f32; 3], color: [u8; 3]) -> Self {
+        PointCloudPoint { position, color }
+    }
+}
+
+fn pad_to_8(bytes: &mut Vec<u8>, pad_byte: u8) {
+    while !bytes.len().is_multiple_of(8) {
+        bytes.push(pad_byte);
+    }
+}
+
+/// Serialize points as a real 3D Tiles 1.0 `pnts` point cloud tile.
+///
+/// Positions are quantized to unsigned 16-bit values and colors are stored
+/// as per-point RGB, with the standard `POSITION_QUANTIZED`/`RGB` feature
+/// table entries and 8-byte-aligned JSON/binary sections.
+pub fn pnts_bytes(points: &[PointCloudPoint]) -> Vec<u8> {
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    for point in points {
+        for axis in 0..3 {
+            let value = point.position[axis] as f64;
+            min[axis] = min[axis].min(value);
+            max[axis] = max[axis].max(value);
+        }
+    }
+    if points.is_empty() {
+        min = [0.0; 3];
+        max = [0.0; 3];
+    }
+
+    let mut scale = [1.0_f64; 3];
+    for axis in 0..3 {
+        let extent = max[axis] - min[axis];
+        if extent > 1e-9 {
+            scale[axis] = extent / u16::MAX as f64;
+        }
+    }
+
+    let mut position_bin = Vec::with_capacity(points.len() * 6);
+    let mut color_bin = Vec::with_capacity(points.len() * 3);
+    for point in points {
+        for axis in 0..3 {
+            let quantized = if scale[axis] > 0.0 {
+                (((point.position[axis] as f64 - min[axis]) / scale[axis])
+                    .round()
+                    .clamp(0.0, u16::MAX as f64)) as u16
+            } else {
+                0
+            };
+            position_bin.extend_from_slice(&quantized.to_le_bytes());
+        }
+        color_bin.extend_from_slice(&point.color);
+    }
+
+    let color_offset = position_bin.len();
+    let mut binary = position_bin;
+    binary.extend_from_slice(&color_bin);
+    pad_to_8(&mut binary, 0);
+
+    let feature_table = serde_json::json!({
+        "POINTS_LENGTH": points.len(),
+        "POSITION_QUANTIZED": { "byteOffset": 0 },
+        "RGB": { "byteOffset": color_offset },
+        "QUANTIZED_VOLUME_OFFSET": min,
+        "QUANTIZED_VOLUME_SCALE": scale,
+    });
+    let mut feature_json = serde_json::to_vec(&feature_table)
+        .expect("point-cloud feature table is always serializable");
+    pad_to_8(&mut feature_json, b' ');
+
+    let header = PNTSHeader::new(feature_json.len() as u32, binary.len() as u32, 0, 0);
+    let mut bytes = header.to_bytes();
+    bytes.extend_from_slice(&feature_json);
+    bytes.extend_from_slice(&binary);
+    bytes
+}
+
+/// Write a real `pnts` point-cloud tile to disk.
+pub fn write_pnts(path: &std::path::Path, points: &[PointCloudPoint]) -> std::io::Result<()> {
+    std::fs::write(path, pnts_bytes(points))
+}
+
 /// 3D Tiles statistics
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TilesStats {
@@ -588,5 +679,30 @@ mod tests {
             QUANTIZED_VOLUME_SCALE: Some([1.0, 1.0, 1.0]),
         };
         assert_eq!(features.POINTS_LENGTH, 1000);
+    }
+
+    #[test]
+    fn test_pnts_bytes_are_a_valid_3d_tiles_point_cloud() {
+        let points = [
+            PointCloudPoint::new([0.0, 0.0, 0.0], [255, 0, 0]),
+            PointCloudPoint::new([1.0, 2.0, 3.0], [0, 255, 0]),
+            PointCloudPoint::new([-1.0, -2.0, -3.0], [0, 0, 255]),
+        ];
+        let bytes = pnts_bytes(&points);
+        assert_eq!(&bytes[0..4], b"pnts");
+
+        let byte_length = u32::from_le_bytes(bytes[8..12].try_into().unwrap()) as usize;
+        let feature_json_len = u32::from_le_bytes(bytes[12..16].try_into().unwrap()) as usize;
+        let feature_bin_len = u32::from_le_bytes(bytes[16..20].try_into().unwrap()) as usize;
+        assert_eq!(byte_length, bytes.len());
+        assert_eq!(feature_json_len % 8, 0);
+        assert_eq!(feature_bin_len % 8, 0);
+        assert_eq!(28 + feature_json_len + feature_bin_len, bytes.len());
+
+        let feature_json: serde_json::Value =
+            serde_json::from_slice(&bytes[28..28 + feature_json_len]).unwrap();
+        assert_eq!(feature_json["POINTS_LENGTH"], 3);
+        assert_eq!(feature_json["POSITION_QUANTIZED"]["byteOffset"], 0);
+        assert_eq!(feature_json["RGB"]["byteOffset"], 18);
     }
 }

@@ -232,3 +232,11 @@ def start_server(
     cert_path: Optional[str] = None,
     key_path: Optional[str] = None,
 ) -> PyServerHandle: ...
+
+# ---------------------------------------------------------------------------
+# Allowlisted JSON bridge for advanced Rust-only operations
+# (photogrammetry, SLAM tracking, Cesium 3D Tiles, local SRTM lookup)
+# ---------------------------------------------------------------------------
+
+def run_op(op: str, payload_json: str) -> str: ...
+def ops() -> str: ...

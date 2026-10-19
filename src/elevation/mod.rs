@@ -11,6 +11,10 @@
 use serde::Deserialize;
 use std::time::Duration;
 
+pub mod srtm;
+
+pub use srtm::SrtmTileProvider;
+
 const EARTH_RADIUS_KM: f64 = 6371.0;
 const KM_PER_DEGREE_LAT: f64 = 111.32;
 

@@ -102,6 +102,10 @@ is_accessible = _core.is_accessible
 start_server = _core.start_server
 ServerHandle = _core.PyServerHandle
 
+# Allowlisted JSON bridge for Rust-only advanced operations
+run_op = _core.run_op
+ops = _core.ops
+
 
 # Personas
 class Persona:
@@ -143,6 +147,8 @@ __all__ = [
     "is_accessible",
     "start_server",
     "ServerHandle",
+    "run_op",
+    "ops",
     "Persona",
     "cli",
 ]
