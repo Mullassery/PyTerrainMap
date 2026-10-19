@@ -160,7 +160,7 @@ Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports: [GitHub Issues](https://github.com/Mullassery/PyTerrainMap/issues). Support: mullassery@gmail.com.
 
-## Decentralized fleet sync with SyncFleet (planned integration)
+## Fleet sync with SyncFleet (operation-capture bridge)
 
 PyTerrainMap pairs with [SyncFleet](https://github.com/Mullassery/SyncFleet), a
 secure, local-first, peer-to-peer SQLite synchronization engine. The intended
@@ -180,13 +180,17 @@ keeps working across intermittent or air-gapped links.
 - SyncFleet supplies mutual-TLS transport, peer enrollment, and per-dataset ACLs
   for the replication channel.
 
-**Status: not wired up yet.** This is a design goal, not a current capability.
-Before it works, SyncFleet must (1) materialize replicated operations into the
-allowlisted table (today it only replicates its journal), (2) share a live
-storage substrate (SyncFleet is SQLite; PyTerrainMap's live backend is
-PostgreSQL), and (3) capture PyTerrainMap writes as SyncFleet operations via an
-outbox/CDC bridge. Until then, treat the two as independent, complementary
-tools.
+**Status: operation capture is implemented and tested.**
+`pyterrain_map.syncfleet.SyncFleetBridge` turns observations into SyncFleet
+`dataset apply` operations and registers the `terrain` dataset. The cross-repo
+test `tests/test_syncfleet_bridge.py` runs the real `syncfleet` binary and
+verifies the SQLite `operation_journal` rows. See
+[docs/SYNCFLEET_INTEGRATION.md](docs/SYNCFLEET_INTEGRATION.md).
+
+**Remaining work:** automatic capture from `TerrainMap.push_observation`
+(callers invoke the bridge), materialization of replicated operations into a
+typed table, and a PostgreSQL outbox. Transport, peer enrollment, and ACLs are
+SyncFleet's existing commands.
 
 ## Part of the robotics & autonomy family
 
@@ -201,7 +205,7 @@ PyTerrainMap is one of six complementary, composable tools in the Mullassery **r
 | [PyRoboReplay](https://github.com/Mullassery/PyRoboReplay) | Mission forensics | Forensic-debugging and causal-analysis engine for autonomous robot mission replay. |
 | [SyncFleet](https://github.com/Mullassery/SyncFleet) | Fleet coordination | Rust + SQLite, peer-to-peer state sync for robotics fleets — mutual-TLS 1.3, version-vector replication, mDNS discovery; conflict resolution on the roadmap. |
 
-Each works standalone, but they're complementary by design. The planned integration with SyncFleet (detailed below) will allow terrain maps to sync across fleets without relying on a central database.
+Each works standalone, but they're complementary by design. The SyncFleet bridge (above) lets terrain observations sync across fleets without relying on a central database.
 
 [Browse all projects →](https://github.com/Mullassery?tab=repositories)
 

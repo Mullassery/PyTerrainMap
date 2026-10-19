@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `pyterrain_map.syncfleet.SyncFleetBridge`: records observations as SyncFleet
+  `dataset apply` operations and registers the dataset; tested against the real
+  SyncFleet binary in `tests/test_syncfleet_bridge.py`.
+
 ### Fixed
 - Declare `license = "Apache-2.0"` in project metadata so PyPI/wheels expose a PEP 639 `License-Expression` (verified in the built wheel).
 

@@ -31,6 +31,7 @@
 ## 📚 Documentation Map
 
 ### Core Concepts
+- **[SYNCFLEET_INTEGRATION.md](SYNCFLEET_INTEGRATION.md)** — replicate observations through SyncFleet (operation-capture bridge)
 - **[STATUS.md](STATUS.md)** — current status and verified gaps
 - **[COMPARISON.md](COMPARISON.md)** — H3, grid_map, PostGIS
 - **[README.md](../README.md)** — High-level platform overview
