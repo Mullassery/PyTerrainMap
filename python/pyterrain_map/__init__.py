@@ -121,6 +121,9 @@ from . import cli  # noqa: F401, E402
 
 # Public API
 __all__ = [
+    "GridCell",
+    "build_grid_map",
+    "write_grid_map",
     "TerrainMap",
     "Observation",
     "GeoPoint",
@@ -143,3 +146,5 @@ __all__ = [
     "Persona",
     "cli",
 ]
+
+from .gridmap import GridCell, build_grid_map, write_grid_map

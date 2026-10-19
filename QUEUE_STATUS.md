@@ -3,7 +3,7 @@
 This file records what was shipped, what is blocked/failed, and what is rejected for this repository. It complements `AUDIT_FINDINGS.md`.
 
 ## Shipped
-- No code changes; audit/bundle docs added.
+- Elevation/confidence grid-map JSON export (`pyterrain_map.gridmap`).
 
 ## Blocked / failed
 - Linux/Windows wheels; real SQLite/BigQuery backends.

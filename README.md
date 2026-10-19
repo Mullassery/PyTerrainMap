@@ -85,6 +85,20 @@ for robot_type in ("drone", "wheeled", "quadruped", "humanoid"):
     print(robot_type, mobility.traversable, mobility.difficulty_label())
 ```
 
+## Grid-map JSON export
+
+Aggregate observations into a lightweight elevation/confidence grid JSON:
+
+```python
+from pyterrain_map.gridmap import write_grid_map
+
+write_grid_map(observations, "terrain-grid.json", cell_size_m=10)
+```
+
+Cells carry `x`, `y`, mean `elevation_m`, `confidence` and observation count.
+This is a documented JSON interchange for custom viewers; it is not the ROS
+`grid_map` binary/message format and does not claim OctoMap compatibility.
+
 ## Usage
 
 Start the API server (plain HTTP in-process; `tls=True` uses a self-signed dev certificate):
