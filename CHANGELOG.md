@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- ROS bridge IMU and GPS adapters: `sensor_msgs/Imu` preserves orientation,
+  angular velocity, linear acceleration, and covariance arrays;
+  `sensor_msgs/NavSatFix` preserves geodetic position, status, and covariance.
+  Registry aliases: `imu`, `gps`, `navsat`, `navsatfix`.
 - `pyterrain_map.statguardian_client.StatGuardianQualityClient`: real HTTP
   `/healthz` + `/validate` client, tested against a live StatGuardian service
   (`tests/test_statguardian_client_live.py`).
