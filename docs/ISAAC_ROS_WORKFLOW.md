@@ -85,7 +85,7 @@ CPU-only tests:
 pytest tests/test_ros_pointcloud_odometry.py tests/test_ros_imu_gps.py tests/test_pyterrain_map_ros_bridge.py
 ```
 
-Live validation requires Ubuntu 24.04, ROS 2 Jazzy or Lyrical, an NVIDIA GPU, and Isaac ROS 4.6 or 5.0. Record a ROS 2 bag and replay it with the optional `rosbags` reader:
+Selected live baseline: **Ubuntu 24.04 + ROS 2 Jazzy + Isaac ROS 4.6**. Isaac ROS 5.0 / ROS 2 Lyrical is not the current target. Live validation requires an NVIDIA GPU. Record a ROS 2 bag and replay it with the optional `rosbags` reader:
 
 ```bash
 python3 -m pip install rosbags
