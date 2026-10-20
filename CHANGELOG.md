@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Opt-in live ROS 2 bag replay test gated by `ROS_BAG`; requires the optional
+  `rosbags` package and auto-detects supported sensor topics.
 - ROS bridge IMU and GPS adapters: `sensor_msgs/Imu` preserves orientation,
   angular velocity, linear acceleration, and covariance arrays;
   `sensor_msgs/NavSatFix` preserves geodetic position, status, and covariance.
