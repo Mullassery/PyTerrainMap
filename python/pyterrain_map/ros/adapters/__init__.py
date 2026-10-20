@@ -2,12 +2,14 @@
 
 from .base import SensorAdapter
 from .lidar import LiDARAdapter
+from .odometry import OdometryAdapter
 from .rgb import RGBAdapter
 from .thermal import ThermalAdapter
 
 __all__ = [
     "SensorAdapter",
     "LiDARAdapter",
+    "OdometryAdapter",
     "ThermalAdapter",
     "RGBAdapter",
 ]
@@ -17,6 +19,8 @@ __all__ = [
 # for "rgb" since both names show up informally across docs/configs.
 ADAPTER_CLASSES = {
     "lidar": LiDARAdapter,
+    "odom": OdometryAdapter,
+    "odometry": OdometryAdapter,
     "thermal": ThermalAdapter,
     "rgb": RGBAdapter,
     "camera": RGBAdapter,

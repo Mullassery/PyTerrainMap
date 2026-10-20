@@ -6,10 +6,23 @@ Converts ROS sensor_msgs (LaserScan, PointCloud2) to observations.
 
 import json
 import math
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
+import numpy as np
 
 from ..transforms.coordinate_frames import CoordinateConverter, ENUPoint
 from .base import SensorAdapter, StorageObservation
+
+_POINT_FIELD_DTYPES = {
+    1: "i1",
+    2: "u1",
+    3: "i2",
+    4: "u2",
+    5: "i4",
+    6: "u4",
+    7: "f4",
+    8: "f8",
+}
 
 
 class LiDARAdapter(SensorAdapter):
@@ -201,12 +214,214 @@ class LiDARAdapter(SensorAdapter):
         """
         Process PointCloud2 message (3D point cloud).
 
-        Voxelizes into grid cells and creates observations.
+        Decodes the binary x/y/z fields directly with NumPy, filters by range,
+        transforms into the map frame when a pose is available, and voxelizes
+        into 3D cells. No ROS, PCL, or Open3D runtime is required.
         """
-        # Not implemented: PointCloud2 binary parsing (would need open3d or
-        # PCL bindings to decode the x/y/z point fields) -- honestly
-        # returns no observations rather than fabricating any.
-        return []
+        points, intensity = self._decode_point_cloud2(msg)
+        if points.size == 0:
+            return []
+
+        ranges = np.linalg.norm(points, axis=1)
+        valid = np.isfinite(ranges) & (ranges >= self.min_range) & (ranges <= self.max_range)
+        points = points[valid]
+        if intensity is not None:
+            intensity = intensity[valid]
+        if points.size == 0:
+            return []
+
+        if robot_pose is not None:
+            points = self._transform_points(points, robot_pose)
+
+        voxel_coords = np.floor(points / self.voxel_size).astype(np.int64)
+        cells, inverse = np.unique(voxel_coords, axis=0, return_inverse=True)
+        counts = np.bincount(inverse)
+        z_sum = np.bincount(inverse, weights=points[:, 2])
+        z_min = np.full(len(cells), np.inf)
+        z_max = np.full(len(cells), -np.inf)
+        np.minimum.at(z_min, inverse, points[:, 2])
+        np.maximum.at(z_max, inverse, points[:, 2])
+        intensity_mean = None
+        if intensity is not None:
+            intensity_sum = np.bincount(inverse, weights=intensity)
+            intensity_mean = intensity_sum / counts
+
+        timestamp = self._ros_time_to_us(msg.header.stamp)
+        observations: List[StorageObservation] = []
+        for index, (grid_x, grid_y, grid_z) in enumerate(cells):
+            count = int(counts[index])
+            local_x = float(grid_x) * self.voxel_size
+            local_y = float(grid_y) * self.voxel_size
+            local_z = float(z_sum[index] / count)
+            if converter:
+                geo = converter.enu_to_geodetic(
+                    ENUPoint(east=local_x, north=local_y, up=local_z)
+                )
+                lat, lon = geo.lat, geo.lon
+            else:
+                lat, lon = local_x, local_y
+
+            value: Dict[str, object] = {
+                "points": count,
+                "grid_x": int(grid_x),
+                "grid_y": int(grid_y),
+                "grid_z": int(grid_z),
+                "z_mean": round(local_z, 3),
+                "z_min": round(float(z_min[index]), 3),
+                "z_max": round(float(z_max[index]), 3),
+            }
+            if intensity_mean is not None:
+                value["intensity"] = round(float(intensity_mean[index]), 2)
+
+            observations.append(
+                StorageObservation(
+                    id=self._generate_id(),
+                    robot_id=self.robot_id,
+                    timestamp=timestamp,
+                    location_lat=lat,
+                    location_lon=lon,
+                    sensor_type=self.sensor_type,
+                    value_json=json.dumps(value),
+                    confidence=min(0.95, count / 10),
+                )
+            )
+        return observations
+
+    @staticmethod
+    def _transform_points(points: np.ndarray, pose: Tuple) -> np.ndarray:
+        """Transform ``[N, 3]`` sensor-frame points by (x, y, z, qx, qy, qz, qw)."""
+        qx, qy, qz, qw = pose[3:7]
+        rotation = np.array(
+            [
+                [
+                    1 - 2 * (qy * qy + qz * qz),
+                    2 * (qx * qy - qw * qz),
+                    2 * (qx * qz + qw * qy),
+                ],
+                [
+                    2 * (qx * qy + qw * qz),
+                    1 - 2 * (qx * qx + qz * qz),
+                    2 * (qy * qz - qw * qx),
+                ],
+                [
+                    2 * (qx * qz - qw * qy),
+                    2 * (qy * qz + qw * qx),
+                    1 - 2 * (qx * qx + qy * qy),
+                ],
+            ],
+            dtype=np.float64,
+        )
+        return points @ rotation.T + np.array(pose[:3], dtype=np.float64)
+
+    def _decode_point_cloud2(
+        self, msg
+    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """Decode x/y/z (and optional intensity) from a duck-typed PointCloud2."""
+        fields = getattr(msg, "fields", None)
+        if not fields:
+            raise ValueError("PointCloud2 message has no fields")
+
+        by_name = {
+            str(self._field_attr(field, "name")): field
+            for field in fields
+            if self._field_attr(field, "name") is not None
+        }
+        missing = [name for name in ("x", "y", "z") if name not in by_name]
+        if missing:
+            raise ValueError(f"PointCloud2 is missing fields: {missing}")
+
+        width = int(getattr(msg, "width", 0))
+        height = int(getattr(msg, "height", 1))
+        point_step = int(getattr(msg, "point_step", 0))
+        if width <= 0 or height <= 0 or point_step <= 0:
+            raise ValueError("PointCloud2 has invalid width, height, or point_step")
+
+        row_step = int(getattr(msg, "row_step", width * point_step))
+        raw = self._message_bytes(msg)
+        required = row_step * (height - 1) + width * point_step
+        if raw.size < required:
+            raise ValueError(
+                f"PointCloud2 data is {raw.size} bytes, need at least {required}"
+            )
+        endian = ">" if bool(getattr(msg, "is_bigendian", False)) else "<"
+
+        x = self._field_values(by_name["x"], raw, width, height, point_step, row_step, endian)
+        y = self._field_values(by_name["y"], raw, width, height, point_step, row_step, endian)
+        z = self._field_values(by_name["z"], raw, width, height, point_step, row_step, endian)
+        points = np.column_stack(
+            [
+                np.asarray(x, dtype=np.float64),
+                np.asarray(y, dtype=np.float64),
+                np.asarray(z, dtype=np.float64),
+            ]
+        )
+
+        intensity = None
+        for name in ("intensity", "i"):
+            if name in by_name:
+                intensity = np.asarray(
+                    self._field_values(
+                        by_name[name], raw, width, height, point_step, row_step, endian
+                    ),
+                    dtype=np.float64,
+                )
+                break
+        return points, intensity
+
+    @staticmethod
+    def _field_attr(field, name: str):
+        if isinstance(field, dict):
+            return field.get(name)
+        return getattr(field, name, None)
+
+    @staticmethod
+    def _message_bytes(msg) -> np.ndarray:
+        data = getattr(msg, "data", None)
+        if data is None:
+            raise ValueError("PointCloud2 message has no data")
+        if isinstance(data, np.ndarray):
+            return data.view(np.uint8).reshape(-1)
+        return np.frombuffer(bytes(data), dtype=np.uint8)
+
+    def _field_values(
+        self,
+        field,
+        raw: np.ndarray,
+        width: int,
+        height: int,
+        point_step: int,
+        row_step: int,
+        endian: str,
+    ) -> np.ndarray:
+        datatype = int(self._field_attr(field, "datatype"))
+        if datatype not in _POINT_FIELD_DTYPES:
+            raise ValueError(f"unsupported PointField datatype {datatype}")
+        count = int(self._field_attr(field, "count") or 1)
+        offset = int(self._field_attr(field, "offset") or 0)
+        dtype = np.dtype(endian + _POINT_FIELD_DTYPES[datatype])
+        if count > 1:
+            dtype = np.dtype((dtype, (count,)))
+
+        if height == 1 or row_step == width * point_step:
+            return np.ndarray(
+                shape=(width * height,),
+                dtype=dtype,
+                buffer=raw,
+                offset=offset,
+                strides=(point_step,),
+            )
+
+        rows = [
+            np.ndarray(
+                shape=(width,),
+                dtype=dtype,
+                buffer=raw,
+                offset=row * row_step + offset,
+                strides=(point_step,),
+            )
+            for row in range(height)
+        ]
+        return np.concatenate(rows, axis=0)
 
     @staticmethod
     def _quat_to_yaw(qx: float, qy: float, qz: float, qw: float) -> float:

@@ -64,6 +64,11 @@
   - Platform configurations (Spot, DJI M300, Warthog)
   - Launch file structure
 
+- **[ISAAC_ROS_WORKFLOW.md](ISAAC_ROS_WORKFLOW.md)** — cuVSLAM/nvBlox workflow
+  - PointCloud2 decoding
+  - Odometry adapter
+  - Isaac ROS profile and validation
+
 - **[ROS_MOVEIT_INTEGRATION.md](ROS_MOVEIT_INTEGRATION.md)** — ROS ecosystem integration
   - MoveIt2 + PyTerrainMap workflows
   - Nav2 integration
