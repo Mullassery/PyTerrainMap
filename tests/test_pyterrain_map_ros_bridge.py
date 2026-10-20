@@ -18,10 +18,9 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-
 from pyterrain_map.ros import PyTerrainROSBridge
-from pyterrain_map.ros.adapters import LiDARAdapter, ThermalAdapter, RGBAdapter
-from pyterrain_map.ros.platforms import SPOT_CONFIG, GENERIC_CONFIG
+from pyterrain_map.ros.adapters import LiDARAdapter, RGBAdapter, ThermalAdapter
+from pyterrain_map.ros.platforms import GENERIC_CONFIG, SPOT_CONFIG
 
 
 def ros_image_msg(image: np.ndarray, encoding: str, sec: int = 1, nanosec: int = 0):
@@ -135,11 +134,23 @@ class TestPyTerrainROSBridge:
         assert isinstance(topics["/camera/frontleft/image_raw"], RGBAdapter)
 
     def test_unknown_adapter_key_is_logged_not_silently_dropped(self, caplog):
+        config = {
+            **SPOT_CONFIG,
+            "sensors": {
+                **SPOT_CONFIG["sensors"],
+                "mystery": {
+                    "enabled": True,
+                    "topic": "/mystery/data",
+                    "frame_id": "mystery_link",
+                    "adapter": "mystery",
+                },
+            },
+        }
         with caplog.at_level(logging.WARNING):
-            bridge = PyTerrainROSBridge(SPOT_CONFIG)  # SPOT_CONFIG's imu sensor has no adapter impl
+            bridge = PyTerrainROSBridge(config)
 
-        assert "imu" in caplog.text
-        assert "/imu/data" not in bridge.registry.get_all()
+        assert "mystery" in caplog.text
+        assert "/mystery/data" not in bridge.registry.get_all()
 
     def test_on_message_dispatches_to_correct_adapter(self):
         bridge = PyTerrainROSBridge(SPOT_CONFIG)

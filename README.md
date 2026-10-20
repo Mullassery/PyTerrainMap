@@ -20,6 +20,7 @@ PyTerrainMap is an append-only observation store for multi-robot terrain data (`
 - **3D reconstruction and elevation lookup** — SLAM keyframe/loop-closure tracking, real multi-view photogrammetry geometry, Cesium 3D Tiles export, and local SRTM tile lookup are reachable from Python through the allowlisted `run_op()` / `ops()` JSON bridge (see [Advanced operations](docs/ADVANCED_OPS.md)).
 - **Gaussian-splatting probabilistic mapping** — fusion and storage work; frontier scoring and semantic classification are partial.
 - **Persistent storage** — PostgreSQL is real end-to-end from Python (`TerrainMap.with_postgres(...)`, `push_observation`/`push_batch` write-through, `restore_from_backend()`).
+- **ROS 2 sensor bridge** — duck-typed LaserScan/PointCloud2, odometry, IMU, NavSatFix, RGB, and thermal adapters without importing `rclpy`/`rospy`.
 - **CLI** — `pytm` (`setup`, `configure`, `version`, `query`) and `pytm-setup`.
 
 ## Who it's for / Use cases
@@ -145,6 +146,7 @@ terrain.restore_from_backend()
 - [docs/DATA_INTEGRITY.md](docs/DATA_INTEGRITY.md) — append-only guarantees
 - [docs/TEMPORAL_NORMALIZATION.md](docs/TEMPORAL_NORMALIZATION.md) — temporal decay and clock handling
 - [docs/ROS_BRIDGE_ARCHITECTURE.md](docs/ROS_BRIDGE_ARCHITECTURE.md) — ROS integration design
+- [Isaac ROS workflow](docs/ISAAC_ROS_WORKFLOW.md) — PointCloud2, odometry, IMU, and GPS ingestion
 - [docs/](docs/) — full documentation index
 - [python/examples/01_quick_start.py](python/examples/01_quick_start.py) — runnable quick start
 - [CHANGELOG.md](CHANGELOG.md) — notable changes

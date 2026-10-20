@@ -1,6 +1,6 @@
 # Isaac ROS cuVSLAM/nvBlox Workflow
 
-Status: **PointCloud2 and odometry adapters implemented; live Isaac ROS validation pending.**
+Status: **PointCloud2, odometry, IMU, and GPS adapters implemented; live Isaac ROS validation pending.**
 
 PyTerrainMap's ROS bridge accepts duck-typed ROS messages and does not import `rclpy` or `rospy`. The caller owns subscriptions, message types, QoS, and the running Isaac ROS graph.
 
@@ -13,10 +13,12 @@ PyTerrainMap's ROS bridge accepts duck-typed ROS messages and does not import `r
 | `odom`, `odometry` | `nav_msgs/Odometry` | Implemented |
 | `rgb`, `camera` | `sensor_msgs/Image` | Implemented |
 | `thermal` | `sensor_msgs/Image` | Implemented |
-| `imu` | `sensor_msgs/Imu` | Not implemented; platform configs warn |
-| `gps` | `sensor_msgs/NavSatFix` | Not implemented; platform configs warn |
+| `imu` | `sensor_msgs/Imu` | Implemented |
+| `gps`, `navsat`, `navsatfix` | `sensor_msgs/NavSatFix` | Implemented |
 
 PointCloud2 decoding supports ROS `PointField` datatypes 1-8, little- or big-endian payloads, organized clouds with row padding, and optional `intensity`/`i` fields. It does not require PCL, Open3D, or ROS Python packages.
+
+The IMU adapter preserves orientation, angular velocity, linear acceleration, and all three covariance arrays. It takes its storage location from the bridge's TF pose; without TF or a `robot_pose`, it records `location_source: unavailable` with `0,0` coordinates. The GPS adapter stores `NavSatFix` latitude, longitude, altitude, status, covariance, and covariance type directly; no ENU conversion is applied. No-fix or non-finite GPS messages are dropped and counted as adapter errors.
 
 ## Intended profile
 
@@ -73,14 +75,14 @@ bridge.set_origin(lat=37.7749, lon=-122.4194)
 observations = bridge.on_message("/visual_slam/tracking/odometry", odom_msg)
 ```
 
-The bridge looks up TF at the message timestamp and passes a `(x, y, z, qx, qy, qz, qw)` sensor-to-map transform to the adapter. PointCloud2 points are transformed before voxelization. Odometry observations use the pose from the message.
+The bridge looks up TF at the message timestamp and passes a `(x, y, z, qx, qy, qz, qw)` sensor-to-map transform to the adapter. PointCloud2 points are transformed before voxelization. Odometry observations use the pose from the message. IMU observations use the TF pose only for their storage location, not for the inertial values.
 
 ## Validation
 
 CPU-only tests:
 
 ```bash
-pytest tests/test_ros_pointcloud_odometry.py tests/test_pyterrain_map_ros_bridge.py
+pytest tests/test_ros_pointcloud_odometry.py tests/test_ros_imu_gps.py tests/test_pyterrain_map_ros_bridge.py
 ```
 
 Live validation requires Ubuntu 24.04, ROS 2 Jazzy or Lyrical, an NVIDIA GPU, and Isaac ROS 4.6 or 5.0. Record a ROS 2 bag, replay it, and verify:
@@ -93,7 +95,9 @@ Live validation requires Ubuntu 24.04, ROS 2 Jazzy or Lyrical, an NVIDIA GPU, an
 ## Limitations
 
 - No live ROS or Isaac ROS test has been run in this environment.
-- IMU and GPS adapters are still missing; unknown adapters are logged and skipped.
+- IMU location is unavailable unless the bridge has TF at the message timestamp or the caller passes `robot_pose`.
+- GPS no-fix and non-finite messages are dropped; only fixed positions are stored.
+- Unknown adapters are logged and skipped.
 - nvBlox configuration and topic names vary by launch setup.
 - The bridge does not start Isaac ROS nodes or manage Docker/NITROS.
 
