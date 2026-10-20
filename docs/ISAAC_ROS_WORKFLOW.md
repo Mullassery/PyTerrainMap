@@ -85,7 +85,15 @@ CPU-only tests:
 pytest tests/test_ros_pointcloud_odometry.py tests/test_ros_imu_gps.py tests/test_pyterrain_map_ros_bridge.py
 ```
 
-Live validation requires Ubuntu 24.04, ROS 2 Jazzy or Lyrical, an NVIDIA GPU, and Isaac ROS 4.6 or 5.0. Record a ROS 2 bag, replay it, and verify:
+Live validation requires Ubuntu 24.04, ROS 2 Jazzy or Lyrical, an NVIDIA GPU, and Isaac ROS 4.6 or 5.0. Record a ROS 2 bag and replay it with the optional `rosbags` reader:
+
+```bash
+python3 -m pip install rosbags
+ROS_BAG=/data/rosbags/isaac_validation \
+  pytest tests/test_rosbag_live.py
+```
+
+Set `ROS_BAG_ORIGIN=lat,lon[,alt]` to emit geodetic locations. The live test auto-detects PointCloud2, LaserScan, Odometry, Imu, and NavSatFix topics, feeds TF when present, and skips images because RGB and thermal share `sensor_msgs/Image`. Verify:
 
 - Point count and voxel coordinates.
 - Frame IDs and sensor-to-map transforms.
