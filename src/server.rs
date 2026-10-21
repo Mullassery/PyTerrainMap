@@ -516,29 +516,19 @@ pub fn tls_acceptor_from_pem(
     // just means this is a no-op then.
     let _ = rustls::crypto::ring::default_provider().install_default();
 
-    let certs = rustls_pemfile::certs(&mut &*cert_pem)
-        .collect::<std::io::Result<Vec<_>>>()
+    use rustls::pki_types::pem::PemObject;
+
+    let certs = rustls::pki_types::CertificateDer::pem_slice_iter(cert_pem)
+        .collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to parse certificate PEM: {e}"))?;
     if certs.is_empty() {
         return Err("No certificates found in PEM input".to_string());
     }
 
-    let mut keys = rustls_pemfile::pkcs8_private_keys(&mut &*key_pem)
-        .collect::<std::io::Result<Vec<_>>>()
-        .map_err(|e| format!("Failed to parse PKCS8 private key PEM: {e}"))?;
-    let key = if let Some(key) = keys.pop() {
-        rustls::pki_types::PrivateKeyDer::Pkcs8(key)
-    } else {
-        // rcgen emits PKCS8 keys; fall back to RSA (PKCS1) just in case a
-        // user supplies a non-rcgen key in that format.
-        let mut rsa_keys = rustls_pemfile::rsa_private_keys(&mut &*key_pem)
-            .collect::<std::io::Result<Vec<_>>>()
-            .map_err(|e| format!("Failed to parse RSA private key PEM: {e}"))?;
-        let Some(key) = rsa_keys.pop() else {
-            return Err("No private key found in PEM input".to_string());
-        };
-        rustls::pki_types::PrivateKeyDer::Pkcs1(key)
-    };
+    // `PrivateKeyDer::from_pem_slice` accepts PKCS#8, PKCS#1 (RSA), and SEC1
+    // keys, so it also covers non-rcgen user-supplied key formats.
+    let key = rustls::pki_types::PrivateKeyDer::from_pem_slice(key_pem)
+        .map_err(|e| format!("Failed to parse private key PEM: {e}"))?;
 
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
@@ -737,10 +727,11 @@ mod tests {
 
         assert!(check_write_token(Some("s3cret"), &make(None)).is_err());
         assert!(check_write_token(Some("s3cret"), &make(Some(("x-api-token", "s3cret")))).is_ok());
-        assert!(
-            check_write_token(Some("s3cret"), &make(Some(("authorization", "Bearer s3cret"))))
-                .is_ok()
-        );
+        assert!(check_write_token(
+            Some("s3cret"),
+            &make(Some(("authorization", "Bearer s3cret")))
+        )
+        .is_ok());
         assert!(check_write_token(Some("s3cret"), &make(Some(("x-api-token", "wrong")))).is_err());
     }
 }

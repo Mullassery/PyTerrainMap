@@ -46,7 +46,7 @@ ndarray = "0.15"  # MIT/Apache 2.0
 # estimation, DLT triangulation, structure-only bundle adjustment
 # (src/photogrammetry/geometry.rs). Pure-Rust SVD -- no system BLAS/LAPACK
 # dependency, which matters for cross-platform maturin wheel builds.
-nalgebra = "0.33"  # Apache 2.0
+nalgebra = "0.35"  # Apache 2.0
 
 # Concurrency (use parking_lot, not crossbeam, for smaller deps)
 # crossbeam = "0.8"  # REMOVED: Use parking_lot instead
@@ -66,7 +66,6 @@ tokio-util = { version = "0.7", features = ["codec"] }  # MIT
 # TLS termination for the HTTPS API server (rustls, not OpenSSL -- no system dep)
 rustls = "0.23"  # Apache-2.0/MIT/ISC
 tokio-rustls = "0.26"  # MIT/Apache-2.0
-rustls-pemfile = "2.2"  # Apache-2.0/MIT/ISC
 
 # HTTP client for real elevation lookups (Open-Meteo, free/no-key public DEM API)
 # in src/elevation/mod.rs, used by analyze_terrain(). blocking (not the async

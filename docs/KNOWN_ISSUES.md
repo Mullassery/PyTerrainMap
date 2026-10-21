@@ -133,7 +133,7 @@ package* — corrected below to distinguish "PyPI wheel available" from
 |----------|------------|-------------|-------|
 | macOS ARM64 (Apple Silicon) | ✅ Yes | `build-wheels` (macos-latest) | Only wheel published on PyPI (`cp310-abi3-macosx_11_0_arm64`), verified against published files through v1.5.0 |
 | Linux x86_64 | ❌ No wheel, no sdist | `build-wheels` (ubuntu-latest) builds a wheel; separate `test` job runs the full pytest suite via `maturin develop` on Python 3.10–3.13 | Build-from-source is exercised and passes in CI; PyPI install still fails without building locally |
-| Windows | ❌ No wheel | `build-wheels` (windows-latest) builds a wheel | Build succeeds in CI, but no CI job runs the Python test suite on Windows — only the build step is verified |
+| Windows | ❌ No wheel | `build-wheels` (windows-latest) builds a wheel and smoke-tests `import pyterrain_map` | Build and import succeed in CI; the full Python test suite still runs on Linux only |
 | macOS Intel | ❌ No wheel | Not separately covered — `macos-latest` GitHub runners are Apple Silicon | Not verified either way |
 | Docker/K8s | — | Not covered by any workflow | Would depend on the base image's platform above |
 

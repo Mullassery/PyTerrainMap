@@ -41,9 +41,9 @@
 
 | Gap | Impact | Status |
 |---|---|---|
-| Prebuilt wheels are macOS arm64 only | Linux/Windows/Intel users must build from source | Open |
+| Prebuilt wheels are macOS arm64 only | Linux/Windows wheels are CI artifacts, not PyPI releases; Intel users still build from source | Partial |
 | No GitHub releases/tags | No release feed despite PyPI 1.10.2 | Open |
-| PyPI license metadata is `None` | License scanners/trust signals | Open |
+| PyPI license metadata is `None` | License scanners/trust signals | Resolved (`license_expression = Apache-2.0`) |
 | Not fully offline (`analyze_terrain`) | Requires network for elevation | By design |
 | Not a hosted service | Self-hosted only | By design |
 

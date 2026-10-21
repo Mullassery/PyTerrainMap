@@ -15,11 +15,11 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - uses: dtolnay/rust-toolchain@stable
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -30,7 +30,7 @@ jobs:
         # (tests/test_pyterrain_map_ros_bridge.py); numpy is required by
         # several test modules directly. Both come from the `imaging`/base
         # extras in pyproject.toml.
-        pip install maturin pytest pytest-cov pytest-asyncio numpy opencv-python
+        pip install maturin pytest pytest-cov numpy opencv-python
 
     - name: Build with maturin
       # `maturin develop` requires an active virtualenv/conda env to install
@@ -45,7 +45,7 @@ jobs:
       run: pytest tests/ --cov=pyterrain_map --cov-report=xml
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       with:
         files: ./coverage.xml
         fail_ci_if_error: false
@@ -55,9 +55,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       with:
         python-version: "3.11"
 
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - uses: dtolnay/rust-toolchain@stable
 
@@ -96,22 +96,14 @@ jobs:
       run: cargo check --release
 
     - name: Run cargo test
-      # 5 pre-existing test failures (unrelated to server/immutability work:
-      # adapters::pyroboframes_adapter, adapters::pyrobovision_adapter,
-      # exploration::gaussian_frontier_integration,
-      # gaussian_splatting::fleet_learning, gaussian_splatting::semantic) are
-      # tracked as known issues rather than blocking CI on unrelated modules.
-      # Remove `continue-on-error` once those are fixed.
-      continue-on-error: true
-      run: cargo test --workspace --release
+      # `extension-module` is a default feature, so a plain `cargo test` links
+      # against Python symbols that only maturin provides. Disable defaults and
+      # point PYO3 at a Python >= 3.10 so the standalone test binary links.
+      env:
+        PYO3_PYTHON: python3.11
+      run: cargo test --workspace --release --no-default-features --features database
 
     - name: Run cargo clippy
-      # ~200 pre-existing warnings across the codebase (mostly style lints:
-      # non_snake_case struct fields mirroring external JSON schemas,
-      # PyO3-macro-generated `useless_conversion` false positives, missing
-      # Default impls). Not introduced by this change; not blocking CI until
-      # a dedicated cleanup pass. Still runs so new/fixed code is visible.
-      continue-on-error: true
       run: cargo clippy --release -- -D warnings
 
     - name: Run cargo audit
@@ -137,9 +129,9 @@ jobs:
             label: windows-x86_64
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       with:
         python-version: "3.11"
 
@@ -162,7 +154,7 @@ jobs:
         python -c "import pyterrain_map; print(pyterrain_map.__version__)"
 
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-${{ matrix.label }}
         path: dist/*.whl

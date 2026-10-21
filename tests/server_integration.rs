@@ -156,7 +156,9 @@ async fn test_https_real_tls_handshake_and_request_end_to_end() {
 
     // Build a rustls client that trusts exactly the cert we just generated.
     let mut root_store = rustls::RootCertStore::empty();
-    let first_cert = rustls_pemfile::certs(&mut &*cert_pem)
+    use rustls::pki_types::pem::PemObject;
+
+    let first_cert = rustls::pki_types::CertificateDer::pem_slice_iter(&cert_pem)
         .next()
         .expect("cert PEM should contain at least one certificate")
         .expect("cert PEM should parse");

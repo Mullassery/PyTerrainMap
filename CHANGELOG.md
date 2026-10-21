@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Applied Black formatting to the ROS adapters, syncfleet, and storage backends.
 - Updated `rustls-webpki` and `webpki-roots` for RUSTSEC-2026-0382/RUSTSEC-2026-0381.
 - Stabilized the cache benchmark against shared-runner timing jitter.
+- Replaced unmaintained `rustls-pemfile` with `rustls-pki-types` PEM parsing.
+- Upgraded `nalgebra` to 0.35, removing the unmaintained `paste` dependency.
+- Updated GitHub Actions to Node 24-compatible releases.
 
 ## [1.11.0] - 2026-10-21
 

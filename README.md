@@ -41,7 +41,7 @@ PyTerrainMap is an append-only observation store for multi-robot terrain data (`
 
 ## Project status
 
-Alpha (Development Status 3), version **1.11.0**. The append-only store, H3/temporal indexing, HTTP/HTTPS server, PostgreSQL persistence, and terrain-slope intelligence are implemented and tested. The Rust core is now **`cargo clippy --release -- -D warnings` clean (0 warnings)** and the Rust lib suite passes (**845 passed, 2 ignored**) with `PYO3_PYTHON=<python3.10+> cargo test --release --no-default-features --features database --lib`; the remaining dead-code fields have been wired into real behavior (temporal decay application, cache update policy, scheduler temporal-correction queue, fleet conflict resolution, predictive-caching learning rates, Postgres table name, federated query accessors). Prebuilt wheels are published for **macOS arm64 only**; other platforms build from the source distribution with a Rust toolchain. See [docs/DATA_INTEGRITY.md](docs/DATA_INTEGRITY.md) and `docs/` for details.
+Alpha (Development Status 3), version **1.11.0**. The append-only store, H3/temporal indexing, HTTP/HTTPS server, PostgreSQL persistence, and terrain-slope intelligence are implemented and tested. The Rust core is now **`cargo clippy --release -- -D warnings` clean (0 warnings)** and the Rust lib suite passes (**845 passed, 2 ignored**) with `PYO3_PYTHON=<python3.10+> cargo test --release --no-default-features --features database --lib`; the remaining dead-code fields have been wired into real behavior (temporal decay application, cache update policy, scheduler temporal-correction queue, fleet conflict resolution, predictive-caching learning rates, Postgres table name, federated query accessors). PyPI publishes **macOS arm64** wheels; CI builds and smoke-tests Linux x86_64/aarch64 and Windows x86_64 wheels as artifacts, but those are not yet published to PyPI. Other platforms build from the source distribution with a Rust toolchain. See [docs/DATA_INTEGRITY.md](docs/DATA_INTEGRITY.md) and `docs/` for details.
 
 ## Installation
 
@@ -54,7 +54,7 @@ uv pip install pyterrainMap
 python -c "import pyterrain_map; print(pyterrain_map.__version__)"
 ```
 
-Requires Python 3.10+. Prebuilt wheels are macOS arm64 only; on other platforms build from source:
+Requires Python 3.10+. PyPI wheels are macOS arm64 only; Linux/Windows wheels are CI artifacts today. On other platforms build from source:
 
 ```bash
 git clone https://github.com/Mullassery/PyTerrainMap.git
