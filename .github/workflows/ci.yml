@@ -92,6 +92,10 @@ jobs:
 
     - uses: dtolnay/rust-toolchain@stable
 
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.11'
+
     - name: Run cargo check
       run: cargo check --release
 
