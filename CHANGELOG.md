@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected the high-uncertainty frontier risk assertion to match the configured `0.3` uncertainty weight.
 - Added Apache-2.0 license metadata to the Cargo package manifest.
 - Sorted the grid-map re-export so Ruff E402 passes.
+- Applied Black formatting to the ROS adapters, syncfleet, and storage backends.
+- Updated `rustls-webpki` and `webpki-roots` for RUSTSEC-2026-0382/RUSTSEC-2026-0381.
 
 ## [1.11.0] - 2026-10-21
 

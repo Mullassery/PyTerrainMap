@@ -81,9 +81,7 @@ class IMUAdapter(SensorAdapter):
                 "orientation": quat,
                 "angular_velocity": _vector3(getattr(msg, "angular_velocity", None)),
                 "linear_acceleration": _vector3(linear_acceleration),
-                "orientation_covariance": _covariance(
-                    getattr(msg, "orientation_covariance", None)
-                ),
+                "orientation_covariance": _covariance(getattr(msg, "orientation_covariance", None)),
                 "angular_velocity_covariance": _covariance(
                     getattr(msg, "angular_velocity_covariance", None)
                 ),

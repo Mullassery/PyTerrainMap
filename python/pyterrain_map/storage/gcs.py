@@ -147,12 +147,16 @@ class GCSStorageBackend(StorageBackend):
             if start_time is None:
                 start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
             else:
-                start_date = datetime.fromtimestamp(start_time / 1_000_000, timezone.utc).replace(tzinfo=None)
+                start_date = datetime.fromtimestamp(start_time / 1_000_000, timezone.utc).replace(
+                    tzinfo=None
+                )
 
             if end_time is None:
                 end_date = datetime.now(timezone.utc).replace(tzinfo=None)
             else:
-                end_date = datetime.fromtimestamp(end_time / 1_000_000, timezone.utc).replace(tzinfo=None)
+                end_date = datetime.fromtimestamp(end_time / 1_000_000, timezone.utc).replace(
+                    tzinfo=None
+                )
 
             # List all blobs in prefix
             prefix = f"{self.prefix}/"

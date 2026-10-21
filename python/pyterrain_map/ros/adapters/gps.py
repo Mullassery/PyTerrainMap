@@ -52,12 +52,8 @@ class GPSAdapter(SensorAdapter):
                     "status": status_code,
                     "service": int(getattr(status, "service", 0)),
                 },
-                "position_covariance": _covariance(
-                    getattr(msg, "position_covariance", None)
-                ),
-                "position_covariance_type": int(
-                    getattr(msg, "position_covariance_type", 0)
-                ),
+                "position_covariance": _covariance(getattr(msg, "position_covariance", None)),
+                "position_covariance_type": int(getattr(msg, "position_covariance_type", 0)),
                 "location_source": "navsatfix",
             }
 

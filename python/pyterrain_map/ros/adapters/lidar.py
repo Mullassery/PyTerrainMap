@@ -254,9 +254,7 @@ class LiDARAdapter(SensorAdapter):
             local_y = float(grid_y) * self.voxel_size
             local_z = float(z_sum[index] / count)
             if converter:
-                geo = converter.enu_to_geodetic(
-                    ENUPoint(east=local_x, north=local_y, up=local_z)
-                )
+                geo = converter.enu_to_geodetic(ENUPoint(east=local_x, north=local_y, up=local_z))
                 lat, lon = geo.lat, geo.lon
             else:
                 lat, lon = local_x, local_y
@@ -313,9 +311,7 @@ class LiDARAdapter(SensorAdapter):
         )
         return points @ rotation.T + np.array(pose[:3], dtype=np.float64)
 
-    def _decode_point_cloud2(
-        self, msg
-    ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def _decode_point_cloud2(self, msg) -> Tuple[np.ndarray, Optional[np.ndarray]]:
         """Decode x/y/z (and optional intensity) from a duck-typed PointCloud2."""
         fields = getattr(msg, "fields", None)
         if not fields:
@@ -340,9 +336,7 @@ class LiDARAdapter(SensorAdapter):
         raw = self._message_bytes(msg)
         required = row_step * (height - 1) + width * point_step
         if raw.size < required:
-            raise ValueError(
-                f"PointCloud2 data is {raw.size} bytes, need at least {required}"
-            )
+            raise ValueError(f"PointCloud2 data is {raw.size} bytes, need at least {required}")
         endian = ">" if bool(getattr(msg, "is_bigendian", False)) else "<"
 
         x = self._field_values(by_name["x"], raw, width, height, point_step, row_step, endian)

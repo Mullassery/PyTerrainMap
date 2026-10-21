@@ -120,9 +120,7 @@ class SyncFleetBridge:
         return ("--config", str(Path(self.config).expanduser()))
 
     def dataset_exists(self) -> bool:
-        completed = self._run(
-            "dataset", "show", *self._config_args(), self.dataset, check=False
-        )
+        completed = self._run("dataset", "show", *self._config_args(), self.dataset, check=False)
         return completed.returncode == 0
 
     def ensure_dataset(self) -> None:
