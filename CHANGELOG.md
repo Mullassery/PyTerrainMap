@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-10-21
+
 ### Added
 - Opt-in live ROS 2 bag replay test gated by `ROS_BAG`; requires the optional
   `rosbags` package and auto-detects supported sensor topics.

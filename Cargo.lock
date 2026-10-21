@@ -1784,7 +1784,7 @@ dependencies = [
 
 [[package]]
 name = "pyterrain-map"
-version = "1.10.2"
+version = "1.11.0"
 dependencies = [
  "anyhow",
  "async-trait",
