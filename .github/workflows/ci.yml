@@ -162,7 +162,7 @@ jobs:
         python -c "import pyterrain_map; print(pyterrain_map.__version__)"
 
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-${{ matrix.label }}
         path: dist/*.whl
