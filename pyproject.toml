@@ -48,7 +48,6 @@ dependencies = [
 # Development tools (all OSS)
 dev = [
     "pytest>=7.0",  # MIT
-    "pytest-asyncio>=0.21",  # Apache 2.0
     "pytest-cov>=4.0",  # MIT
     "black>=23.0",  # MIT
     "ruff>=0.1",  # MIT
@@ -114,7 +113,6 @@ include = ["LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
 addopts = "--cov=pyterrain_map --cov-report=html"
 
 [tool.black]

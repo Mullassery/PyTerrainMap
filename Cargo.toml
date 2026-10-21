@@ -4,6 +4,7 @@ version = "1.11.0"
 edition = "2021"
 authors = ["Georgi Mammen Mullassery <mullassery@gmail.com>"]
 description = "Collaborative terrain mapping platform for multi-robot fleets"
+license = "Apache-2.0"
 repository = "https://github.com/Mullassery/PyTerrainMap"
 
 [dependencies]

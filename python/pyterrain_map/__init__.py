@@ -120,8 +120,9 @@ class Persona:
     MissionPlanner = "mission_planner"
 
 
-# CLI
+# CLI and grid-map helpers
 from . import cli  # noqa: F401, E402
+from .gridmap import GridCell, build_grid_map, write_grid_map  # noqa: E402
 
 # Public API
 __all__ = [
@@ -152,5 +153,3 @@ __all__ = [
     "Persona",
     "cli",
 ]
-
-from .gridmap import GridCell, build_grid_map, write_grid_map

@@ -6,7 +6,7 @@ Useful for development, testing, and edge deployments.
 """
 
 import json
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -126,14 +126,14 @@ class LocalStorageBackend(StorageBackend):
         # `_matches_filters` below. Comparing a midnight `file_date` against
         # a time-of-day `start_date` used to drop the entire start day.
         if start_time is None:
-            start_date = (datetime.utcnow() - timedelta(days=30)).date()
+            start_date = (datetime.now(timezone.utc) - timedelta(days=30)).date()
         else:
-            start_date = datetime.utcfromtimestamp(start_time / 1_000_000).date()
+            start_date = datetime.fromtimestamp(start_time / 1_000_000, timezone.utc).date()
 
         if end_time is None:
-            end_date = datetime.utcnow().date()
+            end_date = datetime.now(timezone.utc).date()
         else:
-            end_date = datetime.utcfromtimestamp(end_time / 1_000_000).date()
+            end_date = datetime.fromtimestamp(end_time / 1_000_000, timezone.utc).date()
 
         # Scan all NDJSON files in date range
         for ndjson_file in self.base_path.rglob("*.ndjson"):
@@ -229,7 +229,7 @@ class LocalStorageBackend(StorageBackend):
 
     async def delete_old(self, days: int) -> int:
         """Delete observations older than N days."""
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
         deleted = 0
 
         for ndjson_file in self.base_path.rglob("*.ndjson"):

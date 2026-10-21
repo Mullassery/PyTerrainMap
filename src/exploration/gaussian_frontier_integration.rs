@@ -135,7 +135,7 @@ mod tests {
         // High uncertainty = high information gain
         assert!(frontier.expected_information_gain > 0.5);
         // High uncertainty = high risk
-        assert!(frontier.risk_estimate > 0.3);
+        assert!(frontier.risk_estimate >= 0.3);
         // Low confidence in high uncertainty areas
         assert!(frontier.confidence < 0.5);
     }

@@ -7,7 +7,7 @@ Storage is append-only, immutable observations stored as NDJSON (newline-delimit
 import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
@@ -162,7 +162,7 @@ class StorageBackend(ABC):
         Format: YYYY/MM/DD/{robot_id}/{grid_cell}
         This enables efficient filtering and parallel reads.
         """
-        dt = datetime.utcfromtimestamp(obs.timestamp / 1_000_000)
+        dt = datetime.fromtimestamp(obs.timestamp / 1_000_000, timezone.utc)
         date_str = dt.strftime("%Y/%m/%d")
 
         # Grid cell: 0.1 degree resolution (~10km)

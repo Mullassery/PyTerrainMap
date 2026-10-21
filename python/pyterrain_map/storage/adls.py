@@ -4,7 +4,7 @@ Azure Data Lake Storage (ADLS) backend for PyTerrainMap.
 Stores observations as NDJSON in ADLS containers.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from .base import StorageBackend, StorageObservation
@@ -186,14 +186,14 @@ class ADLSStorageBackend(StorageBackend):
 
             # Determine date range
             if start_time is None:
-                start_date = datetime.utcnow() - timedelta(days=30)
+                start_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
             else:
-                start_date = datetime.utcfromtimestamp(start_time / 1_000_000)
+                start_date = datetime.fromtimestamp(start_time / 1_000_000, timezone.utc).replace(tzinfo=None)
 
             if end_time is None:
-                end_date = datetime.utcnow()
+                end_date = datetime.now(timezone.utc).replace(tzinfo=None)
             else:
-                end_date = datetime.utcfromtimestamp(end_time / 1_000_000)
+                end_date = datetime.fromtimestamp(end_time / 1_000_000, timezone.utc).replace(tzinfo=None)
 
             # List all files in prefix
             for path_properties in self.file_client.get_paths(path=self.prefix):
@@ -292,7 +292,7 @@ class ADLSStorageBackend(StorageBackend):
             if not self.client:
                 await self.connect()
 
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
             deleted = 0
 
             for path_properties in self.file_client.get_paths(path=self.prefix):

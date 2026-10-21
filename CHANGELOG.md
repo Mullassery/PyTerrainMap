@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Replaced deprecated `datetime.utcnow()`/`utcfromtimestamp()` usage in storage backends with timezone-aware UTC handling.
+- Removed the unused `asyncio_mode`/`pytest-asyncio` configuration; the suite has no async tests.
+- Corrected the high-uncertainty frontier risk assertion to match the configured `0.3` uncertainty weight.
+- Added Apache-2.0 license metadata to the Cargo package manifest.
+- Sorted the grid-map re-export so Ruff E402 passes.
+
 ## [1.11.0] - 2026-10-21
 
 ### Added

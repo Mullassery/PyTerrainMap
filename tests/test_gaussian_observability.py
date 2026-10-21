@@ -6,7 +6,7 @@ Gaussian Splatting operations in production fleet deployments.
 """
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class TestGaussianObservability(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestGaussianObservability(unittest.TestCase):
             "span_id": "xyz789",
             "operation": "fusion",
             "bot_id": "bot_01",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         self.assertEqual(context["operation"], "fusion")
@@ -56,7 +56,7 @@ class TestGaussianObservability(unittest.TestCase):
         """Test change event detection and logging"""
         events = [
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "event_type": "object_moved",
                 "object_id": "pallet_1",
                 "from": (40.001, -74.0),
@@ -65,14 +65,14 @@ class TestGaussianObservability(unittest.TestCase):
                 "confidence": 0.9,
             },
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "event_type": "object_appeared",
                 "object_id": "box_5",
                 "position": (40.003, -74.001),
                 "confidence": 0.85,
             },
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "event_type": "object_disappeared",
                 "object_id": "cart_2",
                 "last_position": (40.0, -74.0),
