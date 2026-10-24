@@ -96,11 +96,11 @@ compaction — both of which were then actually implemented at the Rust level
 within the same day (`64e119e`). That's the operating pattern worth continuing:
 identify a specific, verifiable gap, close it, verify the close. On that basis:
 
-1. **Wire the Python API's storage-backend factory** to the already-real
-   `PostgresBackend`/`ServerState::with_backend()` path, so `pip install
-   pyterrainMap` users get durable persistence, not just Rust-level consumers.
-   This is explicitly called out as the immediate follow-up in `64e119e`'s own
-   commit message.
+1. ~~**Wire the Python API's storage-backend factory** to the already-real
+   `PostgresBackend`/`ServerState::with_backend()` path~~ **Done:** Python
+   users get `TerrainMap.with_postgres(...)`, write-through
+   `push_observation`/`push_batch`, and `restore_from_backend()`, not just
+   Rust-level consumers.
 2. **Fix the five currently-failing unit tests on `main`**
    (`test_anomaly_detection_spike`, the SLAM loop-closure test, and the three
    Gaussian-splatting tests for frontier scoring / fleet learning / semantic
