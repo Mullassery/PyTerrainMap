@@ -7,7 +7,7 @@ please be patient with review turnaround.
 
 Read the README's "What this actually is" and Features table first -- it's
 the current, honest account of what's implemented, partially implemented, or
-not implemented. `docs/KNOWN_ISSUES.md` and `ROADMAP_HONEST.md` list known
+not implemented. `docs/KNOWN_ISSUES.md` and `docs/internal/ROADMAP_HONEST.md` list known
 bugs, failing tests, and technical debt. Please check both before opening an
 issue or PR for something that might already be a documented, known gap.
 
@@ -45,7 +45,7 @@ mypy python/pyterrain_map --ignore-missing-imports
 ```
 
 `cargo clippy` currently reports a large number of pre-existing warnings (see
-`ROADMAP_HONEST.md` for the current count) -- these are not blocking CI today,
+`docs/internal/ROADMAP_HONEST.md` for the current count) -- these are not blocking CI today,
 but please don't add *new* clippy warnings in your change, and feel free to
 fix pre-existing ones in the file(s) you're already touching.
 

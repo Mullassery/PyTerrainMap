@@ -159,7 +159,7 @@ terrain.restore_from_backend()
 **Rejected / deferred:**
 - Full SLAM from scratch.
 
-Full shipped/blocked/rejected detail: [`QUEUE_STATUS.md`](QUEUE_STATUS.md).
+Full shipped/blocked/rejected detail: [`docs/internal/QUEUE_STATUS.md`](docs/internal/QUEUE_STATUS.md).
 
 ## Contributing
 

@@ -55,4 +55,4 @@
 
 See [Comparison](COMPARISON.md), [Installation](INSTALLATION.md),
 [Data integrity](DATA_INTEGRITY.md), and
-[`ROADMAP_HONEST.md`](../ROADMAP_HONEST.md).
+[`internal/ROADMAP_HONEST.md`](internal/ROADMAP_HONEST.md).

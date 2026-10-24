@@ -91,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   green for real.
 - Added `permissions: id-token: write` to `publish.yml`'s publish job
   (needed for OIDC trusted publishing to PyPI/TestPyPI). Does not by
-  itself make publishing work -- see `ROADMAP_HONEST.md` for the
+  itself make publishing work -- see `docs/internal/ROADMAP_HONEST.md` for the
   still-open gap (no PyPI/TestPyPI secrets or trusted publisher
   configured).
 - Added `include = ["LICENSE"]` to `[tool.maturin]` in `pyproject.toml`,
@@ -258,7 +258,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pip install pyterrainMap`. Verified against a real local Postgres 16
   container, which surfaced 6 real, previously-undiscovered bugs in the
   Postgres backend itself -- see Fixed, below.
-- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `ROADMAP_HONEST.md`.
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `docs/internal/ROADMAP_HONEST.md`.
 - `.github/dependabot.yml` (cargo, pip, github-actions ecosystems).
 - `.github/ISSUE_TEMPLATE/bug_report.yml`, `feature_request.yml`, `.github/pull_request_template.md`.
 - `pip-audit` step in CI's `lint` job (`continue-on-error: true`; advisory only, no historical baseline yet).
@@ -312,7 +312,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   throughput." Fixed by flooring the latency at 1 microsecond (which also
   guards against negative values from clock skew) instead of
   special-casing it to a false zero. This test had previously been
-  documented in `ROADMAP_HONEST.md` as "genuinely flaky, not fixed"; it is
+  documented in `docs/internal/ROADMAP_HONEST.md` as "genuinely flaky, not fixed"; it is
   now fixed and stable (verified across 5 isolated reruns).
 - **8 of the 9 deterministic known-failing Rust unit tests, individually
   root-caused and fixed** (927 passed / 1 failed / 1 ignored, up from
@@ -334,7 +334,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   splat-traversability wiring (already honestly commented in the source) —
   left failing rather than loosening the test assertion, since that would
   hide the real, still-open gap. Full root-cause detail for all 9 in
-  `ROADMAP_HONEST.md`.
+  `docs/internal/ROADMAP_HONEST.md`.
 - Stale `License: Proprietary` metadata left over from before the Apache-2.0
   relicense: `python/pyterrain_map/__init__.py`'s `__license__` string
   (was actually shipped in package metadata), plus doc references in
@@ -362,7 +362,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   contradicting `docs/VISION.md`'s own "Honest status" section, which
   already explicitly disclaims PyNoramic as never having existed as a
   repository. Removed the layer from the diagram and added a note pointing
-  to `VISION.md` and `ROADMAP_HONEST.md` for the real status of
+  to `VISION.md` and `docs/internal/ROADMAP_HONEST.md` for the real status of
   photogrammetry/SfM code that does exist (`src/photogrammetry/`,
   `src/reconstruction_3d/`, both explicit placeholders, not a working
   solver).
@@ -391,7 +391,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `fleet::learning::tests::test_learned_pattern`) and 1 intermittent/timing-dependent
   (`advanced::streaming::tests::test_streaming_statistics`, root-caused to
   `calculate_throughput()` returning `0.0` when a batch completes in under
-  1 microsecond on fast release-mode hardware) -- see `ROADMAP_HONEST.md`
+  1 microsecond on fast release-mode hardware) -- see `docs/internal/ROADMAP_HONEST.md`
   for the updated failing-test list and root causes. `maturin build
   --release` and `pytest tests/` (205/205) re-verified unaffected by this
   change.

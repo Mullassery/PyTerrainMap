@@ -19,7 +19,7 @@ section for the full correction. It has been removed from the diagram above
 to avoid contradicting `VISION.md` elsewhere in this same `docs/` tree.
 Photogrammetry/structure-from-motion code that does exist in this repo
 (`src/photogrammetry/`, including real multi-view geometry as of
-2026-09-28 -- see `ROADMAP_HONEST.md` section 5) requires the caller to
+2026-09-28 -- see `internal/ROADMAP_HONEST.md` section 5) requires the caller to
 supply real 2D keypoints and is Rust-level only, not yet exposed through
 the Python API. `src/reconstruction_3d/` was a second, entirely unused,
 equally-fake parallel implementation of the same capability; it was
