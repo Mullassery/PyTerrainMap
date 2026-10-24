@@ -29,7 +29,7 @@ jobs:
           # Previously this workflow ran `maturin build` directly on
           # ubuntu-latest, which would have produced exactly that
           # unpublishable tag -- it had also never actually been run (see
-          # ROADMAP_HONEST.md), so this had never been caught.
+          # docs/internal/ROADMAP_HONEST.md), so this had never been caught.
           - os: ubuntu-latest
             target: x86_64
           - os: ubuntu-latest
