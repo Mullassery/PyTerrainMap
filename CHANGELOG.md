@@ -676,13 +676,13 @@ Special thanks to:
 pip install pyterrainMap
 ```
 
-See [Quick Start Guide](https://github.com/Mullassery/PyTerrainMap#quick-start) for usage examples.
+See [Quick Start Guide](../PyTerrainMap#quick-start) for usage examples.
 
 ### Links
 
-- **GitHub**: https://github.com/Mullassery/PyTerrainMap
-- **Issues**: https://github.com/Mullassery/PyTerrainMap/issues
-- **Documentation**: https://github.com/Mullassery/PyTerrainMap/blob/main/PYTHON_BINDINGS.md
+- **GitHub**: ../PyTerrainMap
+- **Issues**: ../PyTerrainMap/issues
+- **Documentation**: ../PyTerrainMap/blob/main/PYTHON_BINDINGS.md
 - **PyPI**: https://pypi.org/project/pyterrainMap/
 
 ---

@@ -2,7 +2,7 @@
 
 Spatial intelligence platform for multi-robot terrain mapping — an append-only, H3-indexed observation store with temporal decay, a real HTTP/HTTPS API server, and terrain-intelligence helpers, built on a Rust core with PyO3 bindings.
 
-[![CI](https://github.com/Mullassery/PyTerrainMap/actions/workflows/ci.yml/badge.svg)](https://github.com/Mullassery/PyTerrainMap/actions/workflows/ci.yml)
+[![CI](../PyTerrainMap/actions/workflows/ci.yml/badge.svg)](../PyTerrainMap/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/pyterrainMap)](https://pypi.org/project/pyterrainMap/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -57,7 +57,7 @@ python -c "import pyterrain_map; print(pyterrain_map.__version__)"
 Requires Python 3.10+. PyPI wheels are macOS arm64 only; Linux/Windows wheels are CI artifacts today. On other platforms build from source:
 
 ```bash
-git clone https://github.com/Mullassery/PyTerrainMap.git
+git clone ../PyTerrainMap
 cd PyTerrainMap
 pip install maturin
 maturin develop --release
@@ -163,11 +163,11 @@ Full shipped/blocked/rejected detail: [`docs/internal/QUEUE_STATUS.md`](docs/int
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports: [GitHub Issues](https://github.com/Mullassery/PyTerrainMap/issues). Support: mullassery@gmail.com.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports: [GitHub Issues](../PyTerrainMap/issues). Support: mullassery@gmail.com.
 
 ## Fleet sync with SyncFleet (operation-capture bridge)
 
-PyTerrainMap pairs with [SyncFleet](https://github.com/Mullassery/SyncFleet), a
+PyTerrainMap pairs with [SyncFleet](../SyncFleet), a
 secure, local-first, peer-to-peer SQLite synchronization engine. The intended
 design gives a multi-robot edge swarm an out-of-the-box decentralized
 map-sharing protocol: each robot accumulates terrain observations in its local
@@ -203,16 +203,16 @@ PyTerrainMap is one of six complementary, composable tools in the Mullassery **r
 
 | Tool | Role | What it does |
 |---|---|---|
-| [PyRoboVision](https://github.com/Mullassery/PyRoboVision) | Perception | Multi-object tracker (Kalman filter + Hungarian algorithm) and trajectory predictor for robot perception. |
-| [PyTerrainMap](https://github.com/Mullassery/PyTerrainMap) | Mapping / SLAM | **This project** — fuses multi-robot terrain observations into a spatial-temporal store, with H3 spatial indexing and SLAM. |
-| [PyRoboSimulator](https://github.com/Mullassery/PyRoboSimulator) | Simulation | World simulator for autonomous systems, with a FastAPI backend. |
-| [PyRoboFrames](https://github.com/Mullassery/PyRoboFrames) | Learning data | Rust-backed ML dataloader for robot-learning datasets (native LeRobot format, Apple Silicon hardware video decode). |
-| [PyRoboReplay](https://github.com/Mullassery/PyRoboReplay) | Mission forensics | Forensic-debugging and causal-analysis engine for autonomous robot mission replay. |
-| [SyncFleet](https://github.com/Mullassery/SyncFleet) | Fleet coordination | Rust + SQLite, peer-to-peer state sync for robotics fleets — mutual-TLS 1.3, version-vector replication, mDNS discovery; conflict resolution on the roadmap. |
+| [PyRoboVision](../PyRoboVision) | Perception | Multi-object tracker (Kalman filter + Hungarian algorithm) and trajectory predictor for robot perception. |
+| [PyTerrainMap](../PyTerrainMap) | Mapping / SLAM | **This project** — fuses multi-robot terrain observations into a spatial-temporal store, with H3 spatial indexing and SLAM. |
+| [PyRoboSimulator](../PyRoboSimulator) | Simulation | World simulator for autonomous systems, with a FastAPI backend. |
+| [PyRoboFrames](../PyRoboFrames) | Learning data | Rust-backed ML dataloader for robot-learning datasets (native LeRobot format, Apple Silicon hardware video decode). |
+| [PyRoboReplay](../PyRoboReplay) | Mission forensics | Forensic-debugging and causal-analysis engine for autonomous robot mission replay. |
+| [SyncFleet](../SyncFleet) | Fleet coordination | Rust + SQLite, peer-to-peer state sync for robotics fleets — mutual-TLS 1.3, version-vector replication, mDNS discovery; conflict resolution on the roadmap. |
 
 Each works standalone, but they're complementary by design. The SyncFleet bridge (above) lets terrain observations sync across fleets without relying on a central database.
 
-[Browse all projects →](https://github.com/Mullassery?tab=repositories)
+[Browse all projects →](../Mullassery-profile)
 
 ## License
 

@@ -575,8 +575,8 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
 
 ## Support & Community
 
-- **Issues:** [GitHub Issues](https://github.com/Mullassery/PyTerrainMap/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Mullassery/PyTerrainMap/discussions)
+- **Issues:** [GitHub Issues](../PyTerrainMap/issues)
+- **Discussions:** [GitHub Discussions](../PyTerrainMap/discussions)
 - **Documentation:** [Full API Docs](../docs/)
 - **Research:** Cite as: "Mullassery, G. (2026). PyTerrainMap: Spatial Intelligence for Multi-Robot Systems. GitHub."
 

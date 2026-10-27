@@ -12,7 +12,7 @@ pip install pyterrainMap
 ### From Source (Development)
 ```bash
 # Clone repository
-git clone https://github.com/Mullassery/pyterrainMap.git
+git clone ../pyterrainMap
 cd pyterrainMap
 
 # Build Python wheel
@@ -399,4 +399,4 @@ Apache License 2.0 - See LICENSE file
 - **CLI**: Use `pytm --help` for command reference
 - **API Docs**: See docstrings (e.g., `help(TerrainMap.analyze)`)
 - **Examples**: Check `examples/` directory
-- **Issues**: Report at https://github.com/Mullassery/pyterrainMap/issues
+- **Issues**: Report at ../pyterrainMap/issues

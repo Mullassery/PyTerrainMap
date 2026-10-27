@@ -199,7 +199,7 @@ If you encounter issues:
    ```
 
 4. **GitHub Issues**
-   https://github.com/Mullassery/PyTerrainMap/issues
+   ../PyTerrainMap/issues
 
 ---
 

@@ -1,7 +1,7 @@
 # SyncFleet integration
 
 PyTerrainMap observations can be replicated through
-[SyncFleet](https://github.com/Mullassery/SyncFleet) by recording them as SyncFleet
+[SyncFleet](../SyncFleet) by recording them as SyncFleet
 *operations*. SyncFleet replicates its operation journal over mutual-TLS 1.3;
 it does not replicate arbitrary SQLite tables.
 

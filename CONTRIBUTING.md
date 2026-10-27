@@ -16,7 +16,7 @@ issue or PR for something that might already be a documented, known gap.
 Requirements: Rust (stable toolchain), Python 3.10+, [maturin](https://github.com/PyO3/maturin).
 
 ```bash
-git clone https://github.com/Mullassery/PyTerrainMap.git
+git clone ../PyTerrainMap
 cd PyTerrainMap
 pip install maturin
 maturin develop --release
