@@ -82,6 +82,9 @@ scientific = [
     "shapely>=2.0",  # BSD
 ]
 
+simready = ["usd-core>=23.11"]
+usd = ["usd-core>=23.11"]
+
 # DO NOT INCLUDE:
 # - "rospy" (ROS, complex dependency)
 # - "dimos" (not yet released)
